@@ -1,0 +1,41 @@
+LoadModule unique_id_module modules/mod_unique_id.so
+LoadModule wsgi_module /usr/lib64/httpd/modules/mod_wsgi.so
+
+Listen 80
+
+Header set X-Rucio-Host "%{HTTP_HOST}e"
+RequestHeader add X-Rucio-RequestId "%{UNIQUE_ID}e"
+
+# RegExp: ^\[(.*?)\]\t(\S+)\t(\S+)\t(\S+)\t(\S+)\t(\S+)\t(\S+)\t(\S+)\t(\S+)\t\"(\S+)\s+(\S+)\s+(\S+)\"\t\"(.*?)-(.*?)\"\t\"(.*?)\"\t?(.*)?$
+LogFormat "[%{%Y-%m-%d %H:%M:%S}t]\t%v\t%h\t%{X-Forwarded-For}i\t%{X-Rucio-RequestId}i\t%>s\t%I\t%B\t%D\t\"%r\"\t\"%{X-Rucio-Auth-Token}i\"\t\"%{User-Agent}i\"\t%{X-Rucio-Script}i" combinedrucio
+
+CacheEnable disk /
+
+<VirtualHost *:80>
+
+# ServerName *:80
+
+ LogLevel info
+ CustomLog logs/access_log combinedrucio
+
+ WSGIScriptAlias /accounts               /usr/lib/python2.7/site-packages/rucio/web/rest/account.py
+ WSGIScriptAlias /accountlimits          /usr/lib/python2.7/site-packages/rucio/web/rest/account_limit.py
+ WSGIScriptAlias /config                 /usr/lib/python2.7/site-packages/rucio/web/rest/config.py
+ WSGIScriptAlias /dids                   /usr/lib/python2.7/site-packages/rucio/web/rest/did.py
+ WSGIScriptAlias /identities             /usr/lib/python2.7/site-packages/rucio/web/rest/identity.py
+ WSGIScriptAlias /heartbeats             /usr/lib/python2.7/site-packages/rucio/web/rest/heartbeat.py
+ WSGIScriptAlias /locks                  /usr/lib/python2.7/site-packages/rucio/web/rest/lock.py
+ WSGIScriptAlias /meta                   /usr/lib/python2.7/site-packages/rucio/web/rest/meta.py
+ WSGIScriptAlias /ping                   /usr/lib/python2.7/site-packages/rucio/web/rest/ping.py
+ WSGIScriptAlias /redirect               /usr/lib/python2.7/site-packages/rucio/web/rest/redirect.py
+ WSGIScriptAlias /replicas               /usr/lib/python2.7/site-packages/rucio/web/rest/replica.py
+ WSGIScriptAlias /requests               /usr/lib/python2.7/site-packages/rucio/web/rest/request.py
+ WSGIScriptAlias /rses                   /usr/lib/python2.7/site-packages/rucio/web/rest/rse.py
+ WSGIScriptAlias /rules                  /usr/lib/python2.7/site-packages/rucio/web/rest/rule.py
+ WSGIScriptAlias /scopes                 /usr/lib/python2.7/site-packages/rucio/web/rest/scope.py
+ WSGIScriptAlias /subscriptions          /usr/lib/python2.7/site-packages/rucio/web/rest/subscription.py
+ WSGIScriptAlias /objectstores           /usr/lib/python2.7/site-packages/rucio/web/rest/objectstore.py
+ WSGIScriptAlias /lifetime_exceptions    /usr/lib/python2.7/site-packages/rucio/web/rest/lifetime_exception.py
+
+</VirtualHost>
+
