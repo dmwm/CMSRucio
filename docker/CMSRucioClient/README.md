@@ -19,3 +19,7 @@ to generate a proxy. Then
 ```rucio whoami```
 
 to verify it worked.
+
+If you want to develop the rucio client code inside the container, add ```-v /path/to/git/rucio/lib/rucio:/usr/lib/python2.7/site-packages/rucio```
+to the ```docker run``` commands above. Then edit the code you checked out from GitHub in ```/path/to/git/rucio```
+on your local machine and the changes will be seen inside the container.
