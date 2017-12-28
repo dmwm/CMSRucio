@@ -27,6 +27,8 @@ RUN curl -k -o  /bin/dasgoclient https://www.lns.cornell.edu/~vk/Work/dasgoclien
 RUN curl -o /etc/ca.crt https://cafiles.cern.ch/cafiles/certificates/CERN%20Root%20Certification%20Authority%202.crt
 
 COPY scripts /scripts
-COPY rucio.cfg /opt/rucio/etc/rucio.cfg
+COPY rucio-chicago.cfg /opt/rucio/etc/rucio.cfg
+COPY rucio-chicago.cfg /opt/rucio-chicago/etc/rucio.cfg
+COPY rucio-fermicloud.cfg /opt/rucio-fermicloud/etc/rucio.cfg
 
 ENV X509_USER_PROXY=/tmp/x509up
