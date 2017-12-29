@@ -4,9 +4,11 @@
 # should be easily transformed/extended for using other sources. 
 
 import argparse
+import logging
+
 import requests
 import json
-import logging
+import re
 
 from functools import wraps
 
@@ -14,6 +16,9 @@ from rucio.client.accountclient import AccountClient
 from rucio.client.rseclient import RSEClient
 from rucio.common.exception import Duplicate, RSEProtocolPriorityError, \
 	RSEProtocolNotSupported, RSENotFound, InvalidObject
+
+DATASVC_URL='http://cmsweb.cern.ch/phedex/datasvc/json/prod/' 
+prog = re.compile('.* -service (.*?) .*')
 
 def setup_logger(logger):
 	""" Code borrowed from bin/rucio-admin
@@ -57,16 +62,7 @@ def exception_handler(function):
 			return error.error_code
 	return new_funct
 
-def whoami ( account = 'natasha', auth_type='x509_proxy'):
-	"""Runs whoami command for a given account via client tool, requires a valid proxy
-	"""
-	account_client = AccountClient(account=account, auth_type='x509_proxy')
-	print("Connected to rucio as %s" % account_client.whoami()['account'])
-
-def list_rses(client):
-	"""Prints names of existing RSEs"""
-	for rse in rse_client.list_rses():
-		print (rse['rse'])
+# Functions for getting PhEDEx information: 
 
 def PhEDEx_node_to_RSE(node, test_tag = '111debug'):
 	""" Translates PhEDEx node names to RSE names. 
@@ -78,9 +74,28 @@ def PhEDEx_node_to_RSE(node, test_tag = '111debug'):
 	"""	
 	return (node+'_'+test_tag).upper()
 
+def PhEDEx_node_FTS_servers(node):
+	"""Returns a list of FTS servers used in node's FileDownload agent configuration"""
+	# FIXME: check node existence. 
+	URL = DATASVC_URL + 'agentlogs?agent=FileDownload&node=' + node
+	RESP = requests.get(url=URL, verify=False)
+	DATA = json.loads(RESP.content)
+	servers = {}
+	for agent in DATA['phedex']['agent']:
+		for log in agent['log']:
+			for message in log['message'].values():
+				assert ('-backend FTS3' in message), \
+					"FTS3 backend is not configured for " + node
+				result = prog.match (message)
+				if result:
+					servers[result.group(1)] = True
+	return servers.keys()
+
+# Functions for translating information to Rucio standards
+
 def PhEDEx_node_names():
 	""" Returns a sorted list of PhEDEx node names via data service nodes API """
-	URL='http://cmsweb.cern.ch/phedex/datasvc/json/prod/nodes'
+	URL = DATASVC_URL + 'nodes'
 	RESP = requests.get(url=URL, verify=False) # work around cmsweb quirks
 	DATA = json.loads(RESP.content)
 	names = []
@@ -88,7 +103,20 @@ def PhEDEx_node_names():
 		names.append(n['name'])
 	names.sort()
 	return names
+
+# Functions involving Rucio client actions
 	
+def whoami ( account = 'natasha', auth_type='x509_proxy'):
+	"""Runs whoami command for a given account via client tool, requires a valid proxy
+	"""
+	account_client = AccountClient(account=account, auth_type='x509_proxy')
+	print("Connected to rucio as %s" % account_client.whoami()['account'])
+
+def list_rses(client):
+	"""Prints names of existing RSEs"""
+	for rse in rse_client.list_rses():
+		print (rse['rse'])
+
 @exception_handler
 def add_rse(client, name):
 	"""Adds an rse """
@@ -112,6 +140,8 @@ if __name__ == '__main__':
 	parser.add_argument('--add-rse', help='add RSE')
 	parser.add_argument('--list-nodes', action='store_true', \
 		help='list PhEDEx node names')
+	parser.add_argument('--node-fts-servers', default = 'T2_PK_NCP ', \
+		help='List fts servers used by PhEDEx node (default T2_PK_NCP)')
 	args = parser.parse_args()
 	if args.verbose:
 		print (args)
@@ -130,8 +160,12 @@ if __name__ == '__main__':
 		nodes = PhEDEx_node_names()
 		for n in nodes:
 			print n, " => ", PhEDEx_node_to_RSE(n, 'userdisk')
-
-
+	if args.node_fts_servers:
+		servers = PhEDEx_node_FTS_servers(args.node_fts_servers)
+		print "FTS servers used by " + args.node_fts_servers + 'PhEDEx node:'
+		for s in servers:
+			print s 
+					
 	# Handle RSE additions
 	if args.verbose:
 		print "===== Initial list of RSEs:"
