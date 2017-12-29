@@ -66,6 +66,17 @@ def list_rses(client):
 	for rse in rse_client.list_rses():
 		print (rse['rse'])
 
+def PhEDEx_node_to_RSE(node, test_tag = '111debug'):
+	""" Translates PhEDEx node names to RSE names. 
+	Make sure new names comply with the policies defined in: 
+	./lib/rucio/common/schema/cms.py
+	./lib/rucio/core/permission/cms.py
+	Because once created RSE name can't be reused, allow to postpend
+	the name wiht a test_tag string
+	"""	
+	return (node+test_tag).upper()
+	
+	
 @exception_handler
 def add_rse(client, name):
 	"""Adds an rse """
