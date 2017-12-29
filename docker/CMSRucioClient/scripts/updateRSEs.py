@@ -4,8 +4,10 @@
 # should be easily transformed/extended for using other sources. 
 
 import argparse
-
+import requests
+import json
 import logging
+
 from functools import wraps
 
 from rucio.client.accountclient import AccountClient
@@ -74,8 +76,18 @@ def PhEDEx_node_to_RSE(node, test_tag = '111debug'):
 	Because once created RSE name can't be reused, allow to postpend
 	the name wiht a test_tag string
 	"""	
-	return (node+test_tag).upper()
-	
+	return (node+'_'+test_tag).upper()
+
+def PhEDEx_node_names():
+	""" Returns a sorted list of PhEDEx node names via data service nodes API """
+	URL='http://cmsweb.cern.ch/phedex/datasvc/json/prod/nodes'
+	RESP = requests.get(url=URL, verify=False) # work around cmsweb quirks
+	DATA = json.loads(RESP.content)
+	names = []
+	for n in DATA['phedex']['node']:
+		names.append(n['name'])
+	names.sort()
+	return names
 	
 @exception_handler
 def add_rse(client, name):
@@ -98,10 +110,11 @@ if __name__ == '__main__':
 	parser.add_argument('-v', '--verbose', action='store_true', \
 		help='increase output verbosity')
 	parser.add_argument('--add-rse', help='add RSE')
+	parser.add_argument('--list-nodes', action='store_true', \
+		help='list PhEDEx node names')
 	args = parser.parse_args()
-
 	if args.verbose:
-		print (args) 
+		print (args)
 
 	# Take care of Rucio exceptions:
 	logger = logging.getLogger("user")
@@ -109,16 +122,25 @@ if __name__ == '__main__':
 
 	if args.test_auth:
 		whoami(account=args.account)
-	# create re-usable RSE client connection: 
+
+	# create re-usable RSE client connection:
 	rse_client = RSEClient(account=args.account, auth_type='x509_proxy')
-	print "===== Initial list of RSEs:"
-	list_rses(rse_client)
-	try:
-		if args.add_rse:
-			print "===== Adding RSE "+args.add_rse
-			add_rse(rse_client, args.add_rse)
-	except InvalidObject:
-		print "InvalidObject exception: "
-		print str(InvalidObject)
-	print "===== Current list of RSEs:"
-	list_rses(rse_client)
+
+	if args.list_nodes:
+		nodes = PhEDEx_node_names()
+		for n in nodes:
+			print n, " => ", PhEDEx_node_to_RSE(n, 'userdisk')
+
+
+	# Handle RSE additions
+	if args.verbose:
+		print "===== Initial list of RSEs:"
+		list_rses(rse_client)
+
+	if args.add_rse:
+		print "===== Adding RSE "+args.add_rse
+		add_rse(rse_client, args.add_rse)
+
+	if args.verbose:
+		print "===== Current list of RSEs:"
+		list_rses(rse_client)
