@@ -14,7 +14,9 @@ from rucio.client.didclient import DIDClient
 from rucio.client.replicaclient import ReplicaClient
 from rucio.common.exception import DataIdentifierAlreadyExists
 
-PATTERN = 'M'  # This replaces slashes to allow us to pass schema rules, but also allows for a new attempt at something
+DUMMY_RSE = 'MOCK-POSIX'
+
+PATTERN = 'X'  # This replaces slashes to allow us to pass schema rules, but also allows for a new attempt at something
 
 DATASET = '/SingleMuon/Run2017A-PromptReco-v2/MINIAOD'
 
@@ -73,7 +75,7 @@ if __name__ == '__main__':
 
     for blockObj in blocks:
         block = blockObj['block'][0]['name']
-        rucio_block_ds = block.replace('#', '-').replace('/', '', 1).replace('/', PATTERN)
+        rucio_block_ds = block.replace('/', '', 1).replace('/', PATTERN)
         print('Creating files for block %s' % block)
 
         phedex_files = json.loads(subprocess.check_output(DAS + [DAS_FILE_PHEDEX % block]))
@@ -96,7 +98,7 @@ if __name__ == '__main__':
                 raise RuntimeError('Checksums or size do not match')
 
             replica = {'scope': 'user.ewv',
-                       'name': fileDict['file'][0]['name'].replace('/', PATTERN),  # Remove slash for now
+                       'name': fileDict['file'][0]['name'],
                        'bytes': phedex_bytes,
                        'meta': {'guid': str(uuid.uuid4()).upper(),
                                 'events': dbs_events,
@@ -116,7 +118,7 @@ if __name__ == '__main__':
                                      dids=[{'scope': 'user.ewv', 'name': rucio_block_ds}])
         print('Status for attach dataset', status)
 
-        status = rClient.add_replicas(rse='MOCK', files=replicas)
+        status = rClient.add_replicas(rse=DUMMY_RSE, files=replicas)
         print('Status for add_replicas', status)
 
         status = dClient.attach_dids(scope='user.ewv', name=rucio_block_ds, dids=replicas)
