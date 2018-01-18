@@ -71,6 +71,8 @@ def exception_handler(function):
 			logger.error(error)
 			logger.error('Please verify that your proxy is still valid and renew it if needed.')
 			sys.exit(1)
+		except Duplicate as warn:
+			return
 	return new_funct
 
 # Functions for getting PhEDEx information: 
