@@ -23,7 +23,6 @@ from rucio.common.exception import Duplicate, RSEProtocolPriorityError, \
 session = requests.Session()
 session.verify=('/etc/grid-security/certificates')
 
-SUFFIX = '0000' # Set to None for generating real RSE names without suffix
 DATASVC_URL = 'http://cmsweb.cern.ch/phedex/datasvc/json/prod/'
 # Pre-compiled regex for PhEDEx returned data: 
 prog = re.compile('.* -service (.*?) .*') 
@@ -76,7 +75,7 @@ def exception_handler(function):
 
 # Functions for getting PhEDEx information: 
 
-def PhEDEx_node_to_RSE(node, suffix = SUFFIX):
+def PhEDEx_node_to_RSE(node):
 	""" Translates PhEDEx node names to RSE names. 
 	Make sure new names comply with the policies defined in: 
 	./lib/rucio/common/schema/cms.py
@@ -85,10 +84,10 @@ def PhEDEx_node_to_RSE(node, suffix = SUFFIX):
 	the name with a test_tag string (default: 0000).
 	In reality something like USERDISK|DATADISK|SCRATCHDISK will be used.
 	"""	
-	if suffix is not None:
-		suffix = args.suffix
+	if args.suffix:
+		node = node + '_' + suffix
 
-	return (node + '_' + suffix).upper()
+	return node.upper()
 
 def PhEDEx_node_FTS_servers(node):
 	"""Returns a list of FTS servers used in node's FileDownload agent configuration"""
@@ -164,7 +163,7 @@ if __name__ == '__main__':
 	parser.add_argument('--add-rse', metavar='RSE_NAME|all',
 		help="""add RSE by name or for all PhEDEx nodes, using pre-generated names.
 		PhEDEx nodes with no data are ignored. Can be combined with --suffix option. """)
-	parser.add_argument('--suffix', default = SUFFIX, \
+	parser.add_argument('--suffix', \
 		help='append suffix to RSE names pre-generated from PhEDEx node names')
 	parser.add_argument('--node-fts-servers', default = None, \
 		help='List fts servers used by PhEDEx node (e.g. T2_PK_NCP)')
@@ -203,11 +202,11 @@ if __name__ == '__main__':
 	if args.add_rse:
 		if args.add_rse == 'all':
 			for n in PhEDEx_node_names():
-				#print "Adding RSE " +  PhEDEx_node_to_RSE(n)  # for test only
-				add_rse(rse_client,  PhEDEx_node_to_RSE(n))
+				print "Adding RSE " +  PhEDEx_node_to_RSE(n)  # for test only
+				#add_rse(rse_client,  PhEDEx_node_to_RSE(n))
 		else:
-			#print "Adding RSE " +  PhEDEx_node_to_RSE(args.add_rse)  # for test only
-			add_rse(rse_client, args.add_rse)
+			print "Adding RSE " +  PhEDEx_node_to_RSE(args.add_rse)  # for test only
+			#add_rse(rse_client, args.add_rse)
 			
 	if args.verbose:
 		print "===== Current list of RSEs:"
