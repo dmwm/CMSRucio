@@ -202,11 +202,11 @@ if __name__ == '__main__':
 	if args.add_rse:
 		if args.add_rse == 'all':
 			for n in PhEDEx_node_names():
-				print "Adding RSE " +  PhEDEx_node_to_RSE(n)  # for test only
-				#add_rse(rse_client,  PhEDEx_node_to_RSE(n))
+				#print "Adding RSE " +  PhEDEx_node_to_RSE(n)  # for test only
+				add_rse(rse_client,  PhEDEx_node_to_RSE(n))
 		else:
-			print "Adding RSE " +  PhEDEx_node_to_RSE(args.add_rse)  # for test only
-			#add_rse(rse_client, args.add_rse)
+			#print "Adding RSE " +  PhEDEx_node_to_RSE(args.add_rse)  # for test only
+			add_rse(rse_client, args.add_rse)
 			
 	if args.verbose:
 		print "===== Current list of RSEs:"
