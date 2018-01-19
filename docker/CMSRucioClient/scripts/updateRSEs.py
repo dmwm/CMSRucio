@@ -203,7 +203,15 @@ if __name__ == '__main__':
 		if args.add_rse == 'all':
 			for n in PhEDEx_node_names():
 				#print "Adding RSE " +  PhEDEx_node_to_RSE(n)  # for test only
-				add_rse(rse_client,  PhEDEx_node_to_RSE(n))
+				#add_rse(rse_client,  PhEDEx_node_to_RSE(n))
+				# Print out FTS server for each node: 
+				print "=================== FTS servers used by " + n + " :"
+				try:
+					servers = PhEDEx_node_FTS_servers(n)
+				except AssertionError as error:
+					logger.error(error)
+				for s in servers:
+					print s
 		else:
 			#print "Adding RSE " +  PhEDEx_node_to_RSE(args.add_rse)  # for test only
 			add_rse(rse_client, PhEDEx_node_to_RSE(args.add_rse))
