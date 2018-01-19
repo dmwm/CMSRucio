@@ -87,8 +87,8 @@ def PhEDEx_node_to_RSE(node):
 	In reality something like USERDISK|DATADISK|SCRATCHDISK will be used.
 	"""	
 	if args.suffix:
-		node = node + '_' + suffix
-
+		node = node + '_' + args.suffix
+	
 	return node.upper()
 
 def PhEDEx_node_FTS_servers(node):
@@ -165,7 +165,7 @@ if __name__ == '__main__':
 	parser.add_argument('--add-rse', metavar='RSE_NAME|all',
 		help="""add RSE by name or for all PhEDEx nodes, using pre-generated names.
 		PhEDEx nodes with no data are ignored. Can be combined with --suffix option. """)
-	parser.add_argument('--suffix', \
+	parser.add_argument('--suffix', default='nrtesting', \
 		help='append suffix to RSE names pre-generated from PhEDEx node names')
 	parser.add_argument('--node-fts-servers', default = None, \
 		help='List fts servers used by PhEDEx node (e.g. T2_PK_NCP)')
@@ -197,9 +197,6 @@ if __name__ == '__main__':
 			print s 
 					
 	# Handle RSE additions
-	if args.verbose:
-		print "===== Initial list of RSEs:"
-		list_rses(rse_client)
 
 	if args.add_rse:
 		if args.add_rse == 'all':
@@ -209,7 +206,3 @@ if __name__ == '__main__':
 		else:
 			#print "Adding RSE " +  PhEDEx_node_to_RSE(args.add_rse)  # for test only
 			add_rse(rse_client, args.add_rse)
-			
-	if args.verbose:
-		print "===== Current list of RSEs:"
-		list_rses(rse_client)
