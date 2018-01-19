@@ -71,8 +71,9 @@ def exception_handler(function):
 			logger.error(error)
 			logger.error('Please verify that your proxy is still valid and renew it if needed.')
 			sys.exit(1)
-		except Duplicate as warn:
-			return
+		except Duplicate as error:
+			logger.error(error)
+			return error.error_code
 	return new_funct
 
 # Functions for getting PhEDEx information: 
@@ -205,4 +206,4 @@ if __name__ == '__main__':
 				add_rse(rse_client,  PhEDEx_node_to_RSE(n))
 		else:
 			#print "Adding RSE " +  PhEDEx_node_to_RSE(args.add_rse)  # for test only
-			add_rse(rse_client, args.add_rse)
+			add_rse(rse_client, PhEDEx_node_to_RSE(args.add_rse))
