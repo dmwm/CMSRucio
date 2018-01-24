@@ -13,18 +13,19 @@ from rucio.client.replicaclient import ReplicaClient
 from rucio.client.ruleclient import RuleClient
 from rucio.common.exception import DataIdentifierAlreadyExists, RucioException
 
-DUMMY_RSE = 'T2_US_UCSD'
+DUMMY_RSE = 'T2_US_Nebraska'
 
 DAYS_TO_LIVE = 300
 
 PATTERN = 'd'  # This replaces slashes to allow us to pass schema rules, but also allows for a new attempt at something
 
-DATASET = '/SingleMuon/Run2017A-PromptReco-v2/MINIAOD'
+DATASET = '/ttH_M125_TuneCP5_13TeV-powheg-pythia8/RunIIFall17MiniAOD-94X_mc2017_realistic_v10-v1/MINIAODSIM'
 
 DAS = ['dasgoclient', '-json']
 DAS_BLOCK = '-query=block dataset=%s'
 DAS_FILE_DBS = '-query=file block=%s detail=true'
 DAS_FILE_PHEDEX = '-query=file block=%s system=phedex'
+DAS_SITE = '-query=site block=%s'
 
 COMMAND = ['dasgoclient', '-query=file dataset=%s system=phedex' % DATASET, '-json']
 
@@ -64,16 +65,17 @@ if __name__ == '__main__':
     # Make Rucio container and dataset to correspond to CMS dataset
 
     try:
-        status = dClient.add_container(scope='user.ewv', name=RUCIO_CONTAINER, lifetime=DAYS_TO_LIVE*24*3600)
-        print('Status for add_container', status)
+        print("Adding dataset %s" % RUCIO_CONTAINER)
+        status = dClient.add_container(scope='cms', name=RUCIO_CONTAINER, lifetime=DAYS_TO_LIVE*24*3600)
+        print(' Status for add_container', status)
     except DataIdentifierAlreadyExists:
         print('Container already exists')
 
-    try:
-        status = dClient.add_dataset(scope='user.ewv', name=RUCIO_DS, lifetime=DAYS_TO_LIVE*24*3600)
-        print('Status for add_dataset', status)
-    except DataIdentifierAlreadyExists:
-        print('Dataset already exists')
+    # try:
+    #     status = dClient.add_dataset(scope='cms', name=RUCIO_DS, lifetime=DAYS_TO_LIVE*24*3600)
+    #     print('Status for add_dataset', status)
+    # except DataIdentifierAlreadyExists:
+    #     print('Dataset already exists')
 
     try:
         dasOutput = subprocess.check_output(DAS + [DAS_BLOCK % DATASET])
@@ -84,25 +86,32 @@ if __name__ == '__main__':
     block_datasets = []
     for blockObj in blocks:
         block = blockObj['block'][0]['name']
-
+        dasOutput = subprocess.check_output(DAS + [DAS_SITE % block])
+        sites = json.loads(dasOutput)
+        firstSite = sites[0]['site'][0]['name']
+        if firstSite != DUMMY_RSE:  # Skip things not at Nebraska for now
+            print("Skipping block %s at %s" % (block, firstSite))
+            continue
         # Make Rucio dataset to correspond to CMS blocks. Attach this dataset to the container representing CMS dataset
         rucio_block_ds = block.replace('/', '', 1).replace('/', PATTERN)
         rucio_block_ds = block
-        block_datasets.append({'scope':'user.ewv', 'name':rucio_block_ds})
+        block_datasets.append({'scope':'cms', 'name':rucio_block_ds})
         try:
-            status = dClient.add_dataset(scope='user.ewv', name=rucio_block_ds, lifetime=DAYS_TO_LIVE*24*3600)
-            print('Status for add_dataset', status)
+            print(" Adding (block) dataset %s" % rucio_block_ds)
+
+            status = dClient.add_dataset(scope='cms', name=rucio_block_ds, lifetime=DAYS_TO_LIVE*24*3600)
+            print('  Status for add_dataset', status)
         except DataIdentifierAlreadyExists:
             print('Dataset already exists')
 
         try:
-            status = dClient.attach_dids(scope='user.ewv', name=RUCIO_CONTAINER,
-                                         dids=[{'scope': 'user.ewv', 'name': rucio_block_ds}])
-            print('Status for attach dataset', status)
+            status = dClient.attach_dids(scope='cms', name=RUCIO_CONTAINER,
+                                         dids=[{'scope': 'cms', 'name': rucio_block_ds}])
+            print('  Status for attach dataset', status)
         except RucioException:
             print("Attach faild, probabably already done.")
 
-        print('Creating files for block %s' % block)
+        print(' Creating files for block %s' % block)
 
         phedex_files = json.loads(subprocess.check_output(DAS + [DAS_FILE_PHEDEX % block]))
         dbs_files = json.loads(subprocess.check_output(DAS + [DAS_FILE_DBS % block]).strip())
@@ -123,29 +132,29 @@ if __name__ == '__main__':
             if adler32 != dbs_adler32 or phedex_bytes != dbs_bytes:
                 raise RuntimeError('Checksums or size do not match')
 
-            replica = {'scope': 'user.ewv',
+            replica = {'scope': 'cms',
                        'name': fileDict['file'][0]['name'],
                        'bytes': phedex_bytes,
                        'meta': {'guid': str(uuid.uuid4()).upper(),
                                 'events': dbs_events,
                                 },  # Should be able to remove later (client cares now)
-                       'adler32': adler32,
+                       'adler32': adler32.rjust(8, '0'),
                        }
-
+            print("  Adding file to block: %s" % replica['name'])
             replicas.append(replica)
 
         # Mark the replicas as at a site
         status = rClient.add_replicas(rse=DUMMY_RSE, files=replicas)
-        print('Status for add_replicas', status)
+        print('  Status for add_replicas', status)
 
         # Attach the files to the dataset representing the block and the single dataset
         try:
-            status = dClient.attach_dids(scope='user.ewv', name=rucio_block_ds, dids=replicas)
-            status = dClient.attach_dids(scope='user.ewv', name=RUCIO_DS, dids=replicas)
+            status = dClient.attach_dids(scope='cms', name=rucio_block_ds, dids=replicas)
+            # status = dClient.attach_dids(scope='cms', name=RUCIO_DS, dids=replicas)
             print('Status for attach', status)
         except RucioException:
             print("Attach failed, probabably already done.")
 
-    status = ruleClient.add_replication_rule(dids=block_datasets, copies=2, rse_expression='tier=2',
-                                             lifetime=DAYS_TO_LIVE//2, account='ewv')
+    # status = ruleClient.add_replication_rule(dids=block_datasets, copies=2, rse_expression='tier=2',
+    #                                          lifetime=DAYS_TO_LIVE//2, account='ewv')
 
