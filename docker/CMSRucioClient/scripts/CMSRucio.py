@@ -8,7 +8,18 @@ from rucio.client.didclient import DIDClient
 from rucio.client.replicaclient import ReplicaClient
 
 
-class CMSRucio(object):  # FIXME: Service?
+class CMSRucio(object):
+    """
+    Interface for Rucio with the CMS data model
+
+    CMS         Rucio
+    File/LFN    File
+    Block       Dataset
+    Dataset     Container
+
+    We try to use the correct terminology on for variable and parameter names where the CMS facing code uses
+    File/Block/Dataset and the Rucio facing code uses File/Dataset/Container
+    """
 
     def __init__(self, account, auth_type):
         self.account = account
@@ -20,6 +31,9 @@ class CMSRucio(object):  # FIXME: Service?
         didClient = DIDClient(account=self.account, auth_type=self.auth_type)
 
         block_names = []
+        response = didClient.get_did(scope=scope, name=container)
+        if response['type'].upper() != 'CONTAINER':
+            return block_names
 
         response = didClient.list_content(scope=scope, name=container)
         for item in response:
@@ -53,7 +67,7 @@ class CMSRucio(object):  # FIXME: Service?
         block_names = []
         result = {'block': []}
 
-        replicaClient = ReplicaClient(account=self.account, auth_type=self.auth_type)
+        rc = ReplicaClient(account=self.account, auth_type=self.auth_type)
 
         if isinstance(block, (list, set)):
             block_names = block
@@ -69,7 +83,7 @@ class CMSRucio(object):  # FIXME: Service?
         for block_name in block_names:
             dids = [{'scope': scope, 'name': block_name}]
 
-            response = replicaClient.list_replicas(dids=dids)
+            response = rc.list_replicas(dids=dids)
             nodes = set()
             for item in response:
                 for node, state in item['states'].items():
