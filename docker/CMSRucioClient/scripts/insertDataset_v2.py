@@ -40,22 +40,27 @@ class DatasetInjector(object):
     """
 
     def __init__(self, dataset, site, rse=None, scope=DEFAULT_SCOPE,
-                 uuid=None, check=True, lifetime=None):
-        self.check = check
-        self.lifetime = lifetime
+                 uuid=None, check=True, lifetime=None, dry_run=False):
+        self.dataset = dataset
+        self.site = site
         if rse is None:
             rse = site
         self.rse = rse
         self.scope = scope
-        self.site = site
-        self.dataset = dataset
-        self.blocks = []
         self.uuid = uuid
+        self.check = check
+        self.lifetime = lifetime
+        self.dry_run = dry_run
+
+        self.blocks = []
+        self.url = ''
+
         self.getmetadata()
         self.get_global_url()
         self.didc = DIDClient()
+        self.repc = ReplicaClient()
+
         self.gfal = Gfal2Context()
-        self.rep = ReplicaClient()
 
     def get_file_url(self, lfn):
         """
@@ -123,32 +128,48 @@ class DatasetInjector(object):
         """
         Create the container.
         """
+
         print("registering container %s" % self.dataset)
+        if self.dry_run:
+            print(' Dry run only. Not creating container.')
+            return
+
         try:
             self.didc.add_container(scope=self.scope, name=self.dataset, lifetime=self.lifetime)
         except DataIdentifierAlreadyExists:
-            print("Container %s already exists" % self.dataset)
+            print(" Container %s already exists" % self.dataset)
 
     def register_dataset(self, block):
         """
         Create the dataset and attach them to teh container
         """
         print("registering dataset %s" % block)
+
+        if self.dry_run:
+            print(' Dry run only. Not creating dataset.')
+            return
+
         try:
             self.didc.add_dataset(scope=self.scope, name=block, lifetime=self.lifetime)
         except DataIdentifierAlreadyExists:
-            print("Dataset %s already exists" % block)
+            print(" Dataset %s already exists" % block)
+
         try:
             print("attaching dataset %s to container %s" % (block, self.dataset))
             self.didc.attach_dids(scope=self.scope, name=self.dataset,
                                   dids=[{'scope': self.scope, 'name': block}])
         except RucioException:
-            print("Dataset already attached")
+            print(" Dataset already attached")
 
     def attach_file(self, lfn, block):
         """
         Attach the file to the container
         """
+
+        if self.dry_run:
+            print(' Dry run only. Not attaching files.')
+            return
+
         try:
             print("attaching file %s" % lfn)
             self.didc.attach_dids(scope=self.scope, name=block,
@@ -161,10 +182,15 @@ class DatasetInjector(object):
         Register file replica.
         """
         print("registering file %s" % filemd['name'])
+
+        if self.dry_run:
+            print(' Dry run only. Not registering files.')
+            return
+
         if self.check:
             self.check_storage(filemd)
         if not self.check_replica(filemd['name']):
-            self.rep.add_replicas(rse=self.rse, files=[{
+            self.repc.add_replicas(rse=self.rse, files=[{
                 'scope': self.scope,
                 'name': filemd['name'],
                 'adler32': filemd['checksum'],
@@ -203,7 +229,7 @@ class DatasetInjector(object):
         """
         print("checking if file %s with scope %s has already a replica at %s"
               % (lfn, self.scope, self.rse))
-        replicas = list(self.rep.list_replicas([{'scope': self.scope, 'name': lfn}]))
+        replicas = list(self.repc.list_replicas([{'scope': self.scope, 'name': lfn}]))
         if replicas:
             replicas = replicas[0]
             if 'rses' in replicas:
@@ -229,6 +255,8 @@ def main():
     parser.add_argument('--uuid', dest='uuid', help='block UUID (default none).')
     parser.add_argument('--nocheck', dest='check', action='store_false',
                         help='do not check size and checksum of files replicas on storage.')
+    parser.add_argument('--dryrun', dest='dry_run', action='store_true',
+                        help='do not change anything in rucio, checking only')
 
     options = parser.parse_args()
 
@@ -239,6 +267,7 @@ def main():
         scope=options.scope,
         uuid=options.uuid,
         check=options.check,
+        dry_run=options.dry_run,
     )
     i.register()
 
