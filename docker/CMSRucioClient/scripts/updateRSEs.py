@@ -125,6 +125,27 @@ def PhEDEx_node_names():
 	names.sort()
 	return names
 
+def PhEDEx_node_protocol_PFN(node,protocol='srmv2', lfn='/store/cms'):
+	""" Returns a PFN for CMS top namespace for a given node/protocol pair """
+	URL = urlparse.urljoin(DATASVC_URL,'lfn2pfn')
+	payload = {'node': node, 'protocol': protocol, 'lfn': lfn}
+	RESP = session.get(url=URL, params=payload)
+	DATA = json.loads(RESP.content)
+	return DATA['phedex']['mapping'][0]['pfn']
+
+def PhEDEx_node_protocols(node):
+	""" Returns a sorted list of protocol names defined in a tfc for a given node"""
+	URL = urlparse.urljoin(DATASVC_URL,'tfc')
+	payload = {'node': node}
+	RESP = session.get(url=URL, params=payload)
+	DATA = json.loads(RESP.content)
+	protocols = []
+	for p in DATA['phedex']['storage-mapping']['array']:
+		protocols.append(p['protocol'])
+	for p in sorted(set(protocols)): 	# Eliminate duplicates
+		print ( "%s %s %s" % (node, p, PhEDEx_node_protocol_PFN(node,p)))
+	return sorted(set(protocols))
+
 # Functions involving Rucio client actions
 
 @exception_handler
@@ -170,6 +191,9 @@ if __name__ == '__main__':
 		help='append suffix to RSE names pre-generated from PhEDEx node names')
 	parser.add_argument('--node-fts-servers', default = None, \
 		help='List fts servers used by PhEDEx node (e.g. T2_PK_NCP)')
+	parser.add_argument('--node-protocols', metavar = 'NODE_NAME', \
+		help='List all protocols defined in the TFC of PhEDEx node. ')
+
 	args = parser.parse_args()
 	if args.verbose:
 		print (args)
@@ -189,14 +213,20 @@ if __name__ == '__main__':
 	if args.list_nodes:
 		nodes = PhEDEx_node_names()
 		for n in nodes:
-			print n, " => ", PhEDEx_node_to_RSE(n)
+			#print n, " => ", PhEDEx_node_to_RSE(n) # Translate to RSE names
+			print n
 
 	if args.node_fts_servers:
 		servers = PhEDEx_node_FTS_servers(args.node_fts_servers)
 		print "FTS servers used by " + args.node_fts_servers + ' PhEDEx node:'
 		for s in servers:
 			print s 
-					
+		sys.exit()
+
+	if args.node_protocols:
+		PhEDEx_node_protocols(args.node_protocols)
+		sys.exit()
+
 	# Handle RSE additions
 
 	if args.add_rse:
