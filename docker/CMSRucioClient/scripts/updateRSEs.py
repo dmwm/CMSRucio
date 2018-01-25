@@ -6,6 +6,7 @@
 import argparse
 import logging
 import sys
+import pprint
 
 import urlparse
 import requests
@@ -146,6 +147,14 @@ def PhEDEx_node_protocols(node):
 		print ( "%s %s %s" % (node, p, PhEDEx_node_protocol_PFN(node,p)))
 	return sorted(set(protocols))
 
+def PhEDEx_link_attributes(source, dest):
+	""" Returns values of various PhEDEx link attributes"""
+	URL = urlparse.urljoin(DATASVC_URL,'links')
+	payload = {'from': source ,'to': dest}
+	RESP = session.get(url=URL, params=payload)
+	DATA = json.loads(RESP.content)
+	return DATA['phedex']['link'][0]
+
 # Functions involving Rucio client actions
 
 @exception_handler
@@ -159,6 +168,11 @@ def list_rses(client):
 	"""Prints names of existing RSEs"""
 	for rse in rse_client.list_rses():
 		print (rse['rse'])
+
+def get_rse_distance(source, dest):
+	"""Prints distance between two RSEs"""
+	return rse_client.get_distance(source, dest)
+
 
 @exception_handler
 def add_rse(client, name):
@@ -187,13 +201,16 @@ if __name__ == '__main__':
 	parser.add_argument('--add-rse', metavar='RSE_NAME|all',
 		help="""add RSE by name or for all PhEDEx nodes, using pre-generated names.
 		PhEDEx nodes with no data are ignored. Can be combined with --suffix option. """)
+	parser.add_argument('--get-rse-distance', metavar = ('SOURCE','DESTINATION'), nargs=2, \
+		help=' Get distance between two RSEs')
+	parser.add_argument('--link-attributes', metavar = ('SOURCE','DESTINATION'), nargs=2, \
+		help='Get PhEDEx link attributes')
 	parser.add_argument('--suffix', default='nrtesting', \
 		help='append suffix to RSE names pre-generated from PhEDEx node names')
 	parser.add_argument('--node-fts-servers', default = None, \
 		help='List fts servers used by PhEDEx node (e.g. T2_PK_NCP)')
 	parser.add_argument('--node-protocols', metavar = 'NODE_NAME', \
 		help='List all protocols defined in the TFC of PhEDEx node. ')
-
 	args = parser.parse_args()
 	if args.verbose:
 		print (args)
@@ -225,6 +242,16 @@ if __name__ == '__main__':
 
 	if args.node_protocols:
 		PhEDEx_node_protocols(args.node_protocols)
+		sys.exit()
+
+	if args.get_rse_distance:
+		(s,d) = args.get_rse_distance
+		pprint.pprint(get_rse_distance(s,d))
+		sys.exit()
+
+	if args.link_attributes:
+		(s,d) = args.link_attributes
+		pprint.pprint(PhEDEx_link_attributes(s,d))
 		sys.exit()
 
 	# Handle RSE additions
