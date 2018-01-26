@@ -191,23 +191,32 @@ def get_rse_distance(source, dest):
 
 def set_rse_ftsserver (rse, server):
 	""" Adds fts server to an existing RSE """
-	print "NRDEBUG: adding fts server "+server+" to RSE: "+rse
+	if args.dry_run:
+		print "DRY RUN: adding fts server "+server+" to RSE: "+rse
+		return
 
 @exception_handler
 def set_rse_distance_ranking (source, dest, value):
-	print "NRDEBUG: set distance and ranking from " + source + " to " + dest + \
-	" to: " + str(value) \
+	if args.dry_run:
+		print "DRY RUN: set distance and ranking from " + source + " to " + dest + \
+		" to: " + str(value)
+		return
 
 @exception_handler
 def set_rse_protocol(rse, node):
 	""" Gets protocol used for PhEDEx transfers at the node,
 	identifies the corresponding RSE protocol scheme and parameters
 	adds resulting protocol to a given existing rse """
-	print "NRDEBUG: adding protocol(s) used by PhEDEx node " + node + " to RSE " + rse
+	if args.dry_run:
+		print "DRY RUN: adding protocol(s) used by PhEDEx node " + node + " to RSE " + rse
+		return
 
 @exception_handler
 def add_rse(name):
 	"""Adds an rse """
+	if args.dry_run:
+		print "DRY RUN: adding RSE: " + name
+		return
 	rse_client.add_rse(name)
 	if args.verbose:
 		print "Added RSE "+name
@@ -217,7 +226,7 @@ def add_rse(name):
 
 @exception_handler
 def update_rse(rse, node):
-	#add_rse(name) # use real CMS node names
+	add_rse(rse)
 	servers=()
 	try:
 		servers = PhEDEx_node_FTS_servers(node)
@@ -225,8 +234,8 @@ def update_rse(rse, node):
 		logger.error(error)
 	for s in servers:
 		set_rse_ftsserver(rse, s)
-
 	set_rse_protocol(rse , node)
+	# Update all to/from links here ???
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser( \
@@ -235,6 +244,8 @@ if __name__ == '__main__':
 		epilog = """This is a test version use with care!""")
 	parser.add_argument('-v', '--verbose', action='store_true', \
 		help='increase output verbosity')
+	parser.add_argument('-t', '--dry-run', action='store_true', \
+		help='do not update, only printout what would have been done')
 	parser.add_argument('--test-auth', action='store_true', \
 		help='executes AccountClient.whoami (use --account option to change identity')
 	parser.add_argument('--list-nodes', action='store_true', \
@@ -242,7 +253,7 @@ if __name__ == '__main__':
 	parser.add_argument('--list-rses', action='store_true', \
 		help='list RSE names')
 	parser.add_argument('--account', default='natasha', help=' use account ')
-	parser.add_argument('--update-all',
+	parser.add_argument('--update-all',  action='store_true', \
 		help="""Add or update RSEs for all nodes known to PhEDEx.
 		Nodes with no data are ignored.""")
 	parser.add_argument('--update-link', metavar = ('FROM_NODE','TO_NODE'), nargs=2,
