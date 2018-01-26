@@ -126,6 +126,19 @@ def PhEDEx_node_names():
 	names.sort()
 	return names
 
+def PhEDEx_links():
+	""" Get a list of all links between PhEDEx nodes.
+	Filter by status=OK and kind=WAN """
+	URL = urlparse.urljoin(DATASVC_URL,'links')
+	payload = {'status': 'ok', 'kind': 'WAN'}
+	RESP = session.get(url=URL, params=payload)
+	DATA = json.loads(RESP.content)
+	links = []
+	for link in DATA['phedex']['link']:
+		if link['kind'] == 'WAN' and link['status'] == 'ok':
+			links.append(link)
+	return links
+
 def PhEDEx_node_protocol_PFN(node,protocol='srmv2', lfn='/store/cms'):
 	""" Returns a PFN for CMS top namespace for a given node/protocol pair """
 	URL = urlparse.urljoin(DATASVC_URL,'lfn2pfn')
@@ -153,7 +166,10 @@ def PhEDEx_link_attributes(source, dest):
 	payload = {'from': source ,'to': dest}
 	RESP = session.get(url=URL, params=payload)
 	DATA = json.loads(RESP.content)
-	return DATA['phedex']['link'][0]
+	if DATA['phedex']['link']:
+		return DATA['phedex']['link'][0]
+	else:
+		return None
 
 # Functions involving Rucio client actions
 
@@ -177,10 +193,12 @@ def set_rse_ftsserver (rse, server):
 	""" Adds fts server to an existing RSE """
 	print "NRDEBUG: adding fts server "+server+" to RSE: "+rse
 
-def set_distance_ranking (source, dest, value):
-	print "NRDEBUG: adding distance and ranking " + value + \
-	" from " + source + " to " + dest
+@exception_handler
+def set_rse_distance_ranking (source, dest, value):
+	print "NRDEBUG: set distance and ranking from " + source + " to " + dest + \
+	" to: " + str(value) \
 
+@exception_handler
 def set_rse_protocol(rse, node):
 	""" Gets protocol used for PhEDEx transfers at the node,
 	identifies the corresponding RSE protocol scheme and parameters
@@ -227,6 +245,10 @@ if __name__ == '__main__':
 	parser.add_argument('--update-all',
 		help="""Add or update RSEs for all nodes known to PhEDEx.
 		Nodes with no data are ignored.""")
+	parser.add_argument('--update-link', metavar = ('FROM_NODE','TO_NODE'), nargs=2,
+		help="""Create or update a given link""")
+	parser.add_argument('--update-all-links', action='store_true',
+		help="""Create or update all links""")
 	parser.add_argument('--update-rse', metavar=('RSE_NAME', 'NODE_NAME'), nargs=2,
 		help="""Add or update existing RSE using PhEDEx node names and configuration.
 		PhEDEx nodes with no data are ignored.""")
@@ -294,3 +316,14 @@ if __name__ == '__main__':
 			# Use PhEDEx_node_to_RSE(n) as second arg to name RSE other than
 			# real PhEDEx node names
 			update_rse(n,n)
+
+	# Handle links:
+
+	if args.update_link:
+		(s,d) = args.update_link
+		info = PhEDEx_link_attributes (s,d)
+		set_rse_distance_ranking (s, d, info['distance'])
+	
+	if args.update_all_links:
+		for link in PhEDEx_links():
+			set_rse_distance_ranking (link['from'], link['to'], link['distance'])
