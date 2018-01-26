@@ -164,7 +164,7 @@ def whoami ( account = 'natasha', auth_type='x509_proxy'):
 	account_client = AccountClient(account=account, auth_type='x509_proxy')
 	print("Connected to rucio as %s" % account_client.whoami()['account'])
 
-def list_rses(client):
+def list_rses():
 	"""Prints names of existing RSEs"""
 	for rse in rse_client.list_rses():
 		print (rse['rse'])
@@ -173,9 +173,22 @@ def get_rse_distance(source, dest):
 	"""Prints distance between two RSEs"""
 	return rse_client.get_distance(source, dest)
 
+def set_rse_ftsserver (rse, server):
+	""" Adds fts server to an existing RSE """
+	print "NRDEBUG: adding fts server "+server+" to RSE: "+rse
+
+def set_distance_ranking (source, dest, value):
+	print "NRDEBUG: adding distance and ranking " + value + \
+	" from " + source + " to " + dest
+
+def set_rse_protocol(rse, node):
+	""" Gets protocol used for PhEDEx transfers at the node,
+	identifies the corresponding RSE protocol scheme and parameters
+	adds resulting protocol to a given existing rse """
+	print "NRDEBUG: adding protocol(s) used by PhEDEx node " + node + " to RSE " + rse
 
 @exception_handler
-def add_rse(client, name):
+def add_rse(name):
 	"""Adds an rse """
 	rse_client.add_rse(name)
 	if args.verbose:
@@ -183,6 +196,19 @@ def add_rse(client, name):
 		info=rse_client.get_rse(name)
 		for q,v in info.iteritems():
 			print q+" :  ",v
+
+@exception_handler
+def update_rse(rse, node):
+	#add_rse(name) # use real CMS node names
+	servers=()
+	try:
+		servers = PhEDEx_node_FTS_servers(node)
+	except AssertionError as error:
+		logger.error(error)
+	for s in servers:
+		set_rse_ftsserver(rse, s)
+
+	set_rse_protocol(rse , node)
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser( \
@@ -198,9 +224,12 @@ if __name__ == '__main__':
 	parser.add_argument('--list-rses', action='store_true', \
 		help='list RSE names')
 	parser.add_argument('--account', default='natasha', help=' use account ')
-	parser.add_argument('--add-rse', metavar='RSE_NAME|all',
-		help="""add RSE by name or for all PhEDEx nodes, using pre-generated names.
-		PhEDEx nodes with no data are ignored. Can be combined with --suffix option. """)
+	parser.add_argument('--update-all',
+		help="""Add or update RSEs for all nodes known to PhEDEx.
+		Nodes with no data are ignored.""")
+	parser.add_argument('--update-rse', metavar=('RSE_NAME', 'NODE_NAME'), nargs=2,
+		help="""Add or update existing RSE using PhEDEx node names and configuration.
+		PhEDEx nodes with no data are ignored.""")
 	parser.add_argument('--get-rse-distance', metavar = ('SOURCE','DESTINATION'), nargs=2, \
 		help=' Get distance between two RSEs')
 	parser.add_argument('--link-attributes', metavar = ('SOURCE','DESTINATION'), nargs=2, \
@@ -225,7 +254,7 @@ if __name__ == '__main__':
 	rse_client = RSEClient(account=args.account, auth_type='x509_proxy')
 
 	if args.list_rses:
-		list_rses(rse_client)
+		list_rses()
 
 	if args.list_nodes:
 		nodes = PhEDEx_node_names()
@@ -254,21 +283,14 @@ if __name__ == '__main__':
 		pprint.pprint(PhEDEx_link_attributes(s,d))
 		sys.exit()
 
-	# Handle RSE additions
+	# Handle RSE additions and configuration update
 
-	if args.add_rse:
-		if args.add_rse == 'all':
-			for n in PhEDEx_node_names():
-				#print "Adding RSE " +  PhEDEx_node_to_RSE(n)  # for test only
-				#add_rse(rse_client,  PhEDEx_node_to_RSE(n))
-				# Print out FTS server for each node: 
-				print "=================== FTS servers used by " + n + " :"
-				try:
-					servers = PhEDEx_node_FTS_servers(n)
-				except AssertionError as error:
-					logger.error(error)
-				for s in servers:
-					print s
-		else:
-			#print "Adding RSE " +  PhEDEx_node_to_RSE(args.add_rse)  # for test only
-			add_rse(rse_client, PhEDEx_node_to_RSE(args.add_rse))
+	if args.update_rse:
+		(rse,node) = args.update_rse
+		update_rse(rse, node)
+
+	if args.update_all:
+		for n in PhEDEx_node_names():
+			# Use PhEDEx_node_to_RSE(n) as second arg to name RSE other than
+			# real PhEDEx node names
+			update_rse(n,n)
