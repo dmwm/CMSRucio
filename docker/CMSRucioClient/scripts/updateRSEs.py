@@ -26,7 +26,22 @@ session.verify=('/etc/grid-security/certificates')
 
 DATASVC_URL = 'http://cmsweb.cern.ch/phedex/datasvc/json/prod/'
 # Pre-compiled regex for PhEDEx returned data: 
-prog = re.compile('.* -service (.*?) .*') 
+prog = re.compile('.* -service (.*?) .*')
+gsiftp_scheme = re.compile('(gsiftp)://(.+?):?(\d+)?/?(/.*)')
+srm_scheme = re.compile('(srm)://(.+?):(\d+)?(.*=)?(/.*)')
+
+# To exclude RSEs that already have defined protocols and scheme:
+exclude_rse = (
+'T2_FR_GRIF_IRFU',
+'T2_FR_GRIF_LLR',
+'T2_FR_GRIF_LLR_preprod',
+'T2_IT_PISA_NRTESTING',
+'T2_IT_Pisa',
+'T2_US_NEBRASKA_SCRATCHDISK',
+'T2_US_NEBRASKA_USERDISK',
+'T2_US_UCSD',
+'T3_IT_PERUGIA',
+)
 
 def setup_logger(logger):
 	""" Code borrowed from bin/rucio-admin
@@ -78,6 +93,13 @@ def exception_handler(function):
 	return new_funct
 
 # Functions for getting PhEDEx information: 
+
+def PhEDEx_node_exists(node):
+	"""Check existence"""
+	if node in PhEDEx_node_names():
+		return True
+	else:
+		return False
 
 def PhEDEx_node_to_RSE(node):
 	""" Translates PhEDEx node names to RSE names. 
@@ -139,7 +161,7 @@ def PhEDEx_links():
 			links.append(link)
 	return links
 
-def PhEDEx_node_protocol_PFN(node,protocol='srmv2', lfn='/store/cms'):
+def PhEDEx_node_protocol_PFN(node,protocol='srmv2', lfn='/store/test/rucio'):
 	""" Returns a PFN for CMS top namespace for a given node/protocol pair """
 	URL = urlparse.urljoin(DATASVC_URL,'lfn2pfn')
 	payload = {'node': node, 'protocol': protocol, 'lfn': lfn}
@@ -171,6 +193,30 @@ def PhEDEx_link_attributes(source, dest):
 	else:
 		return None
 
+def PFN_to_protocol_attributes(pfn):
+	proto = {}
+	if srm_scheme.match(pfn):
+		(scheme, hostname, port, web_service_path, prefix) = \
+			srm_scheme.match(pfn).groups()
+		proto = {'hostname': hostname,
+				 'scheme': scheme,
+				 'impl': 'rucio.rse.protocols.gfalv2.Default',
+				 'prefix': prefix,
+				 'port': port}
+		if port:
+			proto['port'] = port
+		proto['extended_attributes'] = {'space_token': 'CMS',
+										'web_service_path': web_service_path}
+	if gsiftp_scheme.match(pfn):
+		(scheme, hostname, port, prefix) = gsiftp_scheme.match(pfn).groups()
+		proto = {'hostname': hostname,
+				 'scheme': scheme,
+				 'impl': 'rucio.rse.protocols.gfalv2.Default',
+				 'prefix': prefix,
+				 'port': port}
+		proto['port'] = '0' if not port else port
+	return proto
+
 # Functions involving Rucio client actions
 
 @exception_handler
@@ -180,20 +226,24 @@ def whoami ( account = 'natasha', auth_type='x509_proxy'):
 	account_client = AccountClient(account=account, auth_type='x509_proxy')
 	print("Connected to rucio as %s" % account_client.whoami()['account'])
 
+@exception_handler
 def list_rses():
 	"""Prints names of existing RSEs"""
 	for rse in rse_client.list_rses():
 		print (rse['rse'])
 
+@exception_handler
 def get_rse_distance(source, dest):
 	"""Prints distance between two RSEs"""
 	return rse_client.get_distance(source, dest)
 
+@exception_handler
 def set_rse_ftsserver (rse, server):
 	""" Adds fts server to an existing RSE """
 	if args.dry_run:
 		print "DRY RUN: adding fts server "+server+" to RSE: "+rse
 		return
+	rse_client.add_rse_attribute(rse = rse, key = 'fts', value = server)
 
 @exception_handler
 def set_rse_distance_ranking (source, dest, value):
@@ -206,10 +256,20 @@ def set_rse_distance_ranking (source, dest, value):
 def set_rse_protocol(rse, node):
 	""" Gets protocol used for PhEDEx transfers at the node,
 	identifies the corresponding RSE protocol scheme and parameters
-	adds resulting protocol to a given existing rse """
+	adds resulting protocol to a given existing rse
+	Set lfn2pfn_algorithm attribute"""
+	algo = 'identity'
+	pfn = PhEDEx_node_protocol_PFN (node)
+	proto = PFN_to_protocol_attributes(pfn)
 	if args.dry_run:
-		print "DRY RUN: adding protocol(s) used by PhEDEx node " + node + " to RSE " + rse
+		print "DRY RUN: set protocol for " + rse
+		print "DRY RUN: set " + rse + " lfn2pfn_algorithm attribute to " + algo
+		print "DRY RUN: set protocol: "
+		pprint.pprint(proto)
 		return
+
+	rse_client.add_rse_attribute(rse=rse, key='lfn2pfn_algorithm', value=algo)
+	rse_client.add_protocol(rse, proto)
 
 @exception_handler
 def add_rse(name):
@@ -226,6 +286,11 @@ def add_rse(name):
 
 @exception_handler
 def update_rse(rse, node):
+	# Exclude RSEs that are already manually set up
+	if rse in exclude_rse:
+		print "update_rse: skip excluded "  + rse
+		return
+
 	add_rse(rse)
 	servers=()
 	try:
@@ -273,6 +338,8 @@ if __name__ == '__main__':
 		help='List fts servers used by PhEDEx node (e.g. T2_PK_NCP)')
 	parser.add_argument('--node-protocols', metavar = 'NODE_NAME', \
 		help='List all protocols defined in the TFC of PhEDEx node. ')
+	parser.add_argument('--node-pfn', metavar = 'NODE_NAME', \
+		help='Get PFN for /store/test/rucio on  PhEDEx node (srmv2 protocol) ')
 	args = parser.parse_args()
 	if args.verbose:
 		print (args)
@@ -280,20 +347,24 @@ if __name__ == '__main__':
 	logger = logging.getLogger("user")
 	setup_logger(logger)
 
-	if args.test_auth:
-		whoami(account=args.account)
-
-	# create re-usable RSE client connection:
-	rse_client = RSEClient(account=args.account, auth_type='x509_proxy')
-
-	if args.list_rses:
-		list_rses()
+	# Handle PhEDEx queries:
+	if args.node_pfn:
+		node = args.node_pfn
+		if not PhEDEx_node_exists(node):
+			print "Unknown node: " + node 
+			sys.exit(2)
+		pfn = PhEDEx_node_protocol_PFN(node)
+		proto = PFN_to_protocol_attributes(pfn)
+		print "=== NODE:  " + node + "\n=== PFN:   " + pfn + "\n=== PROTO: "
+		pprint.pprint(proto)
+		sys.exit()
 
 	if args.list_nodes:
 		nodes = PhEDEx_node_names()
 		for n in nodes:
 			#print n, " => ", PhEDEx_node_to_RSE(n) # Translate to RSE names
 			print n
+		sys.exit()
 
 	if args.node_fts_servers:
 		servers = PhEDEx_node_FTS_servers(args.node_fts_servers)
@@ -305,6 +376,15 @@ if __name__ == '__main__':
 	if args.node_protocols:
 		PhEDEx_node_protocols(args.node_protocols)
 		sys.exit()
+
+	if args.test_auth:
+		whoami(account=args.account)
+
+	# create re-usable RSE client connection:
+	rse_client = RSEClient(account=args.account, auth_type='x509_proxy')
+
+	if args.list_rses:
+		list_rses()
 
 	if args.get_rse_distance:
 		(s,d) = args.get_rse_distance
@@ -324,7 +404,7 @@ if __name__ == '__main__':
 
 	if args.update_all:
 		for n in PhEDEx_node_names():
-			# Use PhEDEx_node_to_RSE(n) as second arg to name RSE other than
+			# Use PhEDEx_node_to_RSE(n) to use custom RSE names rather than
 			# real PhEDEx node names
 			update_rse(n,n)
 
