@@ -251,6 +251,10 @@ def set_rse_distance_ranking (source, dest, value):
 		print "DRY RUN: set distance and ranking from " + source + " to " + dest + \
 		" to: " + str(value)
 		return
+	# FIXME: update distance if already exists
+	# Set both distance and ranking to the same value of PhEDEx link distance:
+	params = {'distance': int(value), 'ranking': int(value)}
+	rse_client.add_distance(source, dest, params)
 
 @exception_handler
 def set_rse_protocol(rse, node):
@@ -261,6 +265,8 @@ def set_rse_protocol(rse, node):
 	algo = 'identity'
 	pfn = PhEDEx_node_protocol_PFN (node)
 	proto = PFN_to_protocol_attributes(pfn)
+	# Allow remote read/write/delete access:
+	proto['domains'] = {"wan": {"read": 1, "write": 1, "delete": 1, "third_party_copy": 1}}
 	if args.dry_run:
 		print "DRY RUN: set protocol for " + rse
 		print "DRY RUN: set " + rse + " lfn2pfn_algorithm attribute to " + algo
