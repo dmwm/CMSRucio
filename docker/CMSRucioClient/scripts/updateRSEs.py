@@ -36,7 +36,6 @@ exclude_rse = (
 'T2_FR_GRIF_LLR',
 'T2_FR_GRIF_LLR_preprod',
 'T2_IT_PISA_NRTESTING',
-'T2_IT_Pisa',
 'T2_US_NEBRASKA_SCRATCHDISK',
 'T2_US_NEBRASKA_USERDISK',
 'T2_US_UCSD',
@@ -126,11 +125,10 @@ def PhEDEx_node_FTS_servers(node):
 	for agent in DATA['phedex']['agent']:
 		for log in agent['log']:
 			for message in log['message'].values():
-				assert ('-backend FTS3' in message), \
-					"FTS3 backend is not configured for " + node
-				result = prog.match (message)
-				if result:
-					servers[result.group(1)] = True
+				if ( '-backend FTS3' in message ):
+					result = prog.match (message)
+					if result:
+						servers[result.group(1)] = True
 	return servers.keys()
 
 # Functions for translating information to Rucio standards
@@ -205,7 +203,7 @@ def PFN_to_protocol_attributes(pfn):
 				 'port': port}
 		if port:
 			proto['port'] = port
-		proto['extended_attributes'] = {'space_token': 'CMS',
+		proto['extended_attributes'] = {'space_token': None,
 										'web_service_path': web_service_path}
 	if gsiftp_scheme.match(pfn):
 		(scheme, hostname, port, prefix) = gsiftp_scheme.match(pfn).groups()
@@ -238,8 +236,8 @@ def get_rse_distance(source, dest):
 	return rse_client.get_distance(source, dest)
 
 @exception_handler
-def set_rse_ftsserver (rse, server):
-	""" Adds fts server to an existing RSE """
+def set_rse_ftsserver (rse, server='https://fts3.cern.ch:8446'):
+	""" Adds fts server to an existing RSE , use CERN server by default"""
 	if args.dry_run:
 		print "DRY RUN: adding fts server "+server+" to RSE: "+rse
 		return
@@ -298,13 +296,7 @@ def update_rse(rse, node):
 		return
 
 	add_rse(rse)
-	servers=()
-	try:
-		servers = PhEDEx_node_FTS_servers(node)
-	except AssertionError as error:
-		logger.error(error)
-	for s in servers:
-		set_rse_ftsserver(rse, s)
+	set_rse_ftsserver(rse) # using default server for all RSEs due to proxy delegation
 	set_rse_protocol(rse , node)
 	# Update all to/from links here ???
 
