@@ -1,0 +1,2 @@
+*/10  * * * *  /bin/bash /RSEtest/docker/CMSRucioClient/scripts/test-rucio-auth.sh >>  /RSEtest/LOGS/test-rucio-auth.02-08-2018.log 2>&1 
+* * * * * touch /RSEtest/LOGS/crontab-alive-test
