@@ -1,18 +1,15 @@
 # Test authentication alternating two rucio servers
 # Intended for a continuous execution by cron logging all attempts 
 # to a local log file e.g. in /RSEtest/LOGS/ . 
-echo ========  Testing Rucio authentication  =========
+srv1='https://rucio-cms.grid.uchicago.edu:443'
+srv2='https://fermicloud055.fnal.gov:443'
+echo "======== test Rucio server access ========="
 echo $0
 date
-mv -f  /opt/rucio/etc/rucio.cfg /opt/rucio/etc/rucio.cfg.bak
-ln -s /opt/rucio/etc/rucio.cfg.unichicago /opt/rucio/etc/rucio.cfg 
-grep rucio_host /opt/rucio/etc/rucio.cfg
+echo host1:  $srv1
 X509_USER_PROXY=/tmp/x509up_u0 grid-proxy-info -subject -path -timeleft
-X509_USER_PROXY=/tmp/x509up_u0 /RSEtest/docker/CMSRucioClient/scripts/updateRSEs.py --test-auth 
-rm -f /opt/rucio/etc/rucio.cfg
-ln -s /opt/rucio/etc/rucio.cfg.fermilab /opt/rucio/etc/rucio.cfg
+X509_USER_PROXY=/tmp/x509up_u0 /usr/bin/rucio --host $srv1 --auth-host $srv1 -a natasha 'whoami'
 date
-grep rucio_host /opt/rucio/etc/rucio.cfg
+echo host2:  $srv2
 X509_USER_PROXY=/tmp/x509up grid-proxy-info -subject -path -timeleft
-X509_USER_PROXY=/tmp/x509up /RSEtest/docker/CMSRucioClient/scripts/updateRSEs.py --test-auth 
-mv -f  /opt/rucio/etc/rucio.cfg.bak /opt/rucio/etc/rucio.cfg
+X509_USER_PROXY=/tmp/x509up /usr/bin/rucio --host $srv2 --auth-host $srv2 -a natasha 'whoami'
