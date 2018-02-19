@@ -239,8 +239,11 @@ class DatasetSync(object):
             return
 
         if self.check:
+            filtered_replicas = []
             for filemd in replicas:
-                self.check_storage(filemd)
+                if self.check_storage(filemd):
+                    filtered_replicas.append(filemd)
+            replicas = filtered_replicas
 
         self.repc.add_replicas(rse=self.rse, files=[{
                 'scope': self.scope,
@@ -337,15 +340,20 @@ def main():
                         help="limit on the number of datasets to attempt sync")
     parser.add_argument('--pool', dest='pool', default=5, type=int,
                         help="number of helper processes to use.")
+    parser.add_argument('--dataset', dest='dataset', action='append',
+                        help='specific datasets to sync')
 
     options = parser.parse_args()
 
     pool = multiprocessing.Pool(options.pool)
 
+    datasets = options.dataset
     limit = options.limit
     count = 0
     futures = []
-    for dataset in get_node_datasets(options.site):
+    if not datasets:
+        datasets = get_node_datasets(options.site)
+    for dataset in datasets:
         count += 1
         if limit > 0 and count >= limit:
             break
