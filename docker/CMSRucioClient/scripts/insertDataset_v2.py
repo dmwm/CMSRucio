@@ -119,9 +119,12 @@ class DatasetInjector(object):
         self.register_container()
         for block in self.blocks:
             self.register_dataset(block['name'])
-            for filemd in block['files']:
-                self.register_replica(filemd)
-                self.attach_file(filemd['name'], block['name'])
+
+            self.register_replicas(block['files'])
+            self.attach_files([filemd['name'] for filemd in block['files']], block['name'])
+            # for filemd in block['files']:
+            #     self.register_replica(filemd)
+            #     self.attach_file(filemd['name'], block['name'])
         print("All datasets, blocks and files registered")
 
     def register_container(self):
@@ -143,7 +146,6 @@ class DatasetInjector(object):
         """
         Create the dataset and attach them to teh container
         """
-        print("registering dataset %s" % block)
 
         if self.dry_run:
             print(' Dry run only. Not creating dataset.')
@@ -151,15 +153,16 @@ class DatasetInjector(object):
 
         try:
             self.didc.add_dataset(scope=self.scope, name=block, lifetime=self.lifetime)
+            print("registered dataset %s" % block)
         except DataIdentifierAlreadyExists:
-            print(" Dataset %s already exists" % block)
+            pass
 
         try:
-            print("attaching dataset %s to container %s" % (block, self.dataset))
             self.didc.attach_dids(scope=self.scope, name=self.dataset,
                                   dids=[{'scope': self.scope, 'name': block}])
+            print("attaching dataset %s to container %s" % (block, self.dataset))
         except RucioException:
-            print(" Dataset already attached")
+            pass
 
     def attach_file(self, lfn, block):
         """
@@ -177,6 +180,24 @@ class DatasetInjector(object):
         except FileAlreadyExists:
             print("File already attached")
 
+    def attach_files(self, lfns, block):
+        """
+        Attach the file to the container
+        """
+        if not lfns:
+            print('lfns is empty for %s. Moving on.' % block)
+            return
+        if self.dry_run:
+            print(' Dry run only. Not attaching files.')
+            return
+
+        try:
+            self.didc.attach_dids(scope=self.scope, name=block,
+                                  dids=[{'scope': self.scope, 'name': lfn} for lfn in lfns])
+            print("attached %s files to %s" % (len(lfns), block))
+        except FileAlreadyExists:
+            pass
+
     def register_replica(self, filemd):
         """
         Register file replica.
@@ -190,13 +211,39 @@ class DatasetInjector(object):
         if self.check:
             self.check_storage(filemd)
         if not self.check_replica(filemd['name']):
+            import pdb
+            # pdb.set_trace()
             self.repc.add_replicas(rse=self.rse, files=[{
                 'scope': self.scope,
                 'name': filemd['name'],
                 'adler32': filemd['checksum'],
                 'bytes': filemd['size'],
-                'pfn': self.get_file_url(filemd['name'])
+                # 'pfn': self.get_file_url(filemd['name'])
             }])
+
+    def register_replicas(self, replicas):
+        """
+        Register file replica.
+        """
+        if not replicas:
+            return
+
+        print("registering %s files in Rucio" % len([filemd['name'] for filemd in replicas]))
+
+        if self.dry_run:
+            print(' Dry run only. Not registering files.')
+            return
+
+        if self.check:
+            for filemd in replicas:
+                self.check_storage(filemd)
+
+        self.repc.add_replicas(rse=self.rse, files=[{
+                'scope': self.scope,
+                'name': filemd['name'],
+                'adler32': filemd['checksum'],
+                'bytes': filemd['size'],
+               } for filemd in replicas])
 
     def check_storage(self, filemd):
         """
