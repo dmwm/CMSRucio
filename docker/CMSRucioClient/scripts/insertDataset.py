@@ -5,17 +5,12 @@ Command line tool for registering a CMS dataset into rucio
 
 from __future__ import absolute_import, division, print_function
 
-import json
-from subprocess import Popen, PIPE
 import re
 from argparse import ArgumentParser
 
-from gfal2 import Gfal2Context, GError
 import rucio.rse.rsemanager as rsemgr
-from rucio.client.didclient import DIDClient
-from rucio.client.replicaclient import ReplicaClient
-from rucio.common.exception import DataIdentifierAlreadyExists
-from rucio.common.exception import RucioException
+from CMSRucio import CMSRucio, das_go_client
+from gfal2 import GError, Gfal2Context
 from rucio.common.exception import FileAlreadyExists
 
 DEFAULT_SCOPE = 'cms'
@@ -23,42 +18,30 @@ DEFAULT_SCOPE = 'cms'
 DEBUG_FLAG = False
 
 
-def das_go_client(query):
-    """
-    just wrapping the dasgoclient command line
-    """
-    proc = Popen(['dasgoclient', '-query=%s' % query, '-json'], stdout=PIPE)
-    output = proc.communicate()[0]
-    if DEBUG_FLAG:
-        print('DEBUG:' + output)
-    return json.loads(output)
-
-
-class DatasetInjector(object):
+class DatasetInjector(CMSRucio):
     """
     General Class for injecting a cms dataset in rucio
     """
 
     def __init__(self, dataset, site, rse=None, scope=DEFAULT_SCOPE,
                  uuid=None, check=True, lifetime=None, dry_run=False):
+
+        super(DatasetInjector, self).__init__(account=None, auth_type=None, scope=scope, dry_run=dry_run)
+
         self.dataset = dataset
         self.site = site
         if rse is None:
             rse = site
         self.rse = rse
-        self.scope = scope
         self.uuid = uuid
         self.check = check
         self.lifetime = lifetime
-        self.dry_run = dry_run
 
         self.blocks = []
         self.url = ''
 
         self.getmetadata()
         self.get_global_url()
-        self.didc = DIDClient()
-        self.repc = ReplicaClient()
 
         self.gfal = Gfal2Context()
 
@@ -116,134 +99,13 @@ class DatasetInjector(object):
         Create the container, the  datasets and attach them to the container.
         """
         print("Registering...")
-        self.register_container()
+        self.register_container(dataset=self.dataset, lifetime=self.lifetime)
         for block in self.blocks:
-            self.register_dataset(block['name'])
+            self.register_dataset(block['name'], dataset=self.dataset, lifetime=self.lifetime)
 
-            self.register_replicas(block['files'])
+            self.register_replicas(rse=self.rse, replicas=block['files'])
             self.attach_files([filemd['name'] for filemd in block['files']], block['name'])
-            # for filemd in block['files']:
-            #     self.register_replica(filemd)
-            #     self.attach_file(filemd['name'], block['name'])
         print("All datasets, blocks and files registered")
-
-    def register_container(self):
-        """
-        Create the container.
-        """
-
-        print("registering container %s" % self.dataset)
-        if self.dry_run:
-            print(' Dry run only. Not creating container.')
-            return
-
-        try:
-            self.didc.add_container(scope=self.scope, name=self.dataset, lifetime=self.lifetime)
-        except DataIdentifierAlreadyExists:
-            print(" Container %s already exists" % self.dataset)
-
-    def register_dataset(self, block):
-        """
-        Create the dataset and attach them to teh container
-        """
-
-        if self.dry_run:
-            print(' Dry run only. Not creating dataset.')
-            return
-
-        try:
-            self.didc.add_dataset(scope=self.scope, name=block, lifetime=self.lifetime)
-            print("registered dataset %s" % block)
-        except DataIdentifierAlreadyExists:
-            pass
-
-        try:
-            self.didc.attach_dids(scope=self.scope, name=self.dataset,
-                                  dids=[{'scope': self.scope, 'name': block}])
-            print("attaching dataset %s to container %s" % (block, self.dataset))
-        except RucioException:
-            pass
-
-    def attach_file(self, lfn, block):
-        """
-        Attach the file to the container
-        """
-
-        if self.dry_run:
-            print(' Dry run only. Not attaching files.')
-            return
-
-        try:
-            print("attaching file %s" % lfn)
-            self.didc.attach_dids(scope=self.scope, name=block,
-                                  dids=[{'scope': self.scope, 'name': lfn}])
-        except FileAlreadyExists:
-            print("File already attached")
-
-    def attach_files(self, lfns, block):
-        """
-        Attach the file to the container
-        """
-        if not lfns:
-            print('lfns is empty for %s. Moving on.' % block)
-            return
-        if self.dry_run:
-            print(' Dry run only. Not attaching files.')
-            return
-
-        try:
-            self.didc.attach_dids(scope=self.scope, name=block,
-                                  dids=[{'scope': self.scope, 'name': lfn} for lfn in lfns])
-            print("attached %s files to %s" % (len(lfns), block))
-        except FileAlreadyExists:
-            pass
-
-    def register_replica(self, filemd):
-        """
-        Register file replica.
-        """
-        print("registering file %s" % filemd['name'])
-
-        if self.dry_run:
-            print(' Dry run only. Not registering files.')
-            return
-
-        if self.check:
-            self.check_storage(filemd)
-        if not self.check_replica(filemd['name']):
-            import pdb
-            # pdb.set_trace()
-            self.repc.add_replicas(rse=self.rse, files=[{
-                'scope': self.scope,
-                'name': filemd['name'],
-                'adler32': filemd['checksum'],
-                'bytes': filemd['size'],
-                # 'pfn': self.get_file_url(filemd['name'])
-            }])
-
-    def register_replicas(self, replicas):
-        """
-        Register file replica.
-        """
-        if not replicas:
-            return
-
-        print("registering %s files in Rucio" % len([filemd['name'] for filemd in replicas]))
-
-        if self.dry_run:
-            print(' Dry run only. Not registering files.')
-            return
-
-        if self.check:
-            for filemd in replicas:
-                self.check_storage(filemd)
-
-        self.repc.add_replicas(rse=self.rse, files=[{
-                'scope': self.scope,
-                'name': filemd['name'],
-                'adler32': filemd['checksum'],
-                'bytes': filemd['size'],
-               } for filemd in replicas])
 
     def check_storage(self, filemd):
         """
@@ -276,7 +138,7 @@ class DatasetInjector(object):
         """
         print("checking if file %s with scope %s has already a replica at %s"
               % (lfn, self.scope, self.rse))
-        replicas = list(self.repc.list_replicas([{'scope': self.scope, 'name': lfn}]))
+        replicas = list(self.rc.list_replicas([{'scope': self.scope, 'name': lfn}]))
         if replicas:
             replicas = replicas[0]
             if 'rses' in replicas:
@@ -295,7 +157,7 @@ def main():
     parser = ArgumentParser(description="insert a dataset, all \
                              its blocks and files and all the replicas at a give site")
     parser.add_argument('--scope', dest='scope', help='scope of the dataset (default %s).'
-                        % DEFAULT_SCOPE, default=DEFAULT_SCOPE)
+                                                      % DEFAULT_SCOPE, default=DEFAULT_SCOPE)
     parser.add_argument('--dataset', dest='dataset', help='dataset name.', required=True)
     parser.add_argument('--site', dest='site', help='CMS site name.', required=True)
     parser.add_argument('--rse', dest='rse', help='RSE name, default is CMS Site name.')
