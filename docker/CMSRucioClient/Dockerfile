@@ -11,7 +11,7 @@ RUN curl -o wlcg-repo-1.0.0-1.el7.noarch.rpm http://linuxsoft.cern.ch/wlcg/cento
 # Install sets of RPM
 RUN yum install -y which python-pip gcc krb5-devel python-devel.x86_64 gridsite \
                    lcg-CA globus-proxy-utils voms-clients-cpp wlcg-voms-cms \
-                   gfal2-python gfal2-all gfal2-utils \
+                   gfal2-python gfal2-all gfal2-util \
 #                   cvmfs cvmfs-init-scripts \
                    xrootd-client && \
     yum clean all && \
