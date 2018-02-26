@@ -22,13 +22,13 @@ from rucio.common.exception import FileAlreadyExists
 BLOCKREPLICAS_URL = "https://cmsweb.cern.ch/phedex/datasvc/json/prod/blockreplicas"
 DEBUG_FLAG = False
 DEFAULT_SCOPE = 'cms'
+DEFAULT_DASGOCLIENT='/usr/bin/dasgoclient'
 
-
-def das_go_client(query):
+def das_go_client(query, dasgoclient=DEFAULT_DASGOCLIENT):
     """
     just wrapping the dasgoclient command line
     """
-    proc = Popen(['/cvmfs/cms.cern.ch/common/dasgoclient', '-query=%s' % query, '-json'], stdout=PIPE)
+    proc = Popen([dasgoclient, '-query=%s' % query, '-json'], stdout=PIPE)
     output = proc.communicate()[0]
     if DEBUG_FLAG:
         print('DEBUG:' + output)
@@ -42,7 +42,7 @@ class DatasetSync(object):
     """
 
     def __init__(self, dataset, pnn, rse=None, scope=DEFAULT_SCOPE,
-                 check=True, lifetime=None, dry_run=False):
+                 check=True, lifetime=None, dry_run=False, dasgoclient=DEFAULT_DASGOCLIENT):
         """
            :param dataset: Name of the PhEDEx dataset to synchronize with Rucio.
            :param pnn: PhEDEx node name to filter on for replica information.
@@ -56,6 +56,7 @@ class DatasetSync(object):
         self.check = check
         self.lifetime = lifetime
         self.dry_run = dry_run
+        self.dasgoclient=dasgoclient
 
         self.rucio_datasets = {}
         self.blocks = {}
@@ -99,12 +100,12 @@ class DatasetSync(object):
         """
         print("Initializing... getting the list of blocks and files")
         blocks = das_go_client("block dataset=%s site=%s system=phedex"
-                               % (self.phedex_dataset, self.pnn))
+                               % (self.phedex_dataset, self.pnn), self.dasgoclient)
         for item in blocks:
             block_summary = {}
             block_name = item['block'][0]['name']
             files = das_go_client("file block=%s site=%s system=phedex"
-                                  % (block_name, self.pnn))
+                                  % (block_name, self.pnn), self.dasgoclient)
             for item2 in files:
                 cksum = re.match(r"adler32:([^,]+)", item2['file'][0]['checksum'])
                 cksum = cksum.group(0).split(':')[1]
@@ -302,12 +303,12 @@ def get_node_datasets(node):
     Given a PhEDEx Node Name, return a list of datasets with some
     data present.
     """
-    das_datasets = das_go_client("dataset site=%s system=phedex" % node)
+    das_datasets = das_go_client("dataset site=%s system=phedex" % node, self.dasgoclient)
     for das_dataset in das_datasets:
         yield das_dataset['dataset'][0]['name']
 
 
-def sync_one_dataset(dataset, site, rse, scope, check, dry_run):
+def sync_one_dataset(dataset, site, rse, scope, check, dry_run, dasgoclient):
     """
     Helper function for DatasetSync
     """
@@ -318,6 +319,7 @@ def sync_one_dataset(dataset, site, rse, scope, check, dry_run):
         scope=scope,
         check=check,
         dry_run=dry_run,
+        dasgoclient=dasgoclient,
     )
     instance.register()
 
@@ -342,6 +344,8 @@ def main():
                         help="number of helper processes to use.")
     parser.add_argument('--dataset', dest='dataset', action='append',
                         help='specific datasets to sync')
+    parser.add_argument('--dasgoclient', dest='dasgoclient', default=DEFAULT_DASGOCLIENT,
+                        help='full path to the dasgoclient (default %).' % DEFAULT_DASGOCLIENT)
 
     options = parser.parse_args()
 
@@ -358,7 +362,7 @@ def main():
         if limit > 0 and count >= limit:
             break
         future = pool.apply_async(sync_one_dataset, (dataset, options.site, options.rse,
-                                  options.scope, options.check, options.dry_run))
+                                  options.scope, options.check, options.dry_run, options.dasgoclient))
         futures.append((dataset, future))
     pool.close()
 
