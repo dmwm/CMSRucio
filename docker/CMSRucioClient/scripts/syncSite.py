@@ -22,7 +22,8 @@ from rucio.common.exception import FileAlreadyExists
 BLOCKREPLICAS_URL = "https://cmsweb.cern.ch/phedex/datasvc/json/prod/blockreplicas"
 DEBUG_FLAG = False
 DEFAULT_SCOPE = 'cms'
-DEFAULT_DASGOCLIENT='/usr/bin/dasgoclient'
+DEFAULT_DASGOCLIENT = '/usr/bin/dasgoclient'
+DEFAULT_LIMIT = 10
 
 def das_go_client(query, dasgoclient=DEFAULT_DASGOCLIENT):
     """
@@ -267,10 +268,13 @@ class DatasetSync(object):
             print(" Dry run only.  Not deleting replicas.")
             return
 
-        self.repc.delete_replicas(rse=self.rse, files=[{
-            'scope': self.scope,
-            'name': filemd['name'],
-           } for filemd in replicas])
+        try:
+            self.repc.delete_replicas(rse=self.rse, files=[{
+               'scope': self.scope,
+               'name': filemd['name'],
+             } for filemd in replicas])
+        except rucio.common.exception.AccessDenied:
+            print("Permission denied in deleting replicas: %s" % ", ".join([filemd['name'] for filemd in replicas]))
 
     def check_storage(self, filemd):
         """
@@ -298,12 +302,12 @@ class DatasetSync(object):
         return True
 
 
-def get_node_datasets(node):
+def get_node_datasets(node, dasgoclient):
     """
     Given a PhEDEx Node Name, return a list of datasets with some
     data present.
     """
-    das_datasets = das_go_client("dataset site=%s system=phedex" % node, self.dasgoclient)
+    das_datasets = das_go_client("dataset site=%s system=phedex" % node, dasgoclient)
     for das_dataset in das_datasets:
         yield das_dataset['dataset'][0]['name']
 
@@ -338,14 +342,14 @@ def main():
                         help='do not check size and checksum of files replicas on storage.')
     parser.add_argument('--dryrun', dest='dry_run', action='store_true',
                         help='do not change anything in rucio, checking only')
-    parser.add_argument('--limit', dest='limit', default=10, type=int,
-                        help="limit on the number of datasets to attempt sync")
+    parser.add_argument('--limit', dest='limit', default=DEFAULT_LIMIT, type=int,
+                        help="limit on the number of datasets to attempt sync. default %s. -1 for unlimited" % DEFAULT_LIMIT)
     parser.add_argument('--pool', dest='pool', default=5, type=int,
                         help="number of helper processes to use.")
     parser.add_argument('--dataset', dest='dataset', action='append',
                         help='specific datasets to sync')
     parser.add_argument('--dasgoclient', dest='dasgoclient', default=DEFAULT_DASGOCLIENT,
-                        help='full path to the dasgoclient (default %).' % DEFAULT_DASGOCLIENT)
+                        help='full path to the dasgoclient (default %s).' % DEFAULT_DASGOCLIENT)
 
     options = parser.parse_args()
 
@@ -356,7 +360,7 @@ def main():
     count = 0
     futures = []
     if not datasets:
-        datasets = get_node_datasets(options.site)
+        datasets = get_node_datasets(options.site,options.dasgoclient)
     for dataset in datasets:
         count += 1
         if limit > 0 and count >= limit:
