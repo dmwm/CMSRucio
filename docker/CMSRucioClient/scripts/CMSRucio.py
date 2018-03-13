@@ -11,15 +11,15 @@ from rucio.client.didclient import DIDClient
 from rucio.client.replicaclient import ReplicaClient
 from rucio.common.exception import DataIdentifierAlreadyExists, FileAlreadyExists, RucioException
 
+DEBUG_FLAG = False
+DEFAULT_DASGOCLIENT = '/usr/bin/dasgoclient'
 
-def das_go_client(query):
+
+def das_go_client(query, dasgoclient=DEFAULT_DASGOCLIENT):
     """
     just wrapping the dasgoclient command line
     """
-
-    DEBUG_FLAG = False  # FIXME: Remove
-
-    proc = Popen(['dasgoclient', '-query=%s' % query, '-json'], stdout=PIPE)
+    proc = Popen([dasgoclient, '-query=%s' % query, '-json'], stdout=PIPE)
     output = proc.communicate()[0]
     if DEBUG_FLAG:
         print('DEBUG:' + output)

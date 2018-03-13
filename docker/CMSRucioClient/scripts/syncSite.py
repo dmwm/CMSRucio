@@ -10,6 +10,7 @@ import multiprocessing
 import re
 from argparse import ArgumentParser
 from subprocess import Popen, PIPE
+from CMSRucio import CMSRucio, das_go_client
 
 from gfal2 import Gfal2Context, GError
 import rucio.rse.rsemanager as rsemgr
@@ -22,19 +23,7 @@ from rucio.common.exception import FileAlreadyExists
 BLOCKREPLICAS_URL = "https://cmsweb.cern.ch/phedex/datasvc/json/prod/blockreplicas"
 DEBUG_FLAG = False
 DEFAULT_SCOPE = 'cms'
-DEFAULT_DASGOCLIENT = '/usr/bin/dasgoclient'
 DEFAULT_LIMIT = 10
-
-def das_go_client(query, dasgoclient=DEFAULT_DASGOCLIENT):
-    """
-    just wrapping the dasgoclient command line
-    """
-    proc = Popen([dasgoclient, '-query=%s' % query, '-json'], stdout=PIPE)
-    output = proc.communicate()[0]
-    if DEBUG_FLAG:
-        print('DEBUG:' + output)
-    return json.loads(output)
-
 
 class DatasetSync(object):
     """
@@ -48,15 +37,16 @@ class DatasetSync(object):
            :param dataset: Name of the PhEDEx dataset to synchronize with Rucio.
            :param pnn: PhEDEx node name to filter on for replica information.
         """
+
+        super(DatasetSync, self).__init__(account=None, auth_type=None, scope=scope, dry_run=dry_run)
+
         self.phedex_dataset = dataset
-        self.pnn = pnn 
+        self.pnn = pnn
         if rse is None:
-            rse = pnn 
+            rse = pnn
         self.rse = rse
-        self.scope = scope
         self.check = check
         self.lifetime = lifetime
-        self.dry_run = dry_run
         self.dasgoclient=dasgoclient
 
         self.rucio_datasets = {}
@@ -64,8 +54,6 @@ class DatasetSync(object):
         self.url = ''
 
         self.get_phedex_metadata()
-        self.didc = DIDClient()
-        self.repc = ReplicaClient()
         self.get_rucio_metadata()
         self.get_global_url()
 
@@ -125,7 +113,7 @@ class DatasetSync(object):
         """
         print("Initializing Rucio... getting the list of blocks and files at %s"
               % self.rse)
-        replica_info = self.repc.list_replicas([{"scope": self.scope,
+        replica_info = self.rc.list_replicas([{"scope": self.scope,
                                                  "name": self.phedex_dataset}],
                                                rse_expression="rse=%s" % self.rse)
         replica_files = set()
@@ -150,11 +138,11 @@ class DatasetSync(object):
         Create the container, the datasets and attach them to the container.
         """
         print("Registering...")
-        self.register_container()
+        self.register_container(dataset=self.dataset, lifetime=self.lifetime)
         # First, iterate through all the known PhEDEx blocks.
         for block_name, block_info in self.blocks.items():
             if block_name not in self.rucio_datasets:
-                self.register_dataset(block_name)
+                self.register_dataset(block_name, dataset=self.dataset, lifetime=self.lifetime)
             rucio_dataset_info = self.rucio_datasets.setdefault(block_name, {})
             files_to_attach = []
             for filename, filemd in block_info.items():
@@ -171,43 +159,6 @@ class DatasetSync(object):
                     replicas_to_delete.append(filemd)
             self.delete_replicas(replicas_to_delete)
         print("All datasets, blocks and files registered")
-
-    def register_container(self):
-        """
-        Create the container.
-        """
-
-        print("registering container %s:%s" % (self.scope, self.phedex_dataset))
-        if self.dry_run:
-            print(' Dry run only. Not creating container.')
-            return
-
-        try:
-            self.didc.add_container(scope=self.scope, name=self.phedex_dataset, lifetime=self.lifetime)
-        except DataIdentifierAlreadyExists:
-            print("Container %s already exists" % self.phedex_dataset)
-
-    def register_dataset(self, block):
-        """
-        Create the dataset and attach them to the container
-        """
-        print("registering dataset %s" % block)
-
-        if self.dry_run:
-            print(' Dry run only. Not creating dataset.')
-            return
-
-        try:
-            self.didc.add_dataset(scope=self.scope, name=block, lifetime=self.lifetime)
-        except DataIdentifierAlreadyExists:
-            print(" Dataset %s already exists" % block)
-
-        try:
-            print("attaching dataset %s to container %s" % (block, self.phedex_dataset))
-            self.didc.attach_dids(scope=self.scope, name=self.phedex_dataset,
-                                  dids=[{'scope': self.scope, 'name': block}])
-        except RucioException:
-            print(" Dataset already attached")
 
     def attach_files(self, lfns, block):
         """
@@ -247,7 +198,7 @@ class DatasetSync(object):
                     filtered_replicas.append(filemd)
             replicas = filtered_replicas
 
-        self.repc.add_replicas(rse=self.rse, files=[{
+        self.rc.add_replicas(rse=self.rse, files=[{
                 'scope': self.scope,
                 'name': filemd['name'],
                 'adler32': filemd['checksum'],
@@ -269,7 +220,7 @@ class DatasetSync(object):
             return
 
         try:
-            self.repc.delete_replicas(rse=self.rse, files=[{
+            self.rc.delete_replicas(rse=self.rse, files=[{
                'scope': self.scope,
                'name': filemd['name'],
              } for filemd in replicas])
