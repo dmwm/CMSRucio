@@ -10,7 +10,7 @@ import multiprocessing
 import re
 from argparse import ArgumentParser
 from subprocess import Popen, PIPE
-from CMSRucio import CMSRucio, das_go_client
+from CMSRucio import CMSRucio, das_go_client, DEFAULT_DASGOCLIENT
 
 from gfal2 import Gfal2Context, GError
 import rucio.rse.rsemanager as rsemgr
@@ -148,7 +148,7 @@ class DatasetSync(CMSRucio):
             for filename, filemd in block_info.items():
                 if filename not in rucio_dataset_info:
                     files_to_attach.append(filemd)
-            self.register_replicas(files_to_attach)
+            self.register_replicas(rse=self.rse, replicas=files_to_attach)
             self.attach_files([i['name'] for i in files_to_attach], block_name)
         # We do not detach files, but perhaps remove the replicas.
         for dataset_name, dataset_info in self.rucio_datasets.items():
@@ -157,75 +157,8 @@ class DatasetSync(CMSRucio):
             for filename, filemd in dataset_info.items():
                 if filename not in block_info:
                     replicas_to_delete.append(filemd)
-            self.delete_replicas(replicas_to_delete)
+            self.delete_replicas(rse=self.rse, replicas=replicas_to_delete)
         print("All datasets, blocks and files registered")
-
-    def attach_files(self, lfns, block):
-        """
-        Attach the file to the container
-        """
-        if not lfns:
-            return
-
-        if self.dry_run:
-            print(' Dry run only. Not attaching files.')
-            return
-
-        try:
-            print("attaching files: %s" % ", ".join(lfns))
-            self.didc.attach_dids(scope=self.scope, name=block,
-                                  dids=[{'scope': self.scope, 'name': lfn} for lfn in lfns])
-        except FileAlreadyExists:
-            print("File already attached")
-
-    def register_replicas(self, replicas):
-        """
-        Register file replica.
-        """
-        if not replicas:
-            return
-
-        print("registering files in Rucio: %s" % ", ".join([filemd['name'] for filemd in replicas]))
-
-        if self.dry_run:
-            print(' Dry run only. Not registering files.')
-            return
-
-        if self.check:
-            filtered_replicas = []
-            for filemd in replicas:
-                if self.check_storage(filemd):
-                    filtered_replicas.append(filemd)
-            replicas = filtered_replicas
-
-        self.rc.add_replicas(rse=self.rse, files=[{
-                'scope': self.scope,
-                'name': filemd['name'],
-                'adler32': filemd['checksum'],
-                'bytes': filemd['size'],
-               } for filemd in replicas])
-
-    def delete_replicas(self, replicas):
-        """
-        Delete replicas from the current RSE.
-        """
-        if not replicas:
-            return
-
-        print("Deleting files from %s in Rucio: %s" % (self.rse,
-              ", ".join([filemd['name'] for filemd in replicas])))
-
-        if self.dry_run:
-            print(" Dry run only.  Not deleting replicas.")
-            return
-
-        try:
-            self.rc.delete_replicas(rse=self.rse, files=[{
-               'scope': self.scope,
-               'name': filemd['name'],
-             } for filemd in replicas])
-        except rucio.common.exception.AccessDenied:
-            print("Permission denied in deleting replicas: %s" % ", ".join([filemd['name'] for filemd in replicas]))
 
     def check_storage(self, filemd):
         """
