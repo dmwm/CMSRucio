@@ -25,7 +25,7 @@ DEBUG_FLAG = False
 DEFAULT_SCOPE = 'cms'
 DEFAULT_LIMIT = 10
 
-class DatasetSync(object):
+class DatasetSync(CMSRucio):
     """
     Synchronize the replica of a given dataset at a PhEDEx site to
     the corresponding Rucio site.
