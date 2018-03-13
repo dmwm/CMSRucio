@@ -5,20 +5,13 @@ Command line tool for registering a CMS dataset into rucio
 
 from __future__ import absolute_import, division, print_function
 
-import json
 import multiprocessing
 import re
 from argparse import ArgumentParser
-from subprocess import Popen, PIPE
-from CMSRucio import CMSRucio, das_go_client, DEFAULT_DASGOCLIENT
 
-from gfal2 import Gfal2Context, GError
 import rucio.rse.rsemanager as rsemgr
-from rucio.client.didclient import DIDClient
-from rucio.client.replicaclient import ReplicaClient
-from rucio.common.exception import DataIdentifierAlreadyExists
-from rucio.common.exception import RucioException
-from rucio.common.exception import FileAlreadyExists
+from CMSRucio import CMSRucio, DEFAULT_DASGOCLIENT, das_go_client
+from gfal2 import GError, Gfal2Context
 
 BLOCKREPLICAS_URL = "https://cmsweb.cern.ch/phedex/datasvc/json/prod/blockreplicas"
 DEBUG_FLAG = False
