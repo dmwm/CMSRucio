@@ -20,6 +20,7 @@ RUN yum install -y which python-pip gcc krb5-devel python-devel.x86_64 gridsite 
 
 RUN echo "Bump"
 
+RUN pip install flask
 RUN pip install rucio-clients-cms
 
 # Install DAS client to pull info from PhEDEx/DBS
