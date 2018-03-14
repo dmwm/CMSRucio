@@ -11,7 +11,6 @@ from argparse import ArgumentParser
 import rucio.rse.rsemanager as rsemgr
 from CMSRucio import CMSRucio, das_go_client
 from gfal2 import GError, Gfal2Context
-from rucio.common.exception import FileAlreadyExists
 
 DEFAULT_SCOPE = 'cms'
 
@@ -26,6 +25,7 @@ class DatasetInjector(CMSRucio):
     def __init__(self, dataset, site, rse=None, scope=DEFAULT_SCOPE,
                  uuid=None, check=True, lifetime=None, dry_run=False):
 
+        # Working with default DAS Go client path
         super(DatasetInjector, self).__init__(account=None, auth_type=None, scope=scope, dry_run=dry_run)
 
         self.dataset = dataset
@@ -37,10 +37,10 @@ class DatasetInjector(CMSRucio):
         self.check = check
         self.lifetime = lifetime
 
-        self.blocks = []
         self.url = ''
 
-        self.getmetadata()
+        self.blocks = self.get_phedex_metadata(self.dataset, self.site)
+
         self.get_global_url()
 
         self.gfal = Gfal2Context()
@@ -69,42 +69,20 @@ class DatasetInjector(CMSRucio):
         self.url = url + prefix
         print("Determined base url %s" % self.url)
 
-    def getmetadata(self):
-        """
-        Gets the list of blocks at a site, their files and their metadata
-        """
-        print("Initializing... getting the list of blocks and files")
-        blocks = das_go_client("block dataset=%s site=%s system=phedex"
-                               % (self.dataset, self.site))
-        for item in blocks:
-            uuid = item['block'][0]['name'].split('#')[1]
-            if (self.uuid is None) or (uuid == self.uuid):
-                block = {'name': item['block'][0]['name'], 'files': []}
-                files = das_go_client("file block=%s site=%s system=phedex"
-                                      % (block['name'], self.site))
-                for item2 in files:
-                    cksum = re.match(r"adler32:([^,]+)", item2['file'][0]['checksum'])
-                    cksum = cksum.group(0).split(':')[1]
-                    cksum = "{0:0{1}x}".format(int(cksum, 16), 8)
-                    block['files'].append({
-                        'name': item2['file'][0]['name'],
-                        'checksum': cksum,
-                        'size': item2['file'][0]['size']
-                    })
-                self.blocks.append(block)
-        print("Initalization done.")
-
     def register(self):
         """
         Create the container, the  datasets and attach them to the container.
         """
         print("Registering...")
         self.register_container(dataset=self.dataset, lifetime=self.lifetime)
-        for block in self.blocks:
-            self.register_dataset(block['name'], dataset=self.dataset, lifetime=self.lifetime)
+        for block_name, block_info in self.blocks.items():
+            self.register_dataset(block_name, dataset=self.dataset, lifetime=self.lifetime)
+            files_to_attach = []
+            for filename, filemd in block_info.items():
+                files_to_attach.append(filemd)
+                self.register_replicas(rse=self.rse, replicas=files_to_attach)
+                self.attach_files([i['name'] for i in files_to_attach], block_name)
 
-            self.register_replicas(rse=self.rse, replicas=block['files'])
-            self.attach_files([filemd['name'] for filemd in block['files']], block['name'])
         print("All datasets, blocks and files registered")
 
     def check_storage(self, filemd):
