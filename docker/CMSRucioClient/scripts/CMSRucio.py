@@ -12,10 +12,36 @@ from rucio.client.replicaclient import ReplicaClient
 from rucio.common.exception import (DataIdentifierAlreadyExists, FileAlreadyExists, RucioException,
                                     AccessDenied)
 
+#import urllib2
+#from ssl import (create_default_context, CERT_NONE)
+import requests
+
+
 DEBUG_FLAG = False
 DEFAULT_DASGOCLIENT = '/usr/bin/dasgoclient'
 
+DEFAULT_PHEDEX_INST = 'prod'
+DEFAULT_DATASVC_URL = 'https://cmsweb.cern.ch/phedex/datasvc/json'
 
+def datasvc_client(call, options, instance=DEFAULT_PHEDEX_INST, url=DEFAULT_DATASVC_URL):
+    """
+    just wrapping a call to datasvc apis
+    """
+    url = DEFAULT_DATASVC_URL + '/' + DEFAULT_PHEDEX_INST
+    url += '/' + call + '?'
+    url += '&'.join({opt + '=' + val for opt, val in options.items()})
+
+    r = requests.get(url, allow_redirects=False,verify=False)
+
+    if(DEBUG_FLAG):
+       print('DEBUG:' + str(r.status_code))
+       print('DEBUG:' + r.text)
+
+    if(r.status_code != 200):
+       raise Exception('Request Failed')     
+
+    return json.loads(r.text) 
+   
 def das_go_client(query, dasgoclient=DEFAULT_DASGOCLIENT):
     """
     just wrapping the dasgoclient command line

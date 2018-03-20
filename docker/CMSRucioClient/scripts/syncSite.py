@@ -33,6 +33,7 @@ class DatasetSync(CMSRucio):
 
         super(DatasetSync, self).__init__(account=None, auth_type=None, scope=scope, dry_run=dry_run)
 
+	self.dataset = dataset
         self.phedex_dataset = dataset
         self.pnn = pnn
         if rse is None:
