@@ -9,17 +9,18 @@ from subprocess import PIPE, Popen
 
 from rucio.client.didclient import DIDClient
 from rucio.client.replicaclient import ReplicaClient
-from rucio.common.exception import DataIdentifierAlreadyExists, FileAlreadyExists, RucioException
+from rucio.common.exception import (DataIdentifierAlreadyExists, FileAlreadyExists, RucioException,
+                                    AccessDenied)
+
+DEBUG_FLAG = False
+DEFAULT_DASGOCLIENT = '/usr/bin/dasgoclient'
 
 
-def das_go_client(query):
+def das_go_client(query, dasgoclient=DEFAULT_DASGOCLIENT):
     """
     just wrapping the dasgoclient command line
     """
-
-    DEBUG_FLAG = False  # FIXME: Remove
-
-    proc = Popen(['dasgoclient', '-query=%s' % query, '-json'], stdout=PIPE)
+    proc = Popen([dasgoclient, '-query=%s' % query, '-json'], stdout=PIPE)
     output = proc.communicate()[0]
     if DEBUG_FLAG:
         print('DEBUG:' + output)
@@ -204,12 +205,35 @@ class CMSRucio(object):
             return
 
         if self.check:
+            filtered_replicas = []
             for filemd in replicas:
-                self.check_storage(filemd)
+                if self.check_storage(filemd):
+                    filtered_replicas.append(filemd)
+            replicas = filtered_replicas
 
         self.rc.add_replicas(rse=rse, files=[{'scope': self.scope, 'name': filemd['name'],
                                               'adler32': filemd['checksum'], 'bytes': filemd['size'],
                                               } for filemd in replicas])
+
+    def delete_replicas(self, rse, replicas):
+        """
+        Delete replicas from the current RSE.
+        """
+        if not replicas:
+            return
+
+        print("Deleting files from %s in Rucio: %s" % (self.rse,
+              ", ".join([filemd['name'] for filemd in replicas])))
+
+        if self.dry_run:
+            print(" Dry run only.  Not deleting replicas.")
+            return
+
+        try:
+            self.rc.delete_replicas(rse=rse, files=[{'scope': self.scope,'name': filemd['name'],}
+                                                    for filemd in replicas])
+        except rucio.common.exception.AccessDenied:
+            print("Permission denied in deleting replicas: %s" % ", ".join([filemd['name'] for filemd in replicas]))
 
     def register_dataset(self, block, dataset, lifetime=None):
         """
