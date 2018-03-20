@@ -31,7 +31,8 @@ class DatasetSync(CMSRucio):
            :param pnn: PhEDEx node name to filter on for replica information.
         """
 
-        super(DatasetSync, self).__init__(account=None, auth_type=None, scope=scope, dry_run=dry_run)
+        super(DatasetSync, self).__init__(account=None, auth_type=None, scope=scope, dry_run=dry_run,
+                                          das_go_path=DEFAULT_DASGOCLIENT)
 
         self.dataset = dataset
         self.phedex_dataset = dataset
@@ -41,13 +42,11 @@ class DatasetSync(CMSRucio):
         self.rse = rse
         self.check = check
         self.lifetime = lifetime
-        self.dasgoclient=dasgoclient
 
         self.rucio_datasets = {}
-        self.blocks = {}
         self.url = ''
 
-        self.get_phedex_metadata()
+        self.blocks = self.get_phedex_metadata(dataset=self.phedex_dataset, pnn=self.pnn)
         self.get_rucio_metadata()
         self.get_global_url()
 
@@ -76,30 +75,6 @@ class DatasetSync(CMSRucio):
             url = url + ':' + str(proto['port'])
         self.url = url + prefix
         print("Determined base url %s" % self.url)
-
-    def get_phedex_metadata(self):
-        """
-        Gets the list of blocks at a PhEDEx site, their files and their metadata
-        """
-        print("Initializing... getting the list of blocks and files")
-        blocks = das_go_client("block dataset=%s site=%s system=phedex"
-                               % (self.phedex_dataset, self.pnn), self.dasgoclient)
-        for item in blocks:
-            block_summary = {}
-            block_name = item['block'][0]['name']
-            files = das_go_client("file block=%s site=%s system=phedex"
-                                  % (block_name, self.pnn), self.dasgoclient)
-            for item2 in files:
-                cksum = re.match(r"adler32:([^,]+)", item2['file'][0]['checksum'])
-                cksum = cksum.group(0).split(':')[1]
-                cksum = "{0:0{1}x}".format(int(cksum, 16), 8)
-                block_summary[item2['file'][0]['name']] = {
-                    'name': item2['file'][0]['name'],
-                    'checksum': cksum,
-                    'size': item2['file'][0]['size']
-                }
-            self.blocks[block_name] = block_summary
-        print("PhEDEx initalization done.")
 
     def get_rucio_metadata(self):
         """
