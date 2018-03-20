@@ -4,6 +4,8 @@ from __future__ import absolute_import, division, print_function
 
 import json
 import math
+import re
+
 from itertools import islice
 from subprocess import PIPE, Popen
 
@@ -11,11 +13,10 @@ from rucio.client.didclient import DIDClient
 from rucio.client.replicaclient import ReplicaClient
 from rucio.common.exception import (DataIdentifierAlreadyExists, FileAlreadyExists, RucioException,
                                     AccessDenied)
+DEBUG_FLAG = False
+DEFAULT_DASGOCLIENT = '/usr/bin/dasgoclient'
 
-#import urllib2
-#from ssl import (create_default_context, CERT_NONE)
 import requests
-
 
 DEBUG_FLAG = False
 DEFAULT_DASGOCLIENT = '/usr/bin/dasgoclient'
@@ -99,11 +100,12 @@ class CMSRucio(object):
     File/Block/Dataset and the Rucio facing code uses File/Dataset/Container
     """
 
-    def __init__(self, account, auth_type, scope='cms', dry_run=False):
+    def __init__(self, account, auth_type, scope='cms', dry_run=False, das_go_path=DEFAULT_DASGOCLIENT):
         self.account = account
         self.auth_type = auth_type
         self.scope = scope
         self.dry_run = dry_run
+        self.dasgoclient = das_go_path
 
         self.didc = DIDClient(account=self.account, auth_type=self.auth_type)
         self.rc = ReplicaClient(account=self.account, auth_type=self.auth_type)
@@ -231,8 +233,11 @@ class CMSRucio(object):
             return
 
         if self.check:
+            filtered_replicas = []
             for filemd in replicas:
-                self.check_storage(filemd)
+                if self.check_storage(filemd):
+                    filtered_replicas.append(filemd)
+            replicas = filtered_replicas
 
         self.rc.add_replicas(rse=rse, files=[{'scope': self.scope, 'name': filemd['name'],
                                               'adler32': filemd['checksum'], 'bytes': filemd['size'],
@@ -307,3 +312,30 @@ class CMSRucio(object):
                                   dids=[{'scope': self.scope, 'name': lfn} for lfn in lfns])
         except FileAlreadyExists:
             pass
+
+    def get_phedex_metadata(self, dataset, pnn):
+        """
+        Gets the list of blocks at a PhEDEx site, their files and their metadata
+        """
+        print("Initializing... getting the list of blocks and files")
+        return_blocks = {}
+        blocks = das_go_client("block dataset=%s site=%s system=phedex"
+                               % (dataset, pnn), self.dasgoclient)
+        for item in blocks:
+            block_summary = {}
+            block_name = item['block'][0]['name']
+            files = das_go_client("file block=%s site=%s system=phedex"
+                                  % (block_name, pnn), self.dasgoclient)
+            for item2 in files:
+                cksum = re.match(r"adler32:([^,]+)", item2['file'][0]['checksum'])
+                cksum = cksum.group(0).split(':')[1]
+                cksum = "{0:0{1}x}".format(int(cksum, 16), 8)
+                block_summary[item2['file'][0]['name']] = {
+                    'name': item2['file'][0]['name'],
+                    'checksum': cksum,
+                    'size': item2['file'][0]['size']
+                }
+            return_blocks[block_name] = block_summary
+        print("PhEDEx initalization done.")
+
+        return return_blocks
