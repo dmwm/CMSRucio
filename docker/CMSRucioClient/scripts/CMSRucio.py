@@ -8,6 +8,7 @@ import re
 
 from itertools import islice
 from subprocess import PIPE, Popen
+import requests
 
 from rucio.client.didclient import DIDClient
 from rucio.client.replicaclient import ReplicaClient
@@ -15,8 +16,6 @@ from rucio.common.exception import (DataIdentifierAlreadyExists, FileAlreadyExis
                                     AccessDenied)
 DEBUG_FLAG = False
 DEFAULT_DASGOCLIENT = '/usr/bin/dasgoclient'
-
-import requests
 
 DEBUG_FLAG = False
 DEFAULT_DASGOCLIENT = '/usr/bin/dasgoclient'
@@ -30,7 +29,7 @@ def datasvc_client(call, options, instance=DEFAULT_PHEDEX_INST, url=DEFAULT_DATA
     """
     url = DEFAULT_DATASVC_URL + '/' + DEFAULT_PHEDEX_INST
     url += '/' + call + '?'
-    url += '&'.join({opt + '=' + val for opt, val in options.items()})
+    url += '&'.join([opt + '=' + val for opt, val in options.items()])
 
     r = requests.get(url, allow_redirects=False,verify=False)
 
