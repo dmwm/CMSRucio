@@ -259,7 +259,7 @@ class CMSRucio(object):
         try:
             self.rc.delete_replicas(rse=rse, files=[{'scope': self.scope,'name': filemd['name'],}
                                                     for filemd in replicas])
-        except rucio.common.exception.AccessDenied:
+        except AccessDenied:
             print("Permission denied in deleting replicas: %s" % ", ".join([filemd['name'] for filemd in replicas]))
 
     def register_dataset(self, block, dataset, lifetime=None):
