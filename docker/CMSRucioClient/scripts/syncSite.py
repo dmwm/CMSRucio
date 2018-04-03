@@ -6,17 +6,19 @@ Command line tool for registering a CMS dataset into rucio
 from __future__ import absolute_import, division, print_function
 
 import multiprocessing
-import re
 from argparse import ArgumentParser
 
+import datetime
+
 import rucio.rse.rsemanager as rsemgr
-from CMSRucio import CMSRucio, DEFAULT_DASGOCLIENT, das_go_client
+from CMSRucio import CMSRucio, DEFAULT_DASGOCLIENT, das_go_client, datasvc_client
 from gfal2 import GError, Gfal2Context
 
 BLOCKREPLICAS_URL = "https://cmsweb.cern.ch/phedex/datasvc/json/prod/blockreplicas"
 DEBUG_FLAG = False
 DEFAULT_SCOPE = 'cms'
 DEFAULT_LIMIT = 10
+DEFAULT_POOL_SIZE = 5
 
 class DatasetSync(CMSRucio):
     """
@@ -25,14 +27,15 @@ class DatasetSync(CMSRucio):
     """
 
     def __init__(self, dataset, pnn, rse=None, scope=DEFAULT_SCOPE,
-                 check=True, lifetime=None, dry_run=False, dasgoclient=DEFAULT_DASGOCLIENT):
+                 check=True, lifetime=None, dry_run=False, das_go_path=DEFAULT_DASGOCLIENT):
         """
            :param dataset: Name of the PhEDEx dataset to synchronize with Rucio.
            :param pnn: PhEDEx node name to filter on for replica information.
         """
 
-        super(DatasetSync, self).__init__(account=None, auth_type=None, scope=scope, dry_run=dry_run,
-                                          das_go_path=DEFAULT_DASGOCLIENT)
+        super(DatasetSync, self).__init__(account=None, auth_type=None,
+                                          scope=scope, dry_run=dry_run,
+                                          das_go_path=das_go_path)
 
         self.dataset = dataset
         self.phedex_dataset = dataset
@@ -42,10 +45,8 @@ class DatasetSync(CMSRucio):
         self.rse = rse
         self.check = check
         self.lifetime = lifetime
-
         self.rucio_datasets = {}
         self.url = ''
-
         self.blocks = self.get_phedex_metadata(dataset=self.phedex_dataset, pnn=self.pnn)
         self.get_rucio_metadata()
         self.get_global_url()
@@ -83,8 +84,8 @@ class DatasetSync(CMSRucio):
         print("Initializing Rucio... getting the list of blocks and files at %s"
               % self.rse)
         replica_info = self.rc.list_replicas([{"scope": self.scope,
-                                                 "name": self.phedex_dataset}],
-                                               rse_expression="rse=%s" % self.rse)
+                                               "name": self.phedex_dataset}],
+                                             rse_expression="rse=%s" % self.rse)
         replica_files = set()
         for file_info in replica_info:
             name = file_info['name']
@@ -106,8 +107,9 @@ class DatasetSync(CMSRucio):
         """
         Create the container, the datasets and attach them to the container.
         """
-        print("Registering...")
-        self.register_container(dataset=self.dataset, lifetime=self.lifetime)
+        print("Registering %s ..." % self.dataset)
+        if len(self.blocks) > 0:
+            self.register_container(dataset=self.dataset, lifetime=self.lifetime)
         # First, iterate through all the known PhEDEx blocks.
         for block_name, block_info in self.blocks.items():
             if block_name not in self.rucio_datasets:
@@ -157,13 +159,29 @@ class DatasetSync(CMSRucio):
 
 def get_node_datasets(node, dasgoclient):
     """
-    Given a PhEDEx Node Name, return a list of datasets with some
-    data present.
+    Given a PhEDEx Node Name, return a list of datasets which
+    have some fileblocks at the site according to DAS.
     """
     das_datasets = das_go_client("dataset site=%s system=phedex" % node, dasgoclient)
     for das_dataset in das_datasets:
         yield das_dataset['dataset'][0]['name']
 
+def get_deleted_datasets(node, delreqdays):
+    """
+    Given a PhEDEx Node Name, return the list of datasets concerned
+    by deletion requests in the last delreqdays days
+    """
+    date = (datetime.datetime.now() - datetime.timedelta(days=int(delreqdays))).strftime("%Y-%m-%d")
+    delreq_datasets = datasvc_client('deleterequests', {'node': node,
+                                                        'approval': 'approved',
+                                                        'create_since': date})
+    datasets = []
+    for req in delreq_datasets['phedex']['request']:
+        for block in req['data']['dbs']['block']:
+            datasets.append(block['name'].split('#')[0])
+
+    for dataset in set(datasets):
+        yield dataset
 
 def sync_one_dataset(dataset, site, rse, scope, check, dry_run, dasgoclient):
     """
@@ -176,7 +194,7 @@ def sync_one_dataset(dataset, site, rse, scope, check, dry_run, dasgoclient):
         scope=scope,
         check=check,
         dry_run=dry_run,
-        dasgoclient=dasgoclient,
+        das_go_path=dasgoclient,
     )
     instance.register()
 
@@ -196,13 +214,19 @@ def main():
     parser.add_argument('--dryrun', dest='dry_run', action='store_true',
                         help='do not change anything in rucio, checking only')
     parser.add_argument('--limit', dest='limit', default=DEFAULT_LIMIT, type=int,
-                        help="limit on the number of datasets to attempt sync. default %s. -1 for unlimited" % DEFAULT_LIMIT)
-    parser.add_argument('--pool', dest='pool', default=5, type=int,
-                        help="number of helper processes to use.")
+                        help="limit on the number of datasets to attempt sync. \
+                             Default %s. -1 for unlimited" % DEFAULT_LIMIT)
+    parser.add_argument('--pool', dest='pool', default=DEFAULT_POOL_SIZE, type=int,
+                        help="number of helper processes to use (default %s)" % DEFAULT_POOL_SIZE)
     parser.add_argument('--dataset', dest='dataset', action='append',
                         help='specific datasets to sync')
     parser.add_argument('--dasgoclient', dest='dasgoclient', default=DEFAULT_DASGOCLIENT,
                         help='full path to the dasgoclient (default %s).' % DEFAULT_DASGOCLIENT)
+    parser.add_argument('--delreqdays', dest='delreqdays', default=0,
+                        help='looking at the deletion requests since DELREQDAYS days\
+                             (default 0, don\'t use deletion requests to check files).')
+
+
 
     options = parser.parse_args()
 
@@ -212,14 +236,25 @@ def main():
     limit = options.limit
     count = 0
     futures = []
+
+    # checking the datasets which are in deletion requetss
+    if options.delreqdays > 0:
+        for dataset in get_deleted_datasets(options.site, options.delreqdays):
+            future = pool.apply_async(sync_one_dataset,
+                                      (dataset, options.site, options.rse, options.scope,
+                                       options.check, options.dry_run, options.dasgoclient))
+            futures.append((dataset, future))
+
+    # checking the datasets which are at the site
     if not datasets:
-        datasets = get_node_datasets(options.site,options.dasgoclient)
+        datasets = get_node_datasets(options.site, options.dasgoclient)
     for dataset in datasets:
         count += 1
         if limit > 0 and count >= limit:
             break
-        future = pool.apply_async(sync_one_dataset, (dataset, options.site, options.rse,
-                                  options.scope, options.check, options.dry_run, options.dasgoclient))
+        future = pool.apply_async(sync_one_dataset,
+                                  (dataset, options.site, options.rse, options.scope,
+                                   options.check, options.dry_run, options.dasgoclient))
         futures.append((dataset, future))
     pool.close()
 
