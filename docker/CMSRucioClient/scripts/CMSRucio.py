@@ -12,16 +12,16 @@ import requests
 
 from rucio.client.didclient import DIDClient
 from rucio.client.replicaclient import ReplicaClient
+from rucio.client.ruleclient import RuleClient
 from rucio.common.exception import (DataIdentifierAlreadyExists, FileAlreadyExists, RucioException,
                                     AccessDenied)
-
 DEBUG_FLAG = False
 DEFAULT_DASGOCLIENT = '/usr/bin/dasgoclient'
 
 DEFAULT_PHEDEX_INST = 'prod'
 DEFAULT_DATASVC_URL = 'https://cmsweb.cern.ch/phedex/datasvc/json'
 
-def datasvc_client(call, options, instance=DEFAULT_PHEDEX_INST, url=DEFAULT_DATASVC_URL):
+def datasvc_client(call, options, instance=DEFAULT_PHEDEX_INST, url=DEFAULT_DATASVC_URL, debug=DEBUG_FLAG):
     """
     just wrapping a call to datasvc apis
     """
@@ -31,7 +31,7 @@ def datasvc_client(call, options, instance=DEFAULT_PHEDEX_INST, url=DEFAULT_DATA
 
     r = requests.get(url, allow_redirects=False,verify=False)
 
-    if(DEBUG_FLAG):
+    if(debug):
        print('DEBUG:' + str(r.status_code))
        print('DEBUG:' + r.text)
 
@@ -106,6 +106,7 @@ class CMSRucio(object):
 
         self.didc = DIDClient(account=self.account, auth_type=self.auth_type)
         self.rc = ReplicaClient(account=self.account, auth_type=self.auth_type)
+        self.rulec = RuleClient(account=self.account, auth_type=self.auth_type)
 
         pass
 
@@ -336,3 +337,71 @@ class CMSRucio(object):
         print("PhEDEx initalization done.")
 
         return return_blocks
+
+    @staticmethod
+    def get_subscriptions(dataset, pnn):
+        """
+        Get a dictionary of "per block" phedex subscriptions
+        :dataset: dataset containing the blocks
+        :pnn:    phedex node name
+        """
+
+        subs = {}
+
+        print("Getting fileblock subscriptions for phedex dataset %s" % dataset)
+        phedex_subs = datasvc_client('subscriptions',
+                                     {'node': pnn, 'collapse': 'n',
+                                      'block': dataset + '%23*',
+                                      'percent_min': '100'})
+
+        if len(phedex_subs['phedex']['dataset'])==0:
+            return {}
+
+        for block in  phedex_subs['phedex']['dataset'][0]['block']:
+            if block['is_open'] or (block['bytes_percent'] < 100):
+                next
+            subs[block['name']] = block['subscription'][0]
+        return subs
+
+    def add_rule(self, names, rse_exp, comment, copies=1):
+        """
+        Just wrapping the add_replication_rule method of the ruleclient
+        """
+
+        dids = [{'scope': self.scope, 'name': name} for name in names]
+
+        if self.dry_run:
+            print("Dry run, no rule added.")
+            return
+
+        self.rulec.add_replication_rule(dids=dids,
+                                        copies=copies,
+                                        rse_expression=rse_exp,
+                                        comment=comment)
+ 
+    def del_rule(self, id):
+        """
+        Just wrapping the delete_replication_rule method of ruleclient
+        """
+
+        if self.dry_run:
+           print("Dry run, rule %s not deleted." % id)
+           return
+
+        try:  
+           self.rulec.delete_replication_rule(id, purge_replicas=False)
+        except AccessDenied:
+           print("Premission denied in removing rule (id: %s)" % id)
+           raise AccessDenied
+ 
+    def update_rule(self, id, options):
+        """
+        Just wrapping the update_replication_rule method of ruleclient
+        """
+
+        if self.dry_run:
+           print("Dry run, rule %s not modified." % id)
+           return
+
+        self.rulec.update_replication_rule(id, options)
+
