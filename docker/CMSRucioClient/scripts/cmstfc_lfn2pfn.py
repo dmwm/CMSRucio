@@ -44,9 +44,9 @@ def tfc_lfn2pfn(lfn, tfc, proto):
             if regex.match(lfn):
                 if 'chain' in rule:
                     lfn = tfc_lfn2pfn(lfn, tfc, rule['chain'])
-                    return regex.sub(rule['result'].replace('$', '\\'), lfn)
+                return regex.sub(rule['result'].replace('$', '\\'), lfn)
 
-    raise ValueError("lfn %s with proto %s cannot be matched" % (lfn, proto))
+    raise ValueError("lfn %s with proto %s cannot be matched by tfc %s" % (lfn, proto, tfc))
 
 RSEDeterministicTranslation.register(cmstfc)
 
