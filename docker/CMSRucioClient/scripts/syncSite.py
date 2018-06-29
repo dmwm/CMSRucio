@@ -5,21 +5,104 @@ Command line tool for registering a CMS dataset into rucio
 
 from __future__ import absolute_import, division, print_function
 
+import sys
+import re
 import multiprocessing
 from argparse import ArgumentParser
 import json
-
 import datetime
 
-import rucio.rse.rsemanager as rsemgr
-from CMSRucio import CMSRucio, DEFAULT_DASGOCLIENT, das_go_client, datasvc_client
-from gfal2 import GError, Gfal2Context
+from CMSRucio import (CMSRucio, DEFAULT_DASGOCLIENT, das_go_client,
+                      datasvc_client, get_subscriptions, get_phedex_tfc)
 
 BLOCKREPLICAS_URL = "https://cmsweb.cern.ch/phedex/datasvc/json/prod/blockreplicas"
 DEBUG_FLAG = False
 DEFAULT_SCOPE = 'cms'
 DEFAULT_LIMIT = 10
 DEFAULT_POOL_SIZE = 5
+DEFAULT_TFC_PROTOCOL = 'srmv2'
+
+class NodeSync(CMSRucio):
+    """
+    Synchronize PhEDEx Site attributes with RSE attributes.
+    Currently dealing only with the tfc
+    """
+
+    def __init__(self, pnn, rse=None, dry_run=False):
+        """
+        """
+
+        super(NodeSync, self).__init__(account=None, auth_type=None,
+                                       scope=None, dry_run=dry_run,
+                                       das_go_path=DEFAULT_DASGOCLIENT)
+
+        self.pnn = pnn
+        self.rse = rse
+
+        self.get_phedex_tfc()
+
+        # for the moment assuming we have only 1 protocol
+        self.protocol = self.cli.get_protocols(rse=self.rse)[0]
+        self.get_rucio_tfc()
+
+    def get_rucio_tfc(self):
+        """
+        Get the tfc rules from the extended_attributes of the rse protocol.
+        """
+        if 'extended_attributes' in self.protocol:
+            if 'tfc' in self.protocol['extended_attributes']:
+                self.rucio_tfc = self.protocol['extended_attributes']['tfc']
+                return
+        self.rucio_tfc = {}
+
+    def get_phedex_tfc(self):
+        """
+        Get the relevant lines of the pnn tfc.
+        """
+        full = get_phedex_tfc(self.pnn)
+
+        protos = [DEFAULT_TFC_PROTOCOL]
+        num_protos = 0
+
+        while len(protos) != num_protos:
+            num_protos = len(protos)
+            for rule in full:
+                if rule['element_name'] == 'lfn-to-pfn':
+                    if ('chain' in rule) and (rule['chain'] not in protos):
+                        protos.append(rule['chain'])
+
+        self.phedex_tfc = []
+
+        for rule in full:
+            if rule['element_name'] == 'lfn-to-pfn' and rule['protocol'] in protos:
+                self.phedex_tfc.append(rule)
+
+    def sync(self):
+        """
+        Syncronize the tfc rules in rucio.
+        """
+        if json.dumps(self.rucio_tfc) != json.dumps(self.phedex_tfc):
+            print('Rucio and PhEDEx TFC differ')
+            if self.dry_run:
+                print('Dry run, not modyfing the protocol')
+                return
+            ext = {}
+            if 'extended_attributes' in self.protocol:
+                ext = self.protocol['extended_attributes']
+            ext['tfc'] = self.phedex_tfc
+            ext['tfc_proto'] = DEFAULT_TFC_PROTOCOL
+
+            self.protocol['extended_attributes'] = ext
+
+            self.cli.delete_protocols(rse=self.rse, scheme=self.protocol['scheme'])
+
+            self.cli.add_protocol(rse=self.rse, params=self.protocol)
+
+            #self.cli.update_protocols(
+            #    rse=self.rse,
+            #    scheme=self.protocol['scheme'],
+            #    data=self.protocol
+            #)
 
 class DatasetSync(CMSRucio):
     """
@@ -28,7 +111,8 @@ class DatasetSync(CMSRucio):
     """
 
     def __init__(self, dataset, pnn, rse=None, scope=DEFAULT_SCOPE,
-                 check=True, lifetime=None, dry_run=False, syncrules=False, das_go_path=DEFAULT_DASGOCLIENT):
+                 check=True, lifetime=None, dry_run=False, syncrules=False,
+                 das_go_path=DEFAULT_DASGOCLIENT):
         """
            :param dataset: Name of the PhEDEx dataset to synchronize with Rucio.
            :param pnn: PhEDEx node name to filter on for replica information.
@@ -36,7 +120,7 @@ class DatasetSync(CMSRucio):
 
         super(DatasetSync, self).__init__(account=None, auth_type=None,
                                           scope=scope, dry_run=dry_run,
-                                          das_go_path=das_go_path)
+                                          das_go_path=das_go_path, check=check)
 
         self.dataset = dataset
         self.phedex_dataset = dataset
@@ -49,60 +133,35 @@ class DatasetSync(CMSRucio):
 
         self.lifetime = lifetime
         self.rucio_datasets = {}
-        self.url = ''
         self.blocks = self.get_phedex_metadata(dataset=self.phedex_dataset, pnn=self.pnn)
+
         if self.syncrules:
-            self.subscriptions = self.get_subscriptions(dataset=self.phedex_dataset, pnn=self.pnn)
+            if len(self.blocks) > 0:
+                self.subscriptions = get_subscriptions(dataset=self.phedex_dataset, pnn=self.pnn)
+            else:
+                self.subscriptions = {}
 
         self.get_rucio_metadata()
         if self.syncrules:
             self.get_sync_rules()
 
-        self.get_global_url()
-
-        self.gfal = Gfal2Context()
-
-    def get_file_url(self, lfn):
-        """
-        Return the rucio url of a file.
-        """
-        return self.url + '/' + lfn
-
-    def get_global_url(self):
-        """
-        Return the base path of the rucio url
-        """
-        print("Getting parameters for rse %s" % self.rse)
-        rse = rsemgr.get_rse_info(self.rse)
-        proto = rse['protocols'][0]
-
-        schema = proto['scheme']
-        prefix = proto['prefix'] + '/' + self.scope.replace('.', '/')
-        if schema == 'srm':
-            prefix = proto['extended_attributes']['web_service_path'] + prefix
-        url = schema + '://' + proto['hostname']
-        if proto['port'] != 0:
-            url = url + ':' + str(proto['port'])
-        self.url = url + prefix
-        print("Determined base url %s" % self.url)
-
     def get_rucio_metadata(self):
         """
         Gets the list of datasets at the Rucio RSE, the files, and the metadata.
         """
-        print("Initializing Rucio... getting the list of blocks and files at %s"
-              % self.rse)
-        replica_info = self.rc.list_replicas([{"scope": self.scope,
-                                               "name": self.phedex_dataset}],
-                                             rse_expression="rse=%s" % self.rse)
+        print("Initializing Rucio... getting the list of blocks and files at %s for dataset %s"
+              % (self.rse, self.phedex_dataset))
+        replica_info = self.cli.list_replicas([{"scope": self.scope,
+                                                "name": self.phedex_dataset}],
+                                              rse_expression="rse=%s" % self.rse)
         replica_files = set()
         for file_info in replica_info:
             name = file_info['name']
             if self.rse in file_info['rses']:
                 replica_files.add(name)
-        for dataset in self.didc.list_content(self.scope, self.phedex_dataset):
+        for dataset in self.cli.list_content(self.scope, self.phedex_dataset):
             dataset_summary = {}
-            for file_info in self.didc.list_content(self.scope, dataset['name']):
+            for file_info in self.cli.list_content(self.scope, dataset['name']):
                 file_summary = {'name': file_info['name'],
                                 'adler32': file_info['adler32'],
                                 'size': file_info['bytes']
@@ -142,31 +201,6 @@ class DatasetSync(CMSRucio):
         if self.syncrules:
             self.update_rules()
 
-    def check_storage(self, filemd):
-        """
-        Check size and checksum of a file on storage
-        """
-        url = self.get_file_url(filemd['name'])
-        print("checking url %s" % url)
-        try:
-            size = self.gfal.stat(str(url)).st_size
-            checksum = self.gfal.checksum(str(url), 'adler32')
-            print("got size and checksum of file: pfn=%s size=%s checksum=%s"
-                  % (url, size, checksum))
-        except GError:
-            print("no file found at %s" % url)
-            return False
-        if str(size) != str(filemd['size']):
-            print("wrong size for file %s. Expected %s got %s"
-                  % (filemd['name'], filemd['size'], size))
-            return False
-        if str(checksum) != str(filemd['checksum']):
-            print("wrong checksum for file %s. Expected %s git %s"
-                  % (filemd['name'], filemd['checksum'], checksum))
-            return False
-        print("size and checksum are ok")
-        return True
-
     def get_sync_rules(self):
         """
         Get the rules generated by the syncScript for the datasets and rse
@@ -177,40 +211,52 @@ class DatasetSync(CMSRucio):
         self.rules = {}
         for dsname in self.rucio_datasets.keys():
             print("Getting rucio rule for dataset %s" % dsname)
-            rules = self.didc.list_did_rules(scope=self.scope, name=dsname)
+            rules = self.cli.list_did_rules(scope=self.scope, name=dsname)
             for rule in rules:
                 try:
                     rulemd = json.loads(rule['comments'])
                 except (TypeError, ValueError):
-                    next
+                    print("Missing Comments, skipping")
+                    continue
 
                 rse_exp = 'rse=' + self.rse
-                if rule['rse_expression']!=rse_exp:
-                    next
+                if rule['rse_expression'] != rse_exp:
+                    continue
 
-                if rulemd['type']!='phedex_sync':
-                    next
+                if rulemd['type'] != 'phedex_sync':
+                    continue
                 self.rules[dsname] = rule
 
     def update_rules(self):
         """
         Synchronize rules and subscriptions
         """
-        print("Checking existing rules and subscription for (phedex) dataset %s " % self.phedex_dataset)
+        print("Checking existing rules and subscription for (phedex) dataset %s " %
+              self.phedex_dataset)
 
         for block, sub in self.subscriptions.items():
-            submd = json.dumps({'type': 'phedex_sync', 'rid': sub['request'], 'group': sub['group']})
+            if 'request' not in sub:
+                print("subscription for block %s missing 'request' field" % block)
+                sub['request'] = 'unknown'
+
+            if 'group' not in sub:
+                print("subscription for block %s missing 'group' field" % block)
+                sub['group'] = 'unknown'
+
+            submd = json.dumps({'type': 'phedex_sync', 'rid': sub['request'],
+                                'group': sub['group']})
 
             if block not in self.rules:
                 print("No rule found for %s, creating one" % block)
                 self.add_rule(names=[block], rse_exp='rse='+self.rse,
                               comment=submd)
-            elif submd != self.rules[block]['comments']:
-                print("Rule for %s has wrong comment, re-creating" % block)
-                self.del_rule(self.rules[block]['id'])
-                self.add_rule(names=[block], rse_exp='rse='+self.rse,
-                              comment=submd)
-            elif self.rulec.account != self.rules[block]['account']:
+            # For the moment ignoring this: ISSUE ..
+            #elif submd != self.rules[block]['comments']:
+            #    print("Rule for %s has wrong comment, re-creating" % block)
+            #    self.del_rule(self.rules[block]['id'])
+            #    self.add_rule(names=[block], rse_exp='rse='+self.rse,
+            #                  comment=submd)
+            elif self.cli.account != self.rules[block]['account']:
                 print("Rule for %s belongs to the wrong account, modifying" % block)
                 self.update_rule(self.rules[block]['id'], {'account': self.account})
 
@@ -225,15 +271,35 @@ def get_node_datasets(node, dasgoclient):
     Given a PhEDEx Node Name, return a list of datasets which
     have some fileblocks at the site according to DAS.
     """
+    print("Get datasets at node %s" % node)
     das_datasets = das_go_client("dataset site=%s system=phedex" % node, dasgoclient)
+    datasets = []
     for das_dataset in das_datasets:
-        yield das_dataset['dataset'][0]['name']
+        datasets.append(das_dataset['dataset'][0]['name'])
+
+    return datasets
+
+def get_transferred_datasets(node, subdays):
+    """
+    Given a PhEDEx Node Name, return the list of datasets transfered
+    by subscriptions created during the last subdays days
+    """
+
+    print("Gets datasets transferred at %s in the last %d days" % (node, int(subdays)))
+
+    date = (datetime.datetime.now() - datetime.timedelta(days=int(subdays))).strftime("%Y-%m-%d")
+    blocks = get_subscriptions(node, since=date).keys()
+
+    return list(set([bl.split('#')[0] for bl in blocks]))
+
 
 def get_deleted_datasets(node, delreqdays):
     """
     Given a PhEDEx Node Name, return the list of datasets concerned
     by deletion requests in the last delreqdays days
     """
+    print("Gets datasets deleted at %s in the last %d days" % (node, int(delreqdays)))
+
     date = (datetime.datetime.now() - datetime.timedelta(days=int(delreqdays))).strftime("%Y-%m-%d")
     delreq_datasets = datasvc_client('deleterequests', {'node': node,
                                                         'approval': 'approved',
@@ -243,8 +309,7 @@ def get_deleted_datasets(node, delreqdays):
         for block in req['data']['dbs']['block']:
             datasets.append(block['name'].split('#')[0])
 
-    for dataset in set(datasets):
-        yield dataset
+    return list(set(datasets))
 
 def sync_one_dataset(dataset, site, rse, scope, check, dry_run, syncrules, dasgoclient):
     """
@@ -279,6 +344,10 @@ def main():
                         help='do not change anything in rucio, checking only')
     parser.add_argument('--syncrules', dest='syncrules', action='store_true',
                         help='syncronize rules and subscriptions.')
+    parser.add_argument('--synctfc', dest='synctfc', action='store_true',
+                        help='syncronize TFC into RSE attributes.')
+    parser.add_argument('--fullsync', dest='fullsync', action='store_true',
+                        help='synchronize all the phedex datasets at node')
     parser.add_argument('--limit', dest='limit', default=DEFAULT_LIMIT, type=int,
                         help="limit on the number of datasets to attempt sync. \
                              Default %s. -1 for unlimited" % DEFAULT_LIMIT)
@@ -291,42 +360,80 @@ def main():
     parser.add_argument('--delreqdays', dest='delreqdays', default=0,
                         help='looking at the deletion requests since DELREQDAYS days\
                              (default 0, don\'t use deletion requests to check files).')
-
-
+    parser.add_argument('--subdays', dest='subdays', default=0,
+                        help='looking at the subscriptions since SUBDAYS days\
+                             (default 0).')
+    parser.add_argument('--debug', dest='debug', action='store_true',
+                        help='run in debug mode')
+    parser.add_argument('--filter', dest='filter',
+                        help='regex filtering the datasets name')
 
     options = parser.parse_args()
 
-    pool = multiprocessing.Pool(options.pool)
-
     datasets = options.dataset
     limit = options.limit
-    count = 0
     futures = []
 
+    if options.synctfc:
+        NodeSync(options.site, options.rse, options.dry_run).sync()
+
+
+    if not datasets:
+        if options.fullsync:
+            # Get all datasets at the site
+            datasets = get_node_datasets(options.site, options.dasgoclient)
+        elif int(options.subdays) > 0:
+            # ... or only those requested in the last n days
+            datasets = get_transferred_datasets(options.site, options.subdays)
+        else:
+            datasets = []
+
+    sys.stdout.flush()
+
     # checking the datasets which are in deletion requests
-    if options.delreqdays > 0:
-        for dataset in get_deleted_datasets(options.site, options.delreqdays):
+    if int(options.delreqdays) > 0:
+        datasets.extend(get_deleted_datasets(options.site, options.delreqdays))
+
+    # when running in debug mode
+    # order datasets.
+    if options.debug:
+        print('Sorting datasets list...')
+        datasets.sort(key=lambda s: s.lower())
+
+    # apply the filter, if any
+    if options.filter:
+        regex = re.compile(options.filter)
+        datasets = [d for d in datasets if regex.match(d)]
+
+    pool = multiprocessing.Pool(options.pool)
+
+    done = []
+
+    for dataset in datasets:
+        if dataset in done:
+            continue
+        done.append(dataset)
+        if limit >= 0 and len(done) > limit:
+            break
+
+        # in debug mode run single-threaded
+        if options.debug:
+            sync_one_dataset(dataset, options.site, options.rse, options.scope,
+                             options.check, options.dry_run, options.syncrules, options.dasgoclient)
+            print("Finished processing dataset %s" % dataset)
+        else:
             future = pool.apply_async(sync_one_dataset,
                                       (dataset, options.site, options.rse, options.scope,
-                                       options.check, options.dry_run, options.syncrules, options.dasgoclient))
+                                       options.check, options.dry_run, options.syncrules,
+                                       options.dasgoclient))
             futures.append((dataset, future))
 
-    # checking the datasets which are at the site
-    if not datasets:
-        datasets = get_node_datasets(options.site, options.dasgoclient)
-    for dataset in datasets:
-        count += 1
-        if limit >= 0 and count > limit:
-            break
-        future = pool.apply_async(sync_one_dataset,
-                                  (dataset, options.site, options.rse, options.scope,
-                                   options.check, options.dry_run, options.syncrules, options.dasgoclient))
-        futures.append((dataset, future))
-    pool.close()
+    if not options.debug:
+        pool.close()
 
-    for dataset, future in futures:
-        future.get()
-        print("Finished processing dataset %s" % dataset)
+        for dataset, future in futures:
+            future.get()
+            print("Finished processing dataset %s" % dataset)
 
 if __name__ == '__main__':
     main()

@@ -5,14 +5,17 @@ from __future__ import absolute_import, division, print_function
 import json
 import math
 import re
+import time
 
 from itertools import islice
 from subprocess import PIPE, Popen
 import requests
+from requests.exceptions import ReadTimeout
 
-from rucio.client.didclient import DIDClient
-from rucio.client.replicaclient import ReplicaClient
-from rucio.client.ruleclient import RuleClient
+from gfal2 import GError, Gfal2Context
+
+import rucio.rse.rsemanager as rsemgr
+from rucio.client.client import Client
 from rucio.common.exception import (DataIdentifierAlreadyExists, FileAlreadyExists, RucioException,
                                     AccessDenied)
 DEBUG_FLAG = False
@@ -20,69 +23,8 @@ DEFAULT_DASGOCLIENT = '/usr/bin/dasgoclient'
 
 DEFAULT_PHEDEX_INST = 'prod'
 DEFAULT_DATASVC_URL = 'https://cmsweb.cern.ch/phedex/datasvc/json'
-
-def datasvc_client(call, options, instance=DEFAULT_PHEDEX_INST, url=DEFAULT_DATASVC_URL, debug=DEBUG_FLAG):
-    """
-    just wrapping a call to datasvc apis
-    """
-    url = DEFAULT_DATASVC_URL + '/' + DEFAULT_PHEDEX_INST
-    url += '/' + call + '?'
-    url += '&'.join([opt + '=' + val for opt, val in options.items()])
-
-    r = requests.get(url, allow_redirects=False,verify=False)
-
-    if(debug):
-       print('DEBUG:' + str(r.status_code))
-       print('DEBUG:' + r.text)
-
-    if(r.status_code != 200):
-       raise Exception('Request Failed')     
-
-    return json.loads(r.text) 
-   
-def das_go_client(query, dasgoclient=DEFAULT_DASGOCLIENT):
-    """
-    just wrapping the dasgoclient command line
-    """
-    proc = Popen([dasgoclient, '-query=%s' % query, '-json'], stdout=PIPE)
-    output = proc.communicate()[0]
-    if DEBUG_FLAG:
-        print('DEBUG:' + output)
-    return json.loads(output)
-
-
-def grouper(iterable, n):  # FIXME: Pull this from WMCore/Utils/IteratorTools when we migrate
-    """
-    :param iterable: List of other iterable to slice
-    :type: iterable
-    :param n: Chunk size for resulting lists
-    :type: int
-    :return: iterator of the sliced list
-    Source: http://stackoverflow.com/questions/3992735/python-generator-that-groups-another-iterable-into-groups-of-n
-    """
-    iterable = iter(iterable)
-    return iter(lambda: list(islice(iterable, n)), [])
-
-
-def convert_size(size_bytes):
-    if size_bytes == 0:
-        return "0B"
-    size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
-    i = int(math.floor(math.log(size_bytes, 1024)))
-    p = math.pow(1024, i)
-    s = round(size_bytes / p, 2)
-    return "%s %s" % (s, size_name[i])
-
-
-def convert_size_si(size_bytes):
-    if size_bytes == 0:
-        return "0B"
-    size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
-    i = int(math.floor(math.log(size_bytes, 1000)))
-    p = math.pow(1000, i)
-    s = round(size_bytes / p, 2)
-    return "%s %s" % (s, size_name[i])
-
+DATASVC_MAX_RETRY = 3
+DATASVC_RETRY_SLEEP = 10
 
 class CMSRucio(object):
     """
@@ -93,38 +35,93 @@ class CMSRucio(object):
     Block       Dataset
     Dataset     Container
 
-    We try to use the correct terminology on for variable and parameter names where the CMS facing code uses
-    File/Block/Dataset and the Rucio facing code uses File/Dataset/Container
+    We try to use the correct terminology on for variable and parameter names
+    where the CMS facing code use File/Block/Dataset and the Rucio facing code
+    uses File/Dataset/Container
     """
 
-    def __init__(self, account, auth_type, scope='cms', dry_run=False, das_go_path=DEFAULT_DASGOCLIENT):
+    def __init__(self, account, auth_type, scope='cms', dry_run=False,
+                 das_go_path=DEFAULT_DASGOCLIENT, check=False):
         self.account = account
         self.auth_type = auth_type
         self.scope = scope
         self.dry_run = dry_run
         self.dasgoclient = das_go_path
+        self.check = check
 
-        self.didc = DIDClient(account=self.account, auth_type=self.auth_type)
-        self.rc = ReplicaClient(account=self.account, auth_type=self.auth_type)
-        self.rulec = RuleClient(account=self.account, auth_type=self.auth_type)
+        self.cli = Client(account=self.account, auth_type=self.auth_type)
 
-        pass
+        self.gfal = Gfal2Context()
 
-    def cmsBlocksInContainer(self, container, scope='cms'):
+    def get_file_url(self, lfn, rse):
+        """
+        Return the rucio url of a file.
+        """
+        return self.get_global_url(rse) + '/' + lfn
+
+    def get_global_url(self, rse):
+        """
+        Return the base path of the rucio url
+        """
+        print("Getting parameters for rse %s" % rse)
+        rse = rsemgr.get_rse_info(rse)
+        proto = rse['protocols'][0]
+
+        schema = proto['scheme']
+        prefix = proto['prefix'] + '/' + self.scope.replace('.', '/')
+        if schema == 'srm':
+            prefix = proto['extended_attributes']['web_service_path'] + prefix
+        url = schema + '://' + proto['hostname']
+        if proto['port'] != 0:
+            url = url + ':' + str(proto['port'])
+        url = url + prefix
+        print("Determined base url %s" % url)
+        return url
+
+    def check_storage(self, filemd, rse):
+        """
+        Check size and checksum of a file on storage
+        """
+        url = self.get_file_url(filemd['name'], rse)
+        print("checking url %s" % url)
+        try:
+            size = self.gfal.stat(str(url)).st_size
+            checksum = self.gfal.checksum(str(url), 'adler32')
+            print("got size and checksum of file: pfn=%s size=%s checksum=%s"
+                  % (url, size, checksum))
+        except GError:
+            print("no file found at %s" % url)
+            return False
+        if str(size) != str(filemd['size']):
+            print("wrong size for file %s. Expected %s got %s"
+                  % (filemd['name'], filemd['size'], size))
+            return False
+        if str(checksum) != str(filemd['checksum']):
+            print("wrong checksum for file %s. Expected %s git %s"
+                  % (filemd['name'], filemd['checksum'], checksum))
+            return False
+        print("size and checksum are ok")
+        return True
+
+
+    def cms_blocks_in_container(self, container, scope='cms'):
+        """
+        getting the cms_blocks (rucio datasets) in a rucio container
+        """
 
         block_names = []
-        response = self.didc.get_did(scope=scope, name=container)
+        response = self.cli.get_did(scope=scope, name=container)
         if response['type'].upper() != 'CONTAINER':
             return block_names
 
-        response = self.didc.list_content(scope=scope, name=container)
+        response = self.cli.list_content(scope=scope, name=container)
         for item in response:
             if item['type'].upper() == 'DATASET':
                 block_names.append(item['name'])
 
         return block_names
 
-    def getReplicaInfoForBlocks(self, scope='cms', dataset=None, block=None, node=None):  # Mirroring PhEDEx service
+    def get_replica_info_for_blocks(self, scope='cms', dataset=None, block=None, node=None):
 
         """
         This mimics the API of a CMS PhEDEx function. Be careful changing it
@@ -158,14 +155,14 @@ class CMSRucio(object):
 
         if isinstance(dataset, (list, set)):
             for dataset_name in dataset:
-                block_names.extend(self.cmsBlocksInContainer(dataset_name, scope=scope))
+                block_names.extend(self.cms_blocks_in_container(dataset_name, scope=scope))
         elif dataset:
-            block_names.extend(self.cmsBlocksInContainer(dataset, scope=scope))
+            block_names.extend(self.cms_blocks_in_container(dataset, scope=scope))
 
         for block_name in block_names:
             dids = [{'scope': scope, 'name': block_name} for block_name in block_names]
 
-            response = self.rc.list_replicas(dids=dids)
+            response = self.cli.list_replicas(dids=dids)
             nodes = set()
             for item in response:
                 for node, state in item['states'].items():
@@ -175,7 +172,10 @@ class CMSRucio(object):
         return result
 
     def dataset_summary(self, scope='cms', dataset=None):
-        response = self.didc.list_files(scope=scope, name=dataset)
+        """
+        Summary of a dataset metadata
+        """
+        response = self.cli.list_files(scope=scope, name=dataset)
         summary = {'files': {}, 'dataset': dataset}
         dataset_bytes = 0
         dataset_events = 0
@@ -193,13 +193,14 @@ class CMSRucio(object):
 
             if fileobj['events']:
                 dataset_events += fileobj['events']
-        summary.update({'bytes': dataset_bytes, 'events': dataset_events, 'file_count': dataset_files})
-        summary.update({'size': convert_size_si(dataset_bytes)})
+        summary.update({'bytes': dataset_bytes, 'events': dataset_events,
+                        'file_count': dataset_files})
+        summary.update({'size': self.convert_size_si(dataset_bytes)})
 
         site_summary = {}
 
-        for chunk in grouper(files, 1000):
-            response = self.rc.list_replicas(dids=chunk)
+        for chunk in self.grouper(files, 1000):
+            response = self.cli.list_replicas(dids=chunk)
             for item in response:
                 lfn = item['name']
                 for node, state in item['states'].items():
@@ -213,7 +214,7 @@ class CMSRucio(object):
                             site_summary[node]['events'] += summary['files'][lfn]['events']
 
         for node in site_summary:
-            site_summary[node]['size'] = convert_size_si(site_summary[node]['bytes'])
+            site_summary[node]['size'] = self.convert_size_si(site_summary[node]['bytes'])
 
         summary['sites'] = site_summary
 
@@ -233,12 +234,13 @@ class CMSRucio(object):
         if self.check:
             filtered_replicas = []
             for filemd in replicas:
-                if self.check_storage(filemd):
+                if self.check_storage(filemd, rse):
                     filtered_replicas.append(filemd)
             replicas = filtered_replicas
 
-        self.rc.add_replicas(rse=rse, files=[{'scope': self.scope, 'name': filemd['name'],
-                                              'adler32': filemd['checksum'], 'bytes': filemd['size'],
+        self.cli.add_replicas(rse=rse, files=[{'scope': self.scope, 'name': filemd['name'],
+                                               'adler32': filemd['checksum'],
+                                               'bytes': filemd['size'],
                                               } for filemd in replicas])
 
     def delete_replicas(self, rse, replicas):
@@ -248,22 +250,25 @@ class CMSRucio(object):
         if not replicas:
             return
 
-        print("Deleting files from %s in Rucio: %s" % (self.rse,
-              ", ".join([filemd['name'] for filemd in replicas])))
+        print("Deleting files from %s in Rucio: %s" %
+              (rse, ", ".join([filemd['name'] for filemd in replicas])))
 
         if self.dry_run:
             print(" Dry run only.  Not deleting replicas.")
             return
 
         try:
-            self.rc.delete_replicas(rse=rse, files=[{'scope': self.scope,'name': filemd['name'],}
-                                                    for filemd in replicas])
+            self.cli.delete_replicas(rse=rse, files=[{'scope': self.scope,
+                                                      'name': filemd['name'],
+                                                     } for filemd in replicas])
         except AccessDenied:
-            print("Permission denied in deleting replicas: %s" % ", ".join([filemd['name'] for filemd in replicas]))
+            print("Permission denied in deleting replicas: %s" %
+                  ", ".join([filemd['name'] for filemd in replicas]))
 
     def register_dataset(self, block, dataset, lifetime=None):
         """
-        Create the rucio dataset corresponding to a CMS block and attach it to the container (CMS dataset)
+        Create the rucio dataset corresponding to a CMS block and
+        attach it to the container (CMS dataset)
         """
 
         if self.dry_run:
@@ -271,12 +276,13 @@ class CMSRucio(object):
             return
 
         try:
-            self.didc.add_dataset(scope=self.scope, name=block, lifetime=lifetime)
+            self.cli.add_dataset(scope=self.scope, name=block, lifetime=lifetime)
         except DataIdentifierAlreadyExists:
             pass
 
         try:
-            self.didc.attach_dids(scope=self.scope, name=dataset, dids=[{'scope': self.scope, 'name': block}])
+            self.cli.attach_dids(scope=self.scope, name=dataset,
+                                 dids=[{'scope': self.scope, 'name': block}])
         except RucioException:
             pass
 
@@ -290,7 +296,7 @@ class CMSRucio(object):
             return
 
         try:
-            self.didc.add_container(scope=self.scope, name=dataset, lifetime=lifetime)
+            self.cli.add_container(scope=self.scope, name=dataset, lifetime=lifetime)
         except DataIdentifierAlreadyExists:
             pass
 
@@ -306,8 +312,8 @@ class CMSRucio(object):
             return
 
         try:
-            self.didc.attach_dids(scope=self.scope, name=block,
-                                  dids=[{'scope': self.scope, 'name': lfn} for lfn in lfns])
+            self.cli.attach_dids(scope=self.scope, name=block,
+                                 dids=[{'scope': self.scope, 'name': lfn} for lfn in lfns])
         except FileAlreadyExists:
             pass
 
@@ -325,8 +331,25 @@ class CMSRucio(object):
             files = das_go_client("file block=%s site=%s system=phedex"
                                   % (block_name, pnn), self.dasgoclient)
             for item2 in files:
-                cksum = re.match(r"adler32:([^,]+)", item2['file'][0]['checksum'])
-                cksum = cksum.group(0).split(':')[1]
+
+                # sometimes dasgoclient does not return the checksum attribute for a file
+                # re-fetching data fix the problem
+                try:
+                    item2['file'][0]['checksum']
+                except KeyError:
+                    print("file %s misses checksum attribute, try to refetch from das",
+                          item2['file'][0]['name'])
+                    time.sleep(5)
+                    dummy = das_go_client("file file=%s system=phedex" % item2['file'][0]['name'])
+                    item2['file'][0] = dummy['file'][0]
+
+                try:
+                    cksum = re.match(r"\S*adler32:([^,]+)",
+                                     item2['file'][0]['checksum']).group(1)
+                except AttributeError:
+                    raise AttributeError("file %s has non parsable checksum entry %s"\
+                                         % (item2['file'][0]['name'], item2['file'][0]['checksum']))
+
                 cksum = "{0:0{1}x}".format(int(cksum, 16), 8)
                 block_summary[item2['file'][0]['name']] = {
                     'name': item2['file'][0]['name'],
@@ -337,31 +360,6 @@ class CMSRucio(object):
         print("PhEDEx initalization done.")
 
         return return_blocks
-
-    @staticmethod
-    def get_subscriptions(dataset, pnn):
-        """
-        Get a dictionary of "per block" phedex subscriptions
-        :dataset: dataset containing the blocks
-        :pnn:    phedex node name
-        """
-
-        subs = {}
-
-        print("Getting fileblock subscriptions for phedex dataset %s" % dataset)
-        phedex_subs = datasvc_client('subscriptions',
-                                     {'node': pnn, 'collapse': 'n',
-                                      'block': dataset + '%23*',
-                                      'percent_min': '100'})
-
-        if len(phedex_subs['phedex']['dataset'])==0:
-            return {}
-
-        for block in  phedex_subs['phedex']['dataset'][0]['block']:
-            if block['is_open'] or (block['bytes_percent'] < 100):
-                next
-            subs[block['name']] = block['subscription'][0]
-        return subs
 
     def add_rule(self, names, rse_exp, comment, copies=1):
         """
@@ -374,34 +372,163 @@ class CMSRucio(object):
             print("Dry run, no rule added.")
             return
 
-        self.rulec.add_replication_rule(dids=dids,
-                                        copies=copies,
-                                        rse_expression=rse_exp,
-                                        comment=comment)
- 
-    def del_rule(self, id):
+        self.cli.add_replication_rule(dids=dids,
+                                      copies=copies,
+                                      rse_expression=rse_exp,
+                                      comment=comment)
+
+    def del_rule(self, rid):
         """
         Just wrapping the delete_replication_rule method of ruleclient
         """
 
         if self.dry_run:
-           print("Dry run, rule %s not deleted." % id)
-           return
+            print("Dry run, rule %s not deleted." % rid)
+            return
 
-        try:  
-           self.rulec.delete_replication_rule(id, purge_replicas=False)
+        try:
+            self.cli.delete_replication_rule(rid, purge_replicas=False)
         except AccessDenied:
-           print("Premission denied in removing rule (id: %s)" % id)
-           raise AccessDenied
- 
-    def update_rule(self, id, options):
+            print("Premission denied in removing rule (rid: %s)" % rid)
+            raise AccessDenied
+
+    def update_rule(self, rid, options):
         """
         Just wrapping the update_replication_rule method of ruleclient
         """
 
         if self.dry_run:
-           print("Dry run, rule %s not modified." % id)
-           return
+            print("Dry run, rule %s not modified." % rid)
+            return
 
-        self.rulec.update_replication_rule(id, options)
+        self.cli.update_replication_rule(rid, options)
 
+    @staticmethod
+    # FIXME: Pull this from WMCore/Utils/IteratorTools when we migrate
+    def grouper(iterable, csize):
+        """
+        :param iterable: List of other iterable to slice
+        :type: iterable
+        :param csize: Chunk size for resulting lists
+        :type: int
+        :return: iterator of the sliced list
+        Source: http://stackoverflow.com/questions/3992735/
+           python-generator-that-groups-another-iterable-into-groups-of-n
+        """
+        iterable = iter(iterable)
+        return iter(lambda: list(islice(iterable, csize)), [])
+
+    @staticmethod
+    def convert_size(size_bytes):
+        """
+        Convert size in bytes into human readable.
+        Base 1024.
+        """
+        if size_bytes == 0:
+            return "0B"
+        size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+        ival = int(math.floor(math.log(size_bytes, 1024)))
+        power = math.pow(1024, ival)
+        size = round(size_bytes / power, 2)
+        return "%s %s" % (size, size_name[ival])
+
+    @staticmethod
+    def convert_size_si(size_bytes):
+        """
+        Convert size in bytes into human readable.
+        Base 1000.
+        """
+        if size_bytes == 0:
+            return "0B"
+        size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+        ival = int(math.floor(math.log(size_bytes, 1000)))
+        power = math.pow(1000, ival)
+        size = round(size_bytes / power, 2)
+        return "%s %s" % (size, size_name[ival])
+
+
+def get_subscriptions(pnn, dataset=None, since=None, debug=DEBUG_FLAG):
+    """
+    Get a dictionary of "per block" phedex subscriptions
+    :pnn:    phedex node name
+    :dataset: dataset containing the blocks (default null, all datasets)
+    :since: datasets created since (default null, all datasets)
+    """
+
+    subs = {}
+    req = {'node': pnn, 'collapse': 'n', 'percent_min': '100'}
+    if dataset is not None:
+        req['block'] = dataset + '%23*'
+        print("Getting fileblock subscriptions for phedex dataset %s" % dataset)
+    if since is not None:
+        req['create_since'] = since
+        print("Getting fileblock subscriptions created since %s" % since)
+
+    phedex_subs = datasvc_client('subscriptions', req, debug=debug)
+
+    if len(phedex_subs['phedex']['dataset']) == 0:
+        if debug:
+            print("Subscription list is empty.")
+        return {}
+
+    for dataset in phedex_subs['phedex']['dataset']:
+        for block in dataset['block']:
+            if block['is_open'] == 'y':
+                if debug:
+                    print("Block %s is open, skipping" % block['name'])
+                continue
+            subs[block['name']] = block['subscription'][0]
+    return subs
+
+
+def datasvc_client(call, options, instance=DEFAULT_PHEDEX_INST,
+                   url=DEFAULT_DATASVC_URL, debug=DEBUG_FLAG):
+    """
+    just wrapping a call to datasvc apis
+    """
+    url = DEFAULT_DATASVC_URL + '/' + instance
+    url += '/' + call + '?'
+    url += '&'.join([opt + '=' + val for opt, val in options.items()])
+
+    done = False
+    tries = 0
+
+    if debug:
+        print('DEBUG:' + url)
+
+    while tries < DATASVC_MAX_RETRY and (not done):
+        try:
+            done = True
+            req = requests.get(url, allow_redirects=False, verify=False)
+        except ReadTimeout:
+            done = False
+            time.sleep(DATASVC_RETRY_SLEEP)
+            tries += 1
+
+    #ReadTimeout
+
+    if debug:
+        print('DEBUG:' + str(req.status_code))
+        print('DEBUG:' + req.text)
+
+    if req.status_code != 200:
+        raise Exception('Request Failed')
+
+    return json.loads(req.text)
+
+def das_go_client(query, dasgoclient=DEFAULT_DASGOCLIENT, debug=DEBUG_FLAG):
+    """
+    just wrapping the dasgoclient command line
+    """
+    proc = Popen([dasgoclient, '-query=%s' % query, '-json'], stdout=PIPE)
+    output = proc.communicate()[0]
+    if debug:
+        print('DEBUG:' + output)
+    return json.loads(output)
+
+def get_phedex_tfc(pnn):
+    """
+    Get the TFC of a PhEDEx node.
+    """
+    req = datasvc_client('tfc', {'node': pnn})
+    return req['phedex']['storage-mapping']['array']
