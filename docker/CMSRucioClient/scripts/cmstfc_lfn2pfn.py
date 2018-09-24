@@ -39,12 +39,12 @@ def tfc_lfn2pfn(lfn, tfc, proto):
     """
 
     for rule in tfc:
-        if (rule['element_name'] == 'lfn-to-pfn') and (rule['protocol'] == proto):
-            regex = re.compile(rule['path-match'])
+        if rule['proto'] == proto:
+            regex = re.compile(rule['path'])
             if regex.match(lfn):
                 if 'chain' in rule:
                     lfn = tfc_lfn2pfn(lfn, tfc, rule['chain'])
-                return regex.sub(rule['result'].replace('$', '\\'), lfn)
+                return regex.sub(rule['out'].replace('$', '\\'), lfn)
 
     raise ValueError("lfn %s with proto %s cannot be matched by tfc %s" % (lfn, proto, tfc))
 
@@ -56,12 +56,12 @@ if __name__ == '__main__':
     PROTO_ATTRS = {
         'extended_attributes': {'tfc_proto': 'srmv2', 'web_service_path': '/srm/managerv2?SFN=',\
         'tfc': [
-            {'destination-match': '.*', 'protocol': 'direct',
-             'result': '/dpm/in2p3.fr/home/cms/trivcat/$1',
-             'element_name': 'lfn-to-pfn', 'path-match': u'/+(.*)'},
-            {'protocol': 'srmv2', 'chain': 'direct', 'destination-match': '.*',
-             'result': 'srm://polgrid4.in2p3.fr:8446/srm/managerv2?SFN=/$1',
-             'path-match': '/+(.*)', 'element_name': 'lfn-to-pfn'}
+            {'destination-match': '.*', 'proto': 'direct',
+             'out': '/dpm/in2p3.fr/home/cms/trivcat/$1',
+             'path': u'/+(.*)'},
+            {'proto': 'srmv2', 'chain': 'direct', 'destination-match': '.*',
+             'out': 'srm://polgrid4.in2p3.fr:8446/srm/managerv2?SFN=/$1',
+             'path': '/+(.*)'}
         ]},
         'hostname': 'polgrid4.in2p3.fr', 'prefix': '/dpm', 'scheme': 'srm', 'port': 8446
     }
