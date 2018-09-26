@@ -236,7 +236,12 @@ def whoami(account='natasha', auth_type='x509_proxy'):
     """Runs whoami command for a given account via client tool,
     requires a valid proxy
     """
-    account_client = AccountClient(account=account, auth_type='x509_proxy')
+    if args.password and args.username:
+        creds = {'username': args.username, 'password': args.password}
+        account_client = AccountClient(account=account, auth_type='userpass', creds=creds,
+                                       rucio_host=args.host, auth_host=args.auth_host)
+    else:
+        account_client = AccountClient(account=account, auth_type='x509_proxy')
     print("Connected to rucio as %s" % account_client.whoami()['account'])
 
 
@@ -373,6 +378,13 @@ if __name__ == '__main__':
     parser.add_argument('--node-pfn', metavar='NODE',
                         help="""get PFN for /store/test/rucio and
                         srmv2 protocol as defined in node's TFC""")
+
+    # Options for the userpass auth_strategy
+    parser.add_argument('-u', '--user', dest='username', default=None, help='username')
+    parser.add_argument('-pwd', '--password', dest='password', default=None, help='password')
+    parser.add_argument('-H', '--host', dest="host", metavar="ADDRESS", help="The Rucio API host.")
+    parser.add_argument('--auth-host', dest="auth_host", metavar="ADDRESS", help="The Rucio Authentication host.")
+
     args = parser.parse_args()
     if args.verbose:
         print (args)
@@ -413,7 +425,12 @@ if __name__ == '__main__':
         whoami(account=args.account)
 
     # create re-usable RSE client connection:
-    rse_client = RSEClient(account=args.account, auth_type='x509_proxy')
+    if args.password and args.username:
+        creds = {'username': args.username, 'password': args.password}
+        rse_client = RSEClient(account=args.account, auth_type='userpass', creds=creds,
+                                       rucio_host=args.host, auth_host=args.auth_host)
+    else:
+        rse_client = RSEClient(account=args.account, auth_type='x509_proxy')
 
     if args.list_rses:
         list_rses()
