@@ -28,11 +28,15 @@ class NodeSync(CMSRucio):
     Currently dealing only with the tfc
     """
 
-    def __init__(self, pnn, rse=None, dry_run=False):
+    def __init__(self, pnn, rse=None, dry_run=False, creds=None):
         """
         """
+        if creds:
+            auth_type = 'userpass'
+        else:
+            auth_type = None
 
-        super(NodeSync, self).__init__(account=None, auth_type=None,
+        super(NodeSync, self).__init__(account=None, auth_type=auth_type, creds=creds,
                                        scope=None, dry_run=dry_run,
                                        das_go_path=DEFAULT_DASGOCLIENT)
 
@@ -112,13 +116,18 @@ class DatasetSync(CMSRucio):
 
     def __init__(self, dataset, pnn, rse=None, scope=DEFAULT_SCOPE,
                  check=True, lifetime=None, dry_run=False, syncrules=False,
-                 das_go_path=DEFAULT_DASGOCLIENT):
+                 das_go_path=DEFAULT_DASGOCLIENT, creds=None):
         """
            :param dataset: Name of the PhEDEx dataset to synchronize with Rucio.
            :param pnn: PhEDEx node name to filter on for replica information.
         """
 
-        super(DatasetSync, self).__init__(account=None, auth_type=None,
+        if creds:
+            auth_type = 'userpass'
+        else:
+            auth_type = None
+
+        super(DatasetSync, self).__init__(account=None, auth_type=auth_type, creds=creds,
                                           scope=scope, dry_run=dry_run,
                                           das_go_path=das_go_path, check=check)
 
@@ -159,6 +168,7 @@ class DatasetSync(CMSRucio):
             name = file_info['name']
             if self.rse in file_info['rses']:
                 replica_files.add(name)
+
         for dataset in self.cli.list_content(self.scope, self.phedex_dataset):
             dataset_summary = {}
             for file_info in self.cli.list_content(self.scope, dataset['name']):
@@ -311,7 +321,7 @@ def get_deleted_datasets(node, delreqdays):
 
     return list(set(datasets))
 
-def sync_one_dataset(dataset, site, rse, scope, check, dry_run, syncrules, dasgoclient):
+def sync_one_dataset(dataset, site, rse, scope, check, dry_run, syncrules, dasgoclient, creds=None):
     """
     Helper function for DatasetSync
     """
@@ -324,6 +334,7 @@ def sync_one_dataset(dataset, site, rse, scope, check, dry_run, syncrules, dasgo
         dry_run=dry_run,
         syncrules=syncrules,
         das_go_path=dasgoclient,
+        creds = creds,
     )
     instance.register()
 
@@ -367,15 +378,23 @@ def main():
                         help='run in debug mode')
     parser.add_argument('--filter', dest='filter',
                         help='regex filtering the datasets name')
+    parser.add_argument('-u', '--user', dest='username', default=None, help='username')
+    parser.add_argument('-pwd', '--password', dest='password', default=None, help='password')
 
     options = parser.parse_args()
+
+    # Make credentials if needed
+    if options.username and options.password:
+        options.creds =         {'username': options.username, 'password': options.password}
+    else:
+        options.creds = None
 
     datasets = options.dataset
     limit = options.limit
     futures = []
 
     if options.synctfc:
-        NodeSync(options.site, options.rse, options.dry_run).sync()
+        NodeSync(options.site, options.rse, options.dry_run, creds=options.creds).sync()
 
 
     if not datasets:
@@ -419,13 +438,14 @@ def main():
         # in debug mode run single-threaded
         if options.debug:
             sync_one_dataset(dataset, options.site, options.rse, options.scope,
-                             options.check, options.dry_run, options.syncrules, options.dasgoclient)
+                             options.check, options.dry_run, options.syncrules, options.dasgoclient,
+                             options.creds)
             print("Finished processing dataset %s" % dataset)
         else:
             future = pool.apply_async(sync_one_dataset,
                                       (dataset, options.site, options.rse, options.scope,
                                        options.check, options.dry_run, options.syncrules,
-                                       options.dasgoclient))
+                                       options.dasgoclient, options.creds))
             futures.append((dataset, future))
 
     if not options.debug:
