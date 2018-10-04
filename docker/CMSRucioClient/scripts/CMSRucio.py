@@ -40,16 +40,17 @@ class CMSRucio(object):
     uses File/Dataset/Container
     """
 
-    def __init__(self, account, auth_type, scope='cms', dry_run=False,
+    def __init__(self, account, auth_type, creds=None, scope='cms', dry_run=False,
                  das_go_path=DEFAULT_DASGOCLIENT, check=False):
         self.account = account
         self.auth_type = auth_type
+        self.creds = creds
         self.scope = scope
         self.dry_run = dry_run
         self.dasgoclient = das_go_path
         self.check = check
 
-        self.cli = Client(account=self.account, auth_type=self.auth_type)
+        self.cli = Client(account=self.account, auth_type=self.auth_type, creds=self.creds)
 
         self.gfal = Gfal2Context()
 
@@ -64,8 +65,11 @@ class CMSRucio(object):
         Return the base path of the rucio url
         """
         print("Getting parameters for rse %s" % rse)
-        rse = rsemgr.get_rse_info(rse)
-        proto = rse['protocols'][0]
+
+        # rse = rsemgr.get_rse_info(rse)
+        # proto = rse['protocols'][0]
+        protos = self.cli.get_protocols(rse)
+        proto = protos[0]
 
         schema = proto['scheme']
         prefix = proto['prefix'] + '/' + self.scope.replace('.', '/')
