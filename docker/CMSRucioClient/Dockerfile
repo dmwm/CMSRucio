@@ -8,7 +8,8 @@ RUN yum install -y epel-release.noarch && \
 RUN yum upgrade -y && \
     yum clean all && \
     rm -rf /var/cache/yum
-RUN yum install -y httpd mod_wsgi python-pip libaio gcc python-devel.x86_64 mod_ssl openssl-devel.x86_64 && \
+RUN yum install -y httpd mod_wsgi python-pip libaio gcc python-devel.x86_64 \
+                   mod_ssl openssl-devel.x86_64 bind-utils nano git && \
     yum clean all && \
     rm -rf /var/cache/yum
 
@@ -33,7 +34,7 @@ RUN curl -o wlcg-repo-1.0.0-1.el7.noarch.rpm http://linuxsoft.cern.ch/wlcg/cento
 RUN yum install -y which krb5-devel gridsite \
                    lcg-CA globus-proxy-utils voms-clients-java wlcg-voms-cms \
                    gfal2-python gfal2-all gfal2-util \
-                   xrootd-client bind-utils nano && \
+                   xrootd-client && \
     yum clean all && \
     rm -rf /var/cache/yum
 
@@ -45,6 +46,15 @@ COPY scripts /scripts
 COPY rucio-openstack.cfg /opt/rucio/etc/rucio.cfg
 COPY rucio-openstack.cfg /opt/rucio-openstack/etc/rucio.cfg
 COPY rucio-chicago.cfg /opt/rucio-chicago/etc/rucio.cfg
+
+# Pull some usefule stuff out of git
+
+WORKDIR /root
+
+RUN git clone https://github.com/rucio/rucio.git
+RUN git clone https://github.com/dmwm/CMSRucio.git
+
+WORKDIR /tmp
 
 ENV X509_USER_PROXY=/tmp/x509up
 ENTRYPOINT ["/bin/bash", "-c", "sleep infinity"]
