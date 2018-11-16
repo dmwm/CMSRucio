@@ -11,4 +11,6 @@ WORKDIR /root
 RUN git clone https://github.com/rucio/rucio.git
 RUN git clone https://github.com/dmwm/CMSRucio.git
 
+ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/docker/CMSRucioClient/rucio-openstack.cfg /opt/rucio/etc/rucio.cfg
+
 ENTRYPOINT ["/bin/bash", "-c", "sleep infinity"]
