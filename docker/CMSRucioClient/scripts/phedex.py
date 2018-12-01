@@ -48,8 +48,10 @@ MODULE_FUNCTION_LIST = [
     'lfn2pfn',
     'seinfo',
     'senames',
+    'tfc',
     'fts',
     'pnns',
+    'links'
 ]
 
 class PhEDEx(object):
@@ -148,7 +150,7 @@ class PhEDEx(object):
         :pnn:         the phedex node name. default None.
                       If defined, only blocks at node are considered.
         :metadata:    list block metadata not only block names (default True).
-        :outtype:        type of output items (default 'block').
+        :outtype:     type of output items (default 'block').
         :locality:    include locality information (default True). Must be true id pnn is not None.
 
         returns: an array of blocks/datsets name or blocks/datasets metadata
@@ -188,7 +190,7 @@ class PhEDEx(object):
 
     def fileblock_files(self, pfb, pnn=None):
         """
-        Just get the the phedex files in a fileblock at a node.
+        Just get the phedex files in a fileblock at a node.
         :pfb:         phedex fileblock
         :pnn:         the phedex node name. default None.
                       if defined only the files at node are considered
@@ -296,16 +298,18 @@ class PhEDEx(object):
         return subs
 
 
-    def tfc(self, pnn, dump=True, proto='srmv2', exclude=None, concise=True):
+    def tfc(self, pnn, dump=True, proto='srmv2', exclude=None, concise=True, normalize=None):
         """
         Get the TFC of a PhEDEx node.
-        :pnn:     phedex node name.
-        :dump:    returns the full tfc as given by data svn. default True
-        :proto:   starting protocol of the selection (if dump is False)
-        :exclude: exclude some lfn paths (default None, all path are kept)
-        :concise: return the tfc rule in the concise format used in
-                  rucio RSE protocol definition.
-                  Only if dump is False. default True.
+        :pnn:       phedex node name.
+        :dump:      returns the full tfc as given by data svn. default True
+        :proto:     starting protocol of the selection (if dump is False)
+        :exclude:   exclude some lfn paths (default None, all path are kept)
+        :concise:   return the tfc rule in the concise format used in
+                    rucio RSE protocol definition.
+                    Only if dump is False. default True.
+        :normalize: if not None, normalizes the rules in the tfc according to
+                    some seinfo (in the form of the output of seinfo method)
 
         returns: array with the tfc rules.
         """
@@ -335,12 +339,16 @@ class PhEDEx(object):
         for rule in full:
             if rule['element_name'] == 'lfn-to-pfn' and rule['protocol'] in protos and \
                (exclude is None or not exclude_re.match(rule['path-match'])):
+                if normalize:
+                    prefix = normalize['protocol'] + '://' + normalize['hostname']
+
+                    rule['result'] = rule['result'].replace('\\', '')\
+                        .replace(prefix + '/', prefix + ':' + str(normalize['port']) + '/')
+
                 if concise:
                     rule_info = {
                         'path': rule['path-match'],
-                        # TO BE FIXED: Bad hack to fix the rules with \\
-                        # in the srm path (like FNAL...)
-                        'out': rule['result'].replace('\\', ''),
+                        'out': rule['result'],
                         'proto': rule['protocol'],
                     }
                 else:
@@ -487,15 +495,19 @@ class PhEDEx(object):
                             lfn, pnn, pfn)
             prefix = None
 
-        return {
+        info = {
             'pfn': pfn,
             'protocol': protocol,
             'hostname': hostname,
             'port': int(port),
-            'webpath': webpath,
             'path' : path,
             'prefix': prefix
         }
+
+        if webpath is not None:
+            info['webpath'] = webpath
+
+        return info
 
     def fts(self, pnn):
         """
@@ -519,6 +531,48 @@ class PhEDEx(object):
 
         return list(set(servers))
 
+
+    def links(self, src=None, dest=None, dump=False):
+        """
+        Wraps the links api call of datasvc
+        :src:   source file (can be a db wildcards)
+        :dest:  source file (can be a db wildcards)
+        :dump:  dumps all info instead tha just distance
+
+        returns an double dictionnary
+            {<src>: {<dest>: <linkinfo>, ...},...}
+        for all non disabled <src> to <dest> links
+        (unless dump is True in which case all links are considered)
+        where <linkinfo> is the distance of the links (or the full
+        link info if dump is True)
+        """
+
+        opts = {}
+
+        if src:
+            opts['from'] = src
+        if dest:
+            opts['to'] = dest
+
+        links = self.datasvc(call='links', options=opts)
+
+        ret = {}
+
+        for link in links['phedex']['link']:
+            src = link['from']
+            dest = link['to']
+
+            if not dump and link['status'] == 'deactivated':
+                continue
+
+            if not dump:
+                link = link['distance']
+
+            if src not in ret:
+                ret[src] = {}
+            ret[src][dest] = link
+
+        return ret
 
 
 if __name__ == '__main__':
@@ -564,6 +618,19 @@ if __name__ == '__main__':
                         help='selecting regexps for pnn listing. Can be multiple.')
     PARSER.add_argument('--exclude', dest='exclude', action='append', default=None,
                         help='excluding regexps for pnn listing. Can be multiple.')
+    PARSER.add_argument('--src', dest='src', default=None,
+                        help='source node.')
+    PARSER.add_argument('--dest', dest='dest', default=None,
+                        help='destination node.')
+    PARSER.add_argument('--dump', dest='dump', action='store_true',
+                        help='full dump. Only with tfc and links calls.')
+    PARSER.add_argument('--concise', dest='concise', action='store_true',
+                        help='print tfc in concise format.')
+    PARSER.add_argument('--exclude_re', dest='exclude_re',
+                        help='exclusive regexp.')
+    PARSER.add_argument('--normalize', dest='normalize', default=None,
+                        help='SE info for normalizing the tfc.')
+
 
 
     OPTIONS = PARSER.parse_args()
@@ -643,9 +710,26 @@ if __name__ == '__main__':
 
     def fpnns(opts):
         """
-        Function to call the method: senames
+        Function to call the method: pnns
         """
         print(PCLI.pnns(select=opts.select, exclude=opts.exclude))
+
+    def ftfc(opts):
+        """
+        Function to call the method: tfc
+        """
+
+        if opts.normalize is not None:
+            opts.normalize = json.loads(opts.normalize.replace("'", '"'))
+
+        logging.info(opts.normalize)
+
+        if opts.pnn is None:
+            print("Function 'tfc' requires the --pnn parameter")
+        else:
+            print(PCLI.tfc(pnn=opts.pnn, dump=opts.dump, proto=opts.protocol,
+                           exclude=opts.exclude_re, concise=opts.concise,
+                           normalize=opts.normalize))
 
     def fseinfo(opts):
         """
@@ -654,7 +738,7 @@ if __name__ == '__main__':
         opts.probes = opts.probes or DEFAULT_PROBE_LFNS
 
         if opts.pnn is None:
-            print("Function 'seinfo' requires the --pnn parameter")
+            print("Function 'lfn2pfn' requires the --pnn parameter")
         else:
             print(PCLI.seinfo(pnn=opts.pnn, protocol=opts.protocol,
                               probes=opts.probes))
@@ -679,11 +763,18 @@ if __name__ == '__main__':
         else:
             print(PCLI.fts(pnn=opts.pnn))
 
+    def flinks(opts):
+        """
+        Function to call the method: lfn2pfn
+        """
+
+        print(PCLI.links(src=opts.src, dest=opts.dest, dump=opts.dump))
+
 
     FUNCTIONS = {
         'das': fdas,
         'datasvc' : fdatasvc,
-        'check_item' : fcheck_item,
+        'check_data_item' : fcheck_item,
         'list_data_items': flist_items,
         'fileblock_files': ffileblock_files,
         'fileblocks_files': ffileblocks_files,
@@ -692,7 +783,9 @@ if __name__ == '__main__':
         'seinfo': fseinfo,
         'lfn2pfn': flfn2pfn,
         'fts': ffts,
+        'tfc': ftfc,
         'pnns': fpnns,
+        'links': flinks,
     }
 
     FUNCTIONS[OPTIONS.function](OPTIONS)
