@@ -11,21 +11,22 @@ import re
 import json
 
 from phedex import PhEDEx, DEFAULT_PHEDEX_INST, DEFAULT_DASGOCLIENT,\
-    DEFAULT_DATASVC_URL, DEFAULT_PROTOCOL
+DEFAULT_DATASVC_URL, DEFAULT_PROTOCOL
 from rucio.client.client import Client
 from rucio.common.exception import RSEProtocolNotSupported, RSENotFound
+from cmstfc import cmstfc
 
 DEFAULT_RSETYPE = 'prod'
 DEFAULT_SUFFIXES = {
     'real': '',
-    'temp': '_TMP',
-    'test': '_TEST',
+    'temp': '_Temp',
+    'test': '_Test',
 }
 
 DOMAINS_BYTYPE = {
-    'real': {'wan': {'read': 1, 'write': 0, 'third_party_copy': 0, 'delete': 0},
+    'real': {'wan': {'read': 1, 'write': 0, 'third_party_copy': 1, 'delete': 0},
              'lan': {'read': 0, 'write': 0, 'delete': 0}},
-    'test': {'wan': {'read': 1, 'write': 1, 'third_party_copy': 0, 'delete': 1},
+    'test': {'wan': {'read': 1, 'write': 1, 'third_party_copy': 1, 'delete': 1},
              'lan': {'read': 0, 'write': 0, 'delete': 0}},
     'temp': {'wan': {'read': 1, 'write': 1, 'third_party_copy': 1, 'delete': 1},
              'lan': {'read': 0, 'write': 0, 'delete': 0}},
@@ -119,6 +120,10 @@ class CMSRSE(object):
 
         attrs[self.rsename] = 'True'
 
+        attrs['pnn'] = self.pnn
+
+        attrs['cms_type'] = self.rsetype
+
         for (key, value) in xattrs:
             attrs[key] = value
 
@@ -135,6 +140,11 @@ class CMSRSE(object):
 
         for (key, value) in self.attrs.items():
             if key not in rattrs or rattrs[key] != value:
+                # Hack. I can find no way to define an attribute to 1
+                # (systematically reinterpreted as True)
+                if key in rattrs and rattrs[key] is True and str(value) == '1':
+                    continue
+
                 if key not in rattrs:
                     rattrs[key] = 'None'
                 logging.debug('setting attribute %s from value %s to value %s for rse %s',
@@ -148,6 +158,7 @@ class CMSRSE(object):
 
         return changed
 
+
     def _get_settings(self):
         """
         Get expected settings for the RSE
@@ -160,6 +171,37 @@ class CMSRSE(object):
             self.settings['deterministic'] = True
 
 
+    def _check_lfn2pfn(self):
+        """
+        Checks that lfn2pfn works properly
+        """
+        for lfn in SE_PROBES_BYTYPE[self.rsetype]:
+
+            # this is what rucio does
+            pfn = self.proto['scheme']  + '://' + self.proto['hostname'] +\
+                ':' +  str(self.proto['port'])
+
+            if 'web_service_path' in self.proto['extended_attributes']:
+                pfn = pfn + self.proto['extended_attributes']['web_service_path']
+
+            pfn = pfn + '/' + cmstfc('cms', lfn, None, None, self.proto)
+
+            # this should match dataservice pfn, modulo some normalization
+            # (e.g.: adding the port number)
+            pfn_datasvc = []
+            pfn_datasvc.append(self.pcli.lfn2pfn(pnn=self.pnn, lfn=lfn))
+            pfn_datasvc.append(pfn_datasvc[0].replace(
+                self.proto['hostname'],
+                self.proto['hostname'] + ':' + str(self.proto['port'])
+            ))
+
+            if pfn not in pfn_datasvc:
+                raise Exception("rucio and datasvc lfn2pfn mismatch, rucio: %s ; datasvc: %s" %
+                                (pfn, pfn_datasvc))
+
+            logging.debug("checking lfn2pfn ok %s", pfn)
+
+
     def _get_protocol(self, seinfo, add_prefix, tfc, exclude, domains, token):
         """
         Get the informations about the RSE protocol from creator argument or
@@ -170,14 +212,14 @@ class CMSRSE(object):
                       SE_ADD_PREFIX_BYTYPE is used.
         :tfc:         dictionnary with tfc rules. If None the info is gathered from PhEDEx using
                       the PhEDEx.tfc method,
-        :exclude: rules to be excluded from tfc (in case it is gathered from PhEDEx).
+        :exclude:     rules to be excluded from tfc (in case it is gathered from PhEDEx).
         :domains:     domains dictionnary. If none the DOMAINS_BYTYPE constant is used.
         :token:       space token. default None
         """
 
         seinfo = seinfo or self.pcli.seinfo(pnn=self.pnn, probes=SE_PROBES_BYTYPE[self.rsetype])
 
-        tfc = tfc or self.pcli.tfc(pnn=self.pnn, dump=False, exclude=exclude)
+        tfc = tfc or self.pcli.tfc(pnn=self.pnn, dump=False, exclude=exclude, normalize=seinfo)
 
         domains = domains or DOMAINS_BYTYPE[self.rsetype]
 
@@ -196,6 +238,7 @@ class CMSRSE(object):
             self.proto['prefix'] = '/'
             self.proto['extended_attributes']['tfc_proto'] = DEFAULT_PROTOCOL
             self.proto['extended_attributes']['tfc'] = tfc
+            self._check_lfn2pfn()
         else:
             self.proto['prefix'] = seinfo['prefix']
 
@@ -281,7 +324,7 @@ class CMSRSE(object):
 if __name__ == '__main__':
     PARSER = argparse.ArgumentParser(
         description='''CLI for updating a CMS RSE''',
-        )
+    )
     PARSER.add_argument('-v', '--verbose', dest='debug', action='store_true',
                         help='increase output verbosity')
     PARSER.add_argument('-t', '--dry', dest='dry', action='store_true',
@@ -290,29 +333,30 @@ if __name__ == '__main__':
                         help='PhEDEx instance, default %s.' % DEFAULT_PHEDEX_INST)
     PARSER.add_argument('--dasgoclient', dest='dasgoclient', default=DEFAULT_DASGOCLIENT,
                         help='DAS client to use. default %s.' % DEFAULT_DASGOCLIENT)
-    PARSER.add_argument('--pnn', dest='pnn', help='PhEDEx node name. Can be multiple',
+    PARSER.add_argument('--pnn', dest='pnn', help='PhEDEx node name. Can be multiple.\
+                        "all" to loop on all pnn',
                         action='append', default=[])
-    PARSER.add_argument('--type', dest='type', help='RSE Type. Can be multiple',
+    PARSER.add_argument('--type', dest='type', help='RSE Type. Can be multiple.',
                         action='append', default=[])
     PARSER.add_argument('--suffix', dest='suffix', default=None,
-                        help='RSE suffix. If missing it will be inferred by the the RSE type.')
+                        help='RSE suffix. If missing, inferred by the RSE type.')
     PARSER.add_argument('--fts', dest='fts', default=None,
-                        help='FTS server. If missing it will be gathered from PhEDEx.')
+                        help='FTS server. If missing, taken from PhEDEx.')
     PARSER.add_argument('--tier', dest='tier', default=None,
-                        help='PNN Tier. If missing it will be gathered from PhEDEx.')
+                        help='PNN Tier. If missing, taken from PhEDEx.')
     PARSER.add_argument('--country', dest='country', default=None,
-                        help='Country Flag. If missing it will be gathered from PhEDEx.')
+                        help='Country Flag. If missing, taken from PhEDEx.')
     PARSER.add_argument('--lfn2pfn', dest='lfn2pfn', default=None,
-                        help='lfn2pfn algorithm. If missing, inferred by the the RSE type.')
+                        help='lfn2pfn algorithm. If missing, inferred by the RSE type.')
     # TODO: correct attrs to be a multiple key value option
     PARSER.add_argument('--attr', dest='attrs', default=None,
                         help='dictionnary of extra RSE attributes. Default None')
     PARSER.add_argument('--seinfo', dest='seinfo', default=None,
-                        help='SE informations. If missing it will be gathered from PhEDEx.')
+                        help='SE informations. If missing, taken from PhEDEx.')
     PARSER.add_argument('--tfc', dest='tfc', default=None,
-                        help='TFC ruless. If missing it will be gathered from PhEDEx.')
+                        help='TFC ruless. If missing, taken from PhEDEx.')
     PARSER.add_argument('--domains', dest='domains', default=None,
-                        help='RSE domains. If missing it will be inferred by the the RSE type.')
+                        help='RSE domains. If missing, inferred by the RSE type.')
     PARSER.add_argument('--account', dest='account', default=os.environ['RUCIO_ACCOUNT'],
                         help='Rucio accoun. default RUCIO_ACCOUNT')
     PARSER.add_argument('--space_token', dest='token', default=None,
@@ -335,6 +379,8 @@ if __name__ == '__main__':
     if OPTIONS.domains:
         OPTIONS.domains = json.loads(OPTIONS.domains.replace("'", '"'))
 
+    if OPTIONS.seinfo is not None:
+        OPTIONS.seinfo = json.loads(OPTIONS.seinfo.replace("'", '"'))
 
     if 'all' in OPTIONS.pnn:
         OPTIONS.pnn = PhEDEx(instance=OPTIONS.instance).pnns(
