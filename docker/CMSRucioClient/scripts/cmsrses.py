@@ -251,7 +251,7 @@ class CMSRSE(object):
             self.proto['extended_attributes']['space_token'] = token
 
         if self.proto['extended_attributes'] == {}:
-            self.proto.pop('extended_attributes')
+            self.proto['extended_attributes'] = None
 
         self.proto['impl'] = 'rucio.rse.protocols.gfalv2.Default'
 
@@ -265,18 +265,19 @@ class CMSRSE(object):
         update = False
         if self.proto != rproto:
             logging.debug("protocol definition not as expected: rucio=%s, expected=%s",
-                          str(self.proto), str(rproto))
+                          str(rproto), str(self.proto))
             update = True
 
         if update:
             if self.dry:
                 logging.info('Modifying protocol to %s. Dry run, skipping', str(self.proto))
-                return
+                return update
 
             try:
                 self.rcli.delete_protocols(rse=self.rsename, scheme=self.proto['scheme'])
             except RSEProtocolNotSupported:
-                pass
+                logging.debug("Cannot remove protocol (scheme, rse) = (%s,%s)",
+                              self.proto['scheme'], self.rsename)
 
             self.rcli.add_protocol(rse=self.rsename, params=self.proto)
 
