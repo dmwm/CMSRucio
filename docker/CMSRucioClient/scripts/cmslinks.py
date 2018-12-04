@@ -129,7 +129,8 @@ class LinksMatrix(object):
                         self.links[src['rse']][dest['rse']] = -1
                         break
 
-    def update(self, overwrite=False, disable=True, dry=False):
+    def update(self, overwrite=False, disable=True, dry=False,
+               srcselect=r'\S+', dstselect=r'\S+'):
         """
         Updates distances according to what is expected
         :overwrite:   overwrite distance of the links that already exist
@@ -139,12 +140,17 @@ class LinksMatrix(object):
 
         count = {'checked': [], 'created': [], 'updated': [], 'disabled': []}
 
+        srcregex = re.compile(srcselect)
+        dstregex = re.compile(dstselect)
+
         for src in self.rselist:
             for dest in self.rselist:
                 srse = src['rse']
                 drse = dest['rse']
 
-                if srse == drse:
+                if srse == drse or\
+                    not srcregex.match(srse) or\
+                    not dstregex.match(drse):
                     continue
 
                 count['checked'].append([srse, drse])
@@ -205,6 +211,12 @@ if __name__ == '__main__':
                         help='Data service URL. default %s.' % DEFAULT_DATASVC_URL)
     PARSER.add_argument('--rse', dest='rselist', help='RSE. Can be multiple, default all.',
                         action='append', default=None)
+    PARSER.add_argument('--srcselect', dest='srcselect',
+                        help='Regex for selecting the source RSEs.',
+                        default=r'\S+')
+    PARSER.add_argument('--dstselect', dest='dstselect',
+                        help='Regex for selecting the destination RSEs.',
+                        default=r'\S+')
     PARSER.add_argument('--distance', dest='distance', default=None,
                         help='rules for different RSE distances, default %s' %
                         json.dumps(DEFAULT_DISTANCE_RULES))
@@ -220,6 +232,7 @@ if __name__ == '__main__':
                         help='Overwrite distances that have changed.')
     PARSER.add_argument('--disable', dest='disable', action='store_true',
                         help='Disable links that should not be there.')
+
 
     OPTIONS = PARSER.parse_args()
 
@@ -244,7 +257,9 @@ if __name__ == '__main__':
     ).update(
         overwrite=OPTIONS.overwrite,
         disable=OPTIONS.disable,
-        dry=OPTIONS.dry
+        dry=OPTIONS.dry,
+        srcselect=OPTIONS.srcselect,
+        dstselect=OPTIONS.dstselect
     )
 
     logging.debug(str(COUNT['checked']))
