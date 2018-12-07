@@ -43,9 +43,10 @@ RUN curl -k -o  /bin/dasgoclient https://www.lns.cornell.edu/~vk/Work/dasgoclien
 RUN curl -o /etc/ca.crt https://cafiles.cern.ch/cafiles/certificates/CERN%20Root%20Certification%20Authority%202.crt
 
 COPY scripts /scripts
-COPY rucio-openstack.cfg /opt/rucio/etc/rucio.cfg
-COPY rucio-openstack.cfg /opt/rucio-openstack/etc/rucio.cfg
+COPY rucio-openstack.cfg /opt/rucio-or12/etc/rucio.cfg
+COPY rucio-testbed.cfg /opt/rucio-testbed/etc/rucio.cfg
 COPY rucio-chicago.cfg /opt/rucio-chicago/etc/rucio.cfg
+COPY rucio-testbed.cfg /opt/rucio/etc/rucio.cfg
 
 # Pull some usefule stuff out of git
 
