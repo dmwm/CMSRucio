@@ -1,7 +1,8 @@
 Build and run like so where /tmp/x509up is a proxy generated with the DN that matches account [username]
 
-```docker build -t cms_rucio_client .```
-
+    docker build -t cmssw/rucio_client .
+    docker push cmssw/rucio_client
+    
 To run
 
 ```docker run -e "RUCIO_ACCOUNT=[username]" -v /tmp/x509up:/tmp/x509up -it cms_rucio_client /bin/bash```
