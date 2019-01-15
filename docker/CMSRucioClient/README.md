@@ -12,7 +12,8 @@ To run (no need to build, Eric does this occassionally):
     docker cp ~/.globus/userkey.pem client:/tmp/userkey.pem
     docker exec -it client /bin/bash
 
-Inside container
+Inside container generate a proxy and connect to the Rucio server
+
     chown root *.pem
     voms-proxy-init -voms cms -key userkey.pem -cert usercert.pem 
     export RUCIO_ACCOUNT=[username]
@@ -21,6 +22,7 @@ Inside container
 to verify it worked. (You should get feedback saying the account is correct.)
 
 We ship the container with a number of configuration files in `/opt` which you can switch to with
+
     export RUCIO_HOME=/opt/rucio-[foo]/
 
 If you want to develop the rucio client code inside the container, add ```-v /path/to/git/rucio/lib/rucio:/usr/lib/python2.7/site-packages/rucio```
