@@ -1,0 +1,66 @@
+{
+ "ratnik": {
+  "email": null, 
+  "dns": [
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=ratnik/CN=577888/CN=Natalia Ratnikova"
+  ]
+ }, 
+ "zvada": {
+  "email": null, 
+  "dns": [
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=zvada/CN=684832/CN=Marian Zvada", 
+   "/C=DE/O=GermanGrid/OU=KIT/CN=Marian Zvada"
+  ]
+ }, 
+ "emassaro": {
+  "email": null, 
+  "dns": [
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=emassaro/CN=833901/CN=Evan Keefe Massaro"
+  ]
+ }, 
+ "dciangot": {
+  "email": null, 
+  "dns": [
+   "/DC=org/DC=terena/DC=tcs/C=IT/O=Istituto Nazionale di Fisica Nucleare/CN=Diego Ciangottini ciangottini@infn.it", 
+   "/C=IT/O=CLOUD@CNAF/CN=1e7074e5-96fe-43e8-881d-4d572c128931@dodas-iam", 
+   "/C=IT/O=INFN/OU=Personal Certificate/L=Perugia/CN=Diego Ciangottini"
+  ]
+ }, 
+ "das": {
+  "dns": [
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=valya/CN=443502/CN=Valentin Y Kuznetsov"
+  ]
+ }, 
+ "root": {
+  "email": null, 
+  "dns": [
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=sartiran/CN=672713/CN=Andrea Sartirana", 
+   "/DC=org/DC=terena/DC=tcs/C=IT/O=Istituto Nazionale di Fisica Nucleare/CN=Diego Ciangottini ciangottini@infn.it", 
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=ncsmith/CN=756162/CN=Nicholas Charles Smith", 
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=ratnik/CN=577888/CN=Natalia Ratnikova", 
+   "/C=IT/O=INFN/OU=Personal Certificate/L=Perugia/CN=Diego Ciangottini", 
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=bbockelm/CN=659869/CN=Brian Paul Bockelman", 
+   "/C=CH/ST=Geneva/O=CERN/OU=PH-ADP-CO/CN=DDMLAB Client Certificate/emailAddress=ph-adp-ddm-lab@cern.ch", 
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=ewv/CN=644876/CN=Eric Wayne Vaandering", 
+   "/C=DE/O=GermanGrid/OU=KIT/CN=Marian Zvada", 
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=zvada/CN=684832/CN=Marian Zvada", 
+   "/C=UK/O=eScience/OU=CLRC/L=RAL/CN=katy ellis"
+  ]
+ }, 
+ "ncsmith": {
+  "dns": [
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=ncsmith/CN=756162/CN=Nicholas Charles Smith"
+  ]
+ }, 
+ "ewv": {
+  "dns": [
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=ewv/CN=644876/CN=Eric Wayne Vaandering"
+  ]
+ }, 
+ "kellis": {
+  "email": null, 
+  "dns": [
+   "/C=UK/O=eScience/OU=CLRC/L=RAL/CN=katy ellis"
+  ]
+ }
+}
