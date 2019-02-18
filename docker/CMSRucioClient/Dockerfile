@@ -16,7 +16,7 @@ RUN yum install -y httpd mod_wsgi python-pip libaio gcc python-devel.x86_64 \
 RUN pip install --upgrade pip setuptools
 RUN rm -rf /usr/lib/python2.7/site-packages/ipaddress*
 
-RUN pip install rucio-clients
+RUN pip install rucio-clients multiprocessing-logging jsonschema PyYAML
 
 # Get various repos for yum setup
 
@@ -34,7 +34,7 @@ RUN curl -o wlcg-repo-1.0.0-1.el7.noarch.rpm http://linuxsoft.cern.ch/wlcg/cento
 RUN yum install -y which krb5-devel gridsite \
                    lcg-CA globus-proxy-utils voms-clients-java wlcg-voms-cms \
                    gfal2-python gfal2-all gfal2-util \
-                   xrootd-client && \
+                   xrootd-client pylint && \
     yum clean all && \
     rm -rf /var/cache/yum
 
