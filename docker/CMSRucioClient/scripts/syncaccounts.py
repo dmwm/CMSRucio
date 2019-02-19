@@ -144,11 +144,14 @@ class SyncAccounts(object):
                 stat['identity'].append(account)
 
             else:
-                if self._add_account_attr(account, dry):
-                    stat['attribute'].append(account)
+                try:
+                    if self._add_account_attr(account, dry):
+                        stat['attribute'].append(account)
 
-                if self._add_identity(account, dry):
-                    stat['identity'].append(account)
+                    if self._add_identity(account, dry):
+                        stat['identity'].append(account)
+                except AccountNotFound:
+                    logging.warn('Attributes and identiy not added')
 
         return stat
 
