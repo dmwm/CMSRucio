@@ -11,8 +11,9 @@ voms-proxy-init2 --debug -rfc -valid 96:00 -cert /tmp/cert.pem -key /tmp/key.pem
 
 cd /root/CMSRucio
 git remote add sartiran https://github.com/sartiran/CMSRucio.git
+git remote add ericvaandering https://github.com/ericvaandering/CMSRucio.git
 git fetch --all
-git checkout raw
+git checkout account_limit
 export RUCIO_ACCOUNT=root
 
 echo Using config file in $RUCIO_HOME
