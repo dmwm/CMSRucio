@@ -28,7 +28,7 @@ from rucio.common.exception import RucioException
 from instrument import timer, get_timing
 from phedex import PhEDEx
 
-DEFAULT_CONFFILE = '/etc/cmssyncsites.yaml'
+DEFAULT_CONFFILE = '/etc/synccmssites.yaml'
 DEFAULT_LOGFILE = '/rucio/logs'
 
 LOADED_CONF = '/tmp/.synccmssites.yaml'
@@ -63,6 +63,8 @@ DEFAULT_PNN_CONF = {
     'chunck': 100,
     'allow_clean': False,
     'multi_das_calls': False,
+    'select': [r'\S+'],
+    'ignore': [],
 }
 
 DEFAULT_MAIN_CONF = {
@@ -298,7 +300,6 @@ def pnn_sync(pnn, pcli):
     """
     Synchronize one rucio dataset at one rse
     :pnn:    phedex node name.
-    :config: config file.
     :pcli:   phedex client.
     """
 
@@ -315,12 +316,13 @@ def pnn_sync(pnn, pcli):
     if _pnn_abort(pnn, summary, rcli):
         return summary
 
-    diff = get_node_diff(pnn, pcli, rcli, conf['multi_das_calls'])
+    diff = get_node_diff(pnn, pcli, rcli, conf)
     summary['timing'].update(diff['timing'])
     diff = diff['return']
     summary['diff'] = diff['summary']
 
-    if (diff['summary']['tot'] == diff['summary']['to_remove']) and not conf['allow_clean']:
+    if (diff['summary']['tot'] == diff['summary']['to_remove']) and \
+        not conf['allow_clean']:
         logging.warning('All datasets to be removed. Aborting.')
         summary['status'] = 'aborted'
         return summary
@@ -383,17 +385,23 @@ def _pnn_abort(pnn, summary, rcli):
 
 
 @timer
-def get_node_diff(pnn, pcli, rcli, multi_das_calls=False):
+def get_node_diff(pnn, pcli, rcli, conf):
     """
     Get the diff between the rucio and phedex at a node
     :pnn:  node name
     :pcli: phedex client instance
     :rcli: rucio client instance
+    :multi_das_calls: perform one DAS call for each dataset starting letter
+    :filters: include and exclude filters (by default all datasets are included)
 
     return the list of datasets to add, remove and update
     as in DEFAULT_DATADIFF_DICT
     """
     timing = {}
+
+    multi_das_calls = conf['multi_das_calls']
+    select = conf['select']
+    ignore = conf['ignore']
 
     blocks_at_pnn = get_timing(get_blocks_at_pnn(pnn, pcli, multi_das_calls), timing)
 
@@ -401,7 +409,36 @@ def get_node_diff(pnn, pcli, rcli, multi_das_calls=False):
 
     diff = compare_data_lists(blocks_at_pnn, datasets_at_rse, pnn)
 
+    _diff_apply_filter(diff, select, ignore)
+
     diff['timing'].update(timing)
+
+    return diff
+
+
+@timer
+def _diff_apply_filter(diff, select, ignore):
+    """
+    Select datasets according to filters
+    """
+
+    selected = 0
+
+    select = [re.compile(sel) for sel in select]
+    ignore = [re.compile(sel) for sel in ignore]
+
+    for item in ['missing', 'to_remove', 'to_update']:
+
+        diff['return'][item] = [
+            dset for dset in diff['return'][item] if
+            any(regex.match(dset) for regex in select) and
+            not any(regex.match(dset) for regex in ignore)
+        ]
+
+        diff['return']['summary'][item + '_selected'] = len(diff['return'][item])
+        selected += diff['return']['summary'][item + '_selected']
+
+    diff['return']['summary']['selected'] = selected
 
     return diff
 
