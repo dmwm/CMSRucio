@@ -19,12 +19,15 @@ from custom_logging import logging, get_levels
 from rucio.client.client import Client
 from rucio.common.exception import DataIdentifierNotFound, CannotAuthenticate, FileAlreadyExists,\
     DataIdentifierAlreadyExists, DatabaseException
+from rucio.common.utils import chunks
 
 from phedex import PhEDEx
 from syncaccounts import SYNC_ACCOUNT_FMT
 
 DEFAULT_RSE_FMT = '%s'
 DEFAULT_SCOPE = 'cms'
+
+REMOVE_CHUNK_SIZE = 20
 
 #pylint: disable=too-many-instance-attributes
 class CMSRucioDatasetReplica(object):
@@ -251,20 +254,21 @@ class CMSRucioDatasetReplica(object):
         elif to_remove:
             logging.verbose('Removing replicas %s from rse %s.',
                             str(to_remove), self.rse)
-            attempt = 0
-            while True:
-                attempt += 1
-                try:
-                    self.rcli.delete_replicas(rse=self.rse, files=[{
-                        'scope': self.scope,
-                        'name': lfn,
-                    } for lfn in to_remove])
-                    break
-                except DatabaseException:
-                    logging.warning('DatabaseException raised, retrying...')
-                    if attempt > 3:
-                        raise
-                    time.sleep(randint(1, 5))
+            for to_remove_chunk in chunks(to_remove, REMOVE_CHUNK_SIZE):
+                attempt = 0
+                while True:
+                    attempt += 1
+                    try:
+                        self.rcli.delete_replicas(rse=self.rse, files=[{
+                            'scope': self.scope,
+                            'name': lfn,
+                        } for lfn in to_remove_chunk])
+                        break
+                    except DatabaseException:
+                        logging.warning('DatabaseException raised, retrying...')
+                        if attempt > 3:
+                            raise
+                        time.sleep(randint(1, 5))
 
         return {'added': missing, 'removed': to_remove}
 
