@@ -32,7 +32,7 @@ RUN curl -o wlcg-repo-1.0.0-1.el7.noarch.rpm http://linuxsoft.cern.ch/wlcg/cento
 
 # Install sets of RPM
 RUN yum install -y which krb5-devel gridsite \
-                   lcg-CA globus-proxy-utils voms-clients-java wlcg-voms-cms \
+                   lcg-CA globus-proxy-utils voms-clients-java voms-clients-cpp wlcg-voms-cms \
                    gfal2-python gfal2-all gfal2-util \
                    xrootd-client pylint && \
     yum clean all && \
@@ -42,20 +42,21 @@ RUN yum install -y which krb5-devel gridsite \
 RUN curl -k -o  /bin/dasgoclient https://www.lns.cornell.edu/~vk/Work/dasgoclient && chmod +x /bin/dasgoclient
 RUN curl -o /etc/ca.crt https://cafiles.cern.ch/cafiles/certificates/CERN%20Root%20Certification%20Authority%202.crt
 
-COPY scripts /scripts
-COPY rucio-or12.cfg /opt/rucio-or12/etc/rucio.cfg
-COPY rucio-testbed.cfg /opt/rucio-testbed/etc/rucio.cfg
-COPY rucio-dev.cfg /opt/rucio-dev/etc/rucio.cfg
-COPY rucio-testbed.cfg /opt/rucio/etc/rucio.cfg
-
-# Pull some usefule stuff out of git
-
 WORKDIR /root
 
 RUN git clone https://github.com/rucio/rucio.git
 RUN git clone https://github.com/dmwm/CMSRucio.git
 
 WORKDIR /tmp
+
+COPY scripts /scripts
+COPY rucio-or12.cfg /opt/rucio-or12/etc/rucio.cfg
+COPY rucio-testbed.cfg /opt/rucio-testbed/etc/rucio.cfg
+COPY rucio-dev.cfg /opt/rucio-dev/etc/rucio.cfg
+COPY rucio-int.cfg /opt/rucio-int/etc/rucio.cfg
+COPY rucio-testbed.cfg /opt/rucio/etc/rucio.cfg
+
+# Pull some usefule stuff out of git
 
 ENV X509_USER_PROXY=/tmp/x509up
 ENTRYPOINT ["/bin/bash", "-c", "sleep infinity"]
