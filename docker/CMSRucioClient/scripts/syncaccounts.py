@@ -9,7 +9,7 @@ import os
 import re
 
 from rucio.client.client import Client
-from rucio.common.exception import AccountNotFound
+from rucio.common.exception import AccountNotFound, DatabaseException
 
 SYNC_ACCOUNT_FMT = 'sync_%s'
 
@@ -61,13 +61,17 @@ class SyncAccounts(object):
             logging.info('creating account %s. Dry run',
                          account)
         elif missing:
-            self.rcli.add_account(
-                account=account,
-                type='USER',
-                email=None
-            )
-            logging.debug('created account %s',
-                          account)
+            try:
+                self.rcli.add_account(
+                    account=account,
+                    type='USER',
+                    email=None
+                )
+                logging.debug('created account %s',
+                              account)
+            except DatabaseException:
+                logging.warn('Could not create account %s',
+                              account)
 
         return missing
 
@@ -140,11 +144,14 @@ class SyncAccounts(object):
                 stat['identity'].append(account)
 
             else:
-                if self._add_account_attr(account, dry):
-                    stat['attribute'].append(account)
+                try:
+                    if self._add_account_attr(account, dry):
+                        stat['attribute'].append(account)
 
-                if self._add_identity(account, dry):
-                    stat['identity'].append(account)
+                    if self._add_identity(account, dry):
+                        stat['identity'].append(account)
+                except AccountNotFound:
+                    logging.warn('Attributes and identiy not added')
 
         return stat
 
