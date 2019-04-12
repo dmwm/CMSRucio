@@ -53,6 +53,7 @@ COPY scripts /scripts
 COPY rucio-or12.cfg /opt/rucio-or12/etc/rucio.cfg
 COPY rucio-testbed.cfg /opt/rucio-testbed/etc/rucio.cfg
 COPY rucio-dev.cfg /opt/rucio-dev/etc/rucio.cfg
+COPY rucio-int.cfg /opt/rucio-int/etc/rucio.cfg
 COPY rucio-testbed.cfg /opt/rucio/etc/rucio.cfg
 
 # Pull some usefule stuff out of git
