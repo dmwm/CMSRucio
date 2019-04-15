@@ -133,6 +133,7 @@ class SyncAccounts(object):
         }
 
         for account in self.accounts:
+            logging.debug("Considering %s", account)
             stat['tot'].append(account)
 
             created = self._create_account(account, dry)
@@ -145,8 +146,11 @@ class SyncAccounts(object):
 
             else:
                 try:
+                    logging.debug("Adding attribute to %s", account)
+
                     if self._add_account_attr(account, dry):
                         stat['attribute'].append(account)
+                    logging.debug("Adding identity to %s", account)
 
                     if self._add_identity(account, dry):
                         stat['identity'].append(account)
@@ -192,6 +196,8 @@ if __name__ == '__main__':
         IDENTITY = {'from': OPTIONS.fromaccount}
     else:
         IDENTITY = None
+
+    logging.info("Adding %s to accounts", IDENTITY)
 
     RESULT = SyncAccounts(
         rses=OPTIONS.rse,

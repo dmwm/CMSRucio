@@ -16,6 +16,7 @@ import copy
 from datetime import datetime, timedelta
 import re
 import yaml
+import random
 
 
 from mp_custom import multiprocessing
@@ -696,6 +697,8 @@ def sync(config, logs):
                if pnn not in workers if pnn not in pnns]
 
         pnns += add
+
+        random.shuffle(pnns)
 
         if not _ping():
             logging.warning('Cannot ping, not launching workers')
