@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# set -x
+
 # We have to copy the certificates because we cannot change permissions on them as mounted secrets and voms-proxy is particular about permissions
 
 cp /opt/rucio/certs/usercert.pem /tmp/cert.pem
@@ -20,7 +22,7 @@ echo Using config file in $RUCIO_HOME
 
 cd docker/CMSRucioClient/scripts/
 
-./cmsrses.py --pnn all --select 'T2_\S+' --exclude '\S+RAL\S*' --exclude '\S+Nebraska\S*' --exclude 'T2_MY_\S+' --exclude 'T2_US_Florida' --exclude '\S+CERN\S+' --type real --type temp --type test --fts https://fts3.cern.ch:8446
-./syncaccounts.py --identity "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=cmsrucio/CN=430796/CN=Robot: CMS Rucio Data Transfer"	--type x509
-./cmslinks.py --phedex_link --overwrite --disable
+echo "Site sync config file:"
+cat  /etc/sync-config/site-sync.yaml
 
+./synccmssites.py --nodaemon --config /etc/sync-config/site-sync.yaml --logs /dev/stdout
