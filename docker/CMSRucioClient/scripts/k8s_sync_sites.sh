@@ -7,7 +7,7 @@ cp /opt/rucio/keys/new_userkey.pem /tmp/key.pem
 chmod 400 /tmp/key.pem
 
 # Generate a proxy with the voms extension if requested
-voms-proxy-init2 --debug -rfc -valid 96:00 -cert /tmp/cert.pem -key /tmp/key.pem -out /tmp/x509up -voms cms -rfc -timeout 5
+voms-proxy-init -voms cms  -cert /tmp/cert.pem -key /tmp/key.pem
 
 cd /root/CMSRucio
 git remote add sartiran https://github.com/sartiran/CMSRucio.git
@@ -21,6 +21,6 @@ echo Using config file in $RUCIO_HOME
 cd docker/CMSRucioClient/scripts/
 
 ./cmsrses.py --pnn all --select 'T2_\S+' --exclude '\S+RAL\S*' --exclude '\S+Nebraska\S*' --exclude 'T2_MY_\S+' --exclude 'T2_US_Florida' --exclude '\S+CERN\S+' --type real --type temp --type test --fts https://fts3.cern.ch:8446
-./syncaccounts.py --identity "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=cmsrucio/CN=430796/CN=Robot: CMS Rucio Data Transfer"	--type x509
+./syncaccounts.py --identity "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=cmsrucio/CN=430796/CN=Robot: CMS Rucio Data Transfer" --type x509
 ./cmslinks.py --phedex_link --overwrite --disable
 

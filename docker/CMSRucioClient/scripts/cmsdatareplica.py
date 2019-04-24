@@ -193,10 +193,12 @@ class CMSRucioDatasetReplica(object):
         :dry:  Drydrun. default false
         """
 
-        rrepl = [repl['name'] for repl in self.rcli.list_replicas([{
-            'scope': self.scope,
-            'name': self.dataset
-        }], rse_expression='rse=%s' % self.rse)]
+        logging.notice('Updating replicas for %s:%s at %s' % (self.scope, self.dataset, self.rse))
+
+        replicas = self.rcli.list_replicas([{'scope': self.scope, 'name': self.dataset}],
+                                           rse_expression='rse=%s' % self.rse)
+
+        rrepl = [repl['name'] for repl in replicas]
 
         prepl = [repl for repl in self.replicas.keys()]
 
