@@ -9,7 +9,7 @@ import os
 import re
 
 from rucio.client.client import Client
-from rucio.common.exception import AccountNotFound, DatabaseException
+from rucio.common.exception import AccountNotFound, DatabaseException, Duplicate
 
 SYNC_ACCOUNT_FMT = 'sync_%s'
 
@@ -101,23 +101,18 @@ class SyncAccounts(object):
     def _add_identity(self, account, dry=False):
 
         identities = list(self.rcli.list_identities(account=account))
-
         idmissing = self.identity not in identities
 
         if idmissing and dry:
-            logging.info('adding %s for account %s. Dry run',
-                         self.identity, account)
-
+            logging.info('adding %s for account %s. Dry run', self.identity, account)
         elif idmissing:
-            self.rcli.add_identity(
-                account=account,
-                identity=self.identity['identity'],
-                authtype=self.identity['type'],
-                email=None
-            )
-            logging.debug('added %s for account %s.',
-                          self.identity, account)
-
+            try:
+                self.rcli.add_identity(account=account, identity=self.identity['identity'],
+                                       authtype=self.identity['type'], email=None)
+                logging.debug('added %s for account %s', self.identity, account)
+            except Duplicate:  # Sometimes idmissing doesn't seem to work
+                logging.warn('identity %s for account %s existed', self.identity, account)
+                return False
         return idmissing
 
     def update(self, dry=False):
