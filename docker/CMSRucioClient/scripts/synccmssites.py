@@ -66,6 +66,7 @@ DEFAULT_PNN_CONF = {
     'multi_das_calls': False,
     'select': [r'\S+'],
     'ignore': [],
+    'min_deletions': 50,
 }
 
 DEFAULT_MAIN_CONF = {
@@ -345,7 +346,7 @@ def pnn_sync(pnn, pcli):
     logging.notice("Launched %d workers, pool size %d, timing %s", summary['workers'],
                    int(conf['pool']), summary['timing']['_launch_pnn_workers'])
 
-    left = int(conf['chunck']) - summary['workers']
+    left = int(conf['chunck']) - summary['workers'] + int(conf['min_deletions'])
 
     if left > 0:
         workers_st = get_timing(
