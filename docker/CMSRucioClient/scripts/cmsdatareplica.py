@@ -198,7 +198,10 @@ class CMSRucioDatasetReplica(object):
         replicas = self.rcli.list_replicas([{'scope': self.scope, 'name': self.dataset}],
                                            rse_expression='rse=%s' % self.rse)
 
-        rrepl = [repl['name'] for repl in replicas]
+        try:
+            rrepl = [repl['name'] for repl in replicas]
+        except TypeError:
+            rrepl = []
 
         prepl = [repl for repl in self.replicas.keys()]
 
