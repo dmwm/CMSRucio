@@ -79,7 +79,14 @@ class CMSRSE(object):
             suffix = DEFAULT_SUFFIXES[rsetype]
 
         self.suffix = suffix
-        self.rsename = pnn + self.suffix
+        if pnn.endswith('_MSS'):
+            raise ValueError('Please import PhEDEx _Buffer pnns rather than _MSS for tape endpoints')
+        elif pnn.endswith('_Buffer'):
+             self.rsename = pnn.replace('_Buffer', '_Tape') + self.suffix
+             self.rucio_rse_type = 'TAPE'
+        else:
+             self.rsename = pnn + self.suffix
+             self.rucio_rse_type = 'DISK'
 
         if tfc and os.path.isdir(tfc):
             self.tfc = tfc + '/' + pnn + '/PhEDEx/storage.xml'
@@ -327,10 +334,10 @@ class CMSRSE(object):
 
         if create:
             if self.dry:
-                logging.info('creating rse %s with deterministic %s. Dry run, skipping',
-                             self.rsename, self.settings['deterministic'])
+                logging.info('creating rse %s with deterministic %s and type %s. Dry run, skipping',
+                             self.rsename, self.settings['deterministic'], self.rucio_rse_type)
             else:
-                self.rcli.add_rse(self.rsename, deterministic=self.settings['deterministic'])
+                self.rcli.add_rse(self.rsename, deterministic=self.settings['deterministic'], rse_type=self.rucio_rse_type)
                 logging.debug('created rse %s', self.rsename)
 
         return create
