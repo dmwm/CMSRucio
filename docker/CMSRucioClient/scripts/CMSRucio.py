@@ -26,6 +26,27 @@ DEFAULT_DATASVC_URL = 'https://cmsweb.cern.ch/phedex/datasvc/json'
 DATASVC_MAX_RETRY = 3
 DATASVC_RETRY_SLEEP = 10
 
+
+def replica_file_list(replicas, scope):
+    """
+    Builds a list of files for the add_replicas function. Checksums which are None are not included in the
+    file dictionary
+
+    :param replicas: The list of replicas
+    :param scope:  The scope
+    :return:  A list of dictionaries describing the files
+    """
+
+    files = []
+    for file_metadata in replicas:
+        entry = {'scope': scope, 'name': file_metadata['name'], 'bytes': file_metadata['size']}
+        if file_metadata['checksum']:
+            entry.update({'adler32': file_metadata['checksum']})
+        files.append(entry)
+
+    return files
+
+
 class CMSRucio(object):
     """
     Interface for Rucio with the CMS data model
@@ -242,10 +263,8 @@ class CMSRucio(object):
                     filtered_replicas.append(filemd)
             replicas = filtered_replicas
 
-        self.cli.add_replicas(rse=rse, files=[{'scope': self.scope, 'name': filemd['name'],
-                                               'adler32': filemd['checksum'],
-                                               'bytes': filemd['size'],
-                                              } for filemd in replicas])
+        files = replica_file_list(replicas, self.scope)
+        self.cli.add_replicas(rse=rse, files=files)
 
     def delete_replicas(self, rse, replicas):
         """
@@ -350,11 +369,12 @@ class CMSRucio(object):
                 try:
                     cksum = re.match(r"\S*adler32:([^,]+)",
                                      item2['file'][0]['checksum']).group(1)
+                    cksum = "{0:0{1}x}".format(int(cksum, 16), 8)
                 except AttributeError:
-                    raise AttributeError("file %s has non parsable checksum entry %s"\
+                    print("file %s has non parsable checksum entry %s"\
                                          % (item2['file'][0]['name'], item2['file'][0]['checksum']))
+                    cksum = None
 
-                cksum = "{0:0{1}x}".format(int(cksum, 16), 8)
                 block_summary[item2['file'][0]['name']] = {
                     'name': item2['file'][0]['name'],
                     'checksum': cksum,

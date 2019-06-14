@@ -16,6 +16,8 @@ git remote add sartiran https://github.com/sartiran/CMSRucio.git
 git remote add ericvaandering https://github.com/ericvaandering/CMSRucio.git
 git fetch --all
 git checkout master
+
+
 export RUCIO_ACCOUNT=root
 
 echo Using config file in $RUCIO_HOME

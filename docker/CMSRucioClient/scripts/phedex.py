@@ -231,11 +231,12 @@ class PhEDEx(object):
             try:
                 cksum = re.match(r"\S*adler32:([^,]+)",
                                  pfile['file'][0]['checksum']).group(1)
+                cksum = "{0:0{1}x}".format(int(cksum, 16), 8)
             except AttributeError:
-                raise AttributeError("file %s has non parsable checksum entry %s"\
+                logging.warning("file %s has no adler32 checksum entry %s"\
                                      % (pfile['file'][0]['name'], pfile['file'][0]['checksum']))
+                cksum = None
 
-            cksum = "{0:0{1}x}".format(int(cksum, 16), 8)
             block_summary[pfile['file'][0]['name']] = {
                 'name': pfile['file'][0]['name'],
                 'checksum': cksum,
