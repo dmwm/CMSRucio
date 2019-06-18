@@ -15,6 +15,7 @@ from requests.exceptions import ReadTimeout
 from gfal2 import GError, Gfal2Context
 
 import rucio.rse.rsemanager as rsemgr
+from rucio.client.uploadclient import UploadClient
 from rucio.client.client import Client
 from rucio.common.exception import (DataIdentifierAlreadyExists, FileAlreadyExists, RucioException,
                                     AccessDenied)
@@ -247,6 +248,25 @@ class CMSRucio(object):
                                                'bytes': filemd['size'],
                                               } for filemd in replicas])
 
+    def register_temp_replicas(self, rse, lfns, pfns, sizes, checksums):
+        """
+        Register file replicas
+        """
+
+        if self.dry_run:
+            print(' Dry run only. Not registering files.')
+            return
+        if checksums:
+            replicas = [{'scope': self.scope, 'pfn': pfn,'name': lfn, 'bytes': size, 'adler32': checksum} for lfn, pfn, size, checksum in zip(lfns, pfns, sizes, checksums)]
+        else:
+            replicas = [{'scope': self.scope, 'pfn': pfn,'name': lfn, 'bytes': size} for lfn, pfn, size in zip(lfns, pfns, sizes)]
+        #print(replicas)
+        try:
+            if self.cli.add_replicas(rse=rse, files=replicas):
+                return True
+        except Exception as ex:
+            raise ex
+
     def delete_replicas(self, rse, replicas):
         """
         Delete replicas from the current RSE.
@@ -320,6 +340,26 @@ class CMSRucio(object):
                                  dids=[{'scope': self.scope, 'name': lfn} for lfn in lfns])
         except FileAlreadyExists:
             pass
+
+
+    def upload(self, files, rse):
+        """[summary]
+        
+        :param filename: [description]
+        :type filename: [type]
+        :param rse: [description]
+        :type rse: [type]
+        """
+        files_dict = {}
+
+        for file_ in files
+            files_dict.append({
+                "path": file_,
+                "rse": rse
+            }) 
+
+        UploadClient(_client=self.cli).upload(files_dict)
+
 
     def get_phedex_metadata(self, dataset, pnn):
         """
@@ -530,9 +570,3 @@ def das_go_client(query, dasgoclient=DEFAULT_DASGOCLIENT, debug=DEBUG_FLAG):
         print('DEBUG:' + output)
     return json.loads(output)
 
-def get_phedex_tfc(pnn):
-    """
-    Get the TFC of a PhEDEx node.
-    """
-    req = datasvc_client('tfc', {'node': pnn})
-    return req['phedex']['storage-mapping']['array']
