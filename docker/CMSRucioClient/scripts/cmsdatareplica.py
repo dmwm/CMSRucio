@@ -23,6 +23,7 @@ from rucio.common.utils import chunks
 
 from phedex import PhEDEx
 from syncaccounts import SYNC_ACCOUNT_FMT
+from CMSRucio import replica_file_list
 
 DEFAULT_RSE_FMT = '%s'
 DEFAULT_SCOPE = 'cms'
@@ -217,14 +218,9 @@ class CMSRucioDatasetReplica(object):
             logging.verbose('Adding replicas %s to rse %s.',
                             str(missing), self.rse)
 
-            self.rcli.add_replicas(
-                rse=self.rse,
-                files=[{
-                    'scope': self.scope,
-                    'name': self.replicas[lfn]['name'],
-                    'adler32': self.replicas[lfn]['checksum'],
-                    'bytes': self.replicas[lfn]['size'],
-                } for lfn in missing])
+            add_replicas = [self.replicas[lfn] for lfn in missing]
+            files = replica_file_list(replicas=add_replicas, scope=self.scope)
+            self.rcli.add_replicas(rse=self.rse, files=files)
 
             # missing files that are not in the list of dataset files
             # are to be attached.
