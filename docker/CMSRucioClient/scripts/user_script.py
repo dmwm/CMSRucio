@@ -11,16 +11,13 @@ from argparse import ArgumentParser
 import rucio.rse.rsemanager as rsemgr
 from CMSRucio import CMSRucio
 
-DEFAULT_SCOPE="user.dciangot"
-
-ACTIVITY="User Subscriptions"
 
 class CRABDatasetInjector(CMSRucio):
     """
     General Class for injecting a cms dataset in rucio
     """
 
-    def __init__(self, replica, source_site, dest_site, rse=None, scope=DEFAULT_SCOPE,
+    def __init__(self, replica, source_site, dest_site, rse=None, scope="",
                  uuid=None, check=True, lifetime=None, dry_run=None, account=None):
 
         super(CRABDatasetInjector, self).__init__(account=account, auth_type=None, scope=scope, dry_run=dry_run)
@@ -50,7 +47,7 @@ if __name__ == "__main__":
 
 
     file_dict = {
-        dasd
+        # IMPLEMENT NEEDED FIELD (passed from args)
     }
 
     crabInj.upload_file(file_dict, "T2_IT_Pisa_Temp", "T2_IT_Pisa")
