@@ -80,8 +80,8 @@ class DatasetInjector(CMSRucio):
             files_to_attach = []
             for filename, filemd in block_info.items():
                 files_to_attach.append(filemd)
-                self.register_replicas(rse=self.rse, replicas=files_to_attach)
-                self.attach_files([i['name'] for i in files_to_attach], block_name)
+            self.register_replicas(rse=self.rse, replicas=files_to_attach)
+            self.attach_files([i['name'] for i in files_to_attach], block_name)
 
         print("All datasets, blocks and files registered")
 
