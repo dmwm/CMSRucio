@@ -24,22 +24,27 @@ class CRABDatasetInjector(CMSRucio):
         self.replica = replica
         self.dest_site = dest_site
         self.source = source_site
-        if rse is None:
-            rse = site
-        self.rse = rse
         self.uuid = uuid
         self.check = check
         self.lifetime = lifetime
 
-    def upload_file(self):
+    def upload_file(self, size, checksum):
         """[summary]
 
         """
         self.upload(self.replica, self.source_site)
 
-        self.register_temp_replicas(self.source_site, lfns, pfns, sizes, checksums)
+        REPLICA = [{
+            'scope': self.scope,
+            'name' : self.replica,
+            #'adler32': checksum,
+            'bytes': size
+            #'pfn': URL
+        }]
 
-        self.add_rule(["self.replica_name"], self.dest_site, "")
+        self.register_replicas(self.source_site, REPLICA) #register_temp_replicas(self.source_site, self.replica, pfn, sizes, checksums)
+
+        self.add_rule([self.replica], self.dest_site, "")
 
 if __name__ == "__main__":
 
@@ -47,8 +52,9 @@ if __name__ == "__main__":
 
 
     file_dict = {
-        # IMPLEMENT NEEDED FIELD (passed from args)
+        "size": 0,
+        "checksum": "asd235fs"
     }
 
-    crabInj.upload_file(file_dict, "T2_IT_Pisa_Temp", "T2_IT_Pisa")
+    crabInj.upload_file(file_dict["size"], file_dict["checksums"])
 
