@@ -23,7 +23,7 @@ class CRABDatasetInjector(CMSRucio):
         super(CRABDatasetInjector, self).__init__(account=account, auth_type=None, scope=scope, dry_run=dry_run)
         self.replica = replica
         self.dest_site = dest_site
-        self.source = source_site
+        self.source_site = source_site
         self.uuid = uuid
         self.check = check
         self.lifetime = lifetime
@@ -32,7 +32,10 @@ class CRABDatasetInjector(CMSRucio):
         """[summary]
 
         """
-        self.upload(self.replica, self.source_site)
+        print("Uploading {0}".format(self.replica))
+        #self.upload([self.replica], self.source_site)
+
+        print("{0} uploaded".format(self.replica))
 
         REPLICA = [{
             'scope': self.scope,
@@ -42,13 +45,13 @@ class CRABDatasetInjector(CMSRucio):
             #'pfn': URL
         }]
 
-        self.register_replicas(self.source_site, REPLICA) #register_temp_replicas(self.source_site, self.replica, pfn, sizes, checksums)
+        self.register_temp_replicas(self.source_site, ["/"+self.replica], ["srm://storm-se-01.ba.infn.it:8444/srm/managerv2?SFN=/cms/store/temp/dciangot/replica2.txt"+self.replica], [size], None) #, checksum)
 
-        self.add_rule([self.replica], self.dest_site, "")
+        self.add_rule(["/"+self.replica], self.dest_site, "")
 
 if __name__ == "__main__":
 
-    crabInj = CRABDatasetInjector("replica.txt", "T2_IT_Pisa_Temp", "T2_IT_Pisa", account="dciangot")
+    crabInj = CRABDatasetInjector("replica4.txt", "T2_IT_Bari_Temp", "T2_IT_Pisa", account="dciangot", scope="user.dciangot")
 
 
     file_dict = {
@@ -56,5 +59,5 @@ if __name__ == "__main__":
         "checksum": "asd235fs"
     }
 
-    crabInj.upload_file(file_dict["size"], file_dict["checksums"])
+    crabInj.upload_file(file_dict["size"], file_dict["checksum"])
 

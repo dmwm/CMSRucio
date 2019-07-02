@@ -260,7 +260,7 @@ class CMSRucio(object):
             replicas = [{'scope': self.scope, 'pfn': pfn,'name': lfn, 'bytes': size, 'adler32': checksum} for lfn, pfn, size, checksum in zip(lfns, pfns, sizes, checksums)]
         else:
             replicas = [{'scope': self.scope, 'pfn': pfn,'name': lfn, 'bytes': size} for lfn, pfn, size in zip(lfns, pfns, sizes)]
-        #print(replicas)
+        print(replicas)
         try:
             if self.cli.add_replicas(rse=rse, files=replicas):
                 return True
@@ -350,13 +350,16 @@ class CMSRucio(object):
         :param rse: [description]
         :type rse: [type]
         """
-        files_dict = {}
+        files_dict = [] 
 
-        for file_ in files
+        for file_ in files:
             files_dict.append({
                 "path": file_,
-                "rse": rse
+                "rse": rse,
+                "pfn": "srm://storm-se-01.ba.infn.it:8444/srm/managerv2?SFN=/cms/store/user/dciangot/"+file_
             }) 
+
+        print("CMSRucio upload file {0} to {1}".format(files_dict[0]["path"], files_dict[0]["rse"]))
 
         UploadClient(_client=self.cli).upload(files_dict)
 
