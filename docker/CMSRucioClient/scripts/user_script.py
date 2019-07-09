@@ -45,13 +45,13 @@ class CRABDatasetInjector(CMSRucio):
             #'pfn': URL
         }]
 
-        self.register_temp_replicas(self.source_site, ["/"+self.replica], ["srm://storm-se-01.ba.infn.it:8444/srm/managerv2?SFN=/cms/store/temp/dciangot/replica2.txt"+self.replica], [size], None) #, checksum)
+        self.register_temp_replicas(self.source_site, ["/cms/store/temp/"+self.replica], ["srm://storm-se-01.ba.infn.it:8444/srm/managerv2?SFN=/cms/store/temp/"+self.replica], [size], None) #, checksum)
 
-        self.add_rule(["/"+self.replica], self.dest_site, "")
+        self.add_rule(["/cms/store/temp/"+self.replica], self.dest_site, "")
 
 if __name__ == "__main__":
 
-    crabInj = CRABDatasetInjector("replica4.txt", "T2_IT_Bari_Temp", "T2_IT_Pisa", account="dciangot", scope="user.dciangot")
+    crabInj = CRABDatasetInjector("replica5.txt", "T2_IT_Bari_Temp", "T2_IT_Pisa", account="dciangot", scope="user.dciangot")
 
 
     file_dict = {
