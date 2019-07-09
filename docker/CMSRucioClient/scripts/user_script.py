@@ -33,7 +33,7 @@ class CRABDatasetInjector(CMSRucio):
 
         """
         print("Uploading {0}".format(self.replica))
-        #self.upload([self.replica], self.source_site)
+        self.upload([self.replica], self.source_site)
 
         print("{0} uploaded".format(self.replica))
 
