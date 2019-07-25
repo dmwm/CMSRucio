@@ -119,13 +119,14 @@ class PhEDEx(object):
 
         returns: dictionnary with data
         """
-        logging.debug('phedex.das query %s', query)
-        proc = Popen([self.dasgoclient, '-query=%s' % query, '-json'], stdout=PIPE)
-        output = proc.communicate()[0]
-        logging.debug('phedex.das output %s', output)
         try:
+            logging.debug('phedex.das query %s', query)
+            proc = Popen([self.dasgoclient, '-query=%s' % query, '-json'], stdout=PIPE)
+            output = proc.communicate()[0]
+            logging.debug('phedex.das output %s', output)
             return json.loads(output)
-        except ValueError:
+        except (ValueError, OSError):
+            logging.error('Skipping DAS query %s', query)
             return {}
 
     @staticmethod
