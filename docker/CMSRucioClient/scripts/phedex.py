@@ -123,7 +123,10 @@ class PhEDEx(object):
         proc = Popen([self.dasgoclient, '-query=%s' % query, '-json'], stdout=PIPE)
         output = proc.communicate()[0]
         logging.debug('phedex.das output %s', output)
-        return json.loads(output)
+        try:
+            return json.loads(output)
+        except ValueError:
+            return {}
 
     @staticmethod
     def check_data_item(pditem):
