@@ -18,11 +18,10 @@ import traceback
 from datetime import datetime, timedelta
 
 import yaml
-import monitor
+import monitor #  rucio.core.monitor
 from cmsdatareplica import _replica_update
 from custom_logging import logging
 from instrument import timer, get_timing
-from monitor import record_timer_block  # from rucio.core.monitor import record_timer_block
 from mp_custom import multiprocessing
 from multiprocessing_logging import install_mp_handler
 from phedex import PhEDEx
@@ -317,7 +316,7 @@ def pnn_sync(pnn, pcli):
     :pnn:    phedex node name.
     :pcli:   phedex client.
     """
-
+    monitor.record_counter('cms_sync.site_started')
     summary = copy.deepcopy(DEFAULT_PNN_SUMMARY)
 
     conf = _get_config(pnn)
@@ -375,6 +374,7 @@ def pnn_sync(pnn, pcli):
         workers = dict(workers, **workers_st)
 
     _get_pnn_workers(workers, summary)
+    monitor.record_counter('cms_sync.site_completed')
 
     summary['status'] = 'finished'
 
@@ -413,7 +413,7 @@ def get_node_diff(pnn, pcli, rcli, conf):
     as in DEFAULT_DATADIFF_DICT
     """
     timing = {}
-    with record_timer_block('cms_sync.node_diff'):
+    with monitor.record_timer_block('cms_sync.node_diff'):
         multi_das_calls = conf['multi_das_calls']
         select = conf['select']
         ignore = conf['ignore']
@@ -476,7 +476,7 @@ def get_blocks_at_pnn(pnn, pcli, multi_das_calls=True):
                        list(string.letters + string.digits))
 
         for item in list(string.letters + string.digits):
-            with record_timer_block('cms_sync.pnn_blocks_split'):
+            with monitor.record_timer_block('cms_sync.pnn_blocks_split'):
                 for block in pcli.list_data_items(pnn=pnn, pditem='/' + item + '*/*/*'):
                     if block['block'][0]['is_open'] == 'n' and\
                         block['block'][0]['replica'][0]['complete'] == 'y':
@@ -485,7 +485,7 @@ def get_blocks_at_pnn(pnn, pcli, multi_das_calls=True):
         return blocks_at_pnn
     else:
     # list(string.letters + string.digits)
-        with record_timer_block('cms_sync.pnn_blocks_all'):
+        with monitor.record_timer_block('cms_sync.pnn_blocks_all'):
             retval = {
                 item['block'][0]['name']: item['block'][0]['files']
                 for item in pcli.list_data_items(pnn=pnn)
@@ -504,7 +504,7 @@ def get_datasets_at_rse(rcli):
 
     returns a dictionnary with <dataset name>: <number of files>
     """
-    with record_timer_block('cms_sync.rse_datasets'):
+    with monitor.record_timer_block('cms_sync.rse_datasets'):
         retval = {
             item['name']: item['locks_ok_cnt']
             for item in rcli.list_account_rules(rcli.__dict__['account'])
@@ -523,7 +523,7 @@ def compare_data_lists(blocks, datasets, pnn):
     return the liste of datasets to add, remove and update
     as in DEFAULT_DATADIFF_DICT
     """
-    with record_timer_block('cms_sync.compare_rse_datasets'):
+    with monitor.record_timer_block('cms_sync.compare_rse_datasets'):
         ret = copy.deepcopy(DEFAULT_DATADIFF_DICT)
 
         dataitems = list(set(blocks.keys() + datasets.keys()))
