@@ -18,6 +18,7 @@ import traceback
 from datetime import datetime, timedelta
 
 import yaml
+import monitor
 from cmsdatareplica import _replica_update
 from custom_logging import logging
 from instrument import timer, get_timing
@@ -75,6 +76,8 @@ DEFAULT_MAIN_CONF = {
     'run': True,
     'verbosity': 'SUMMARY'
 }
+
+monitor.server='statsd-exporter-rucio-statsd-exporter'
 
 
 def _open_yaml(yamlfile, modif=None):
