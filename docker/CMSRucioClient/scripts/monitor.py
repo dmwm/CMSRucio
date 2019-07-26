@@ -26,9 +26,12 @@ from pystatsd import Client
 
 from rucio.common.config import config_get
 
-SERVER = config_get('monitor', 'carbon_server', raise_exception=False, default='localhost')
+SERVER = config_get('monitor', 'carbon_server', raise_exception=False, default='statsd-exporter-svc')
 PORT = config_get('monitor', 'carbon_port', raise_exception=False, default=8125)
 SCOPE = config_get('monitor', 'user_scope', raise_exception=False, default='rucio')
+
+print('Instantiating default client with %s %s %s' % (SERVER,PORT,SCOPE))
+
 CLIENT = Client(host=SERVER, port=PORT, prefix=SCOPE)
 
 
