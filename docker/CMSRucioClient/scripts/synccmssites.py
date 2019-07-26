@@ -28,6 +28,7 @@ from rucio.client.client import Client
 from rucio.common.exception import RucioException
 from instrument import timer, get_timing
 from phedex import PhEDEx
+from rucio.core.monitor import record_timer_block
 
 DEFAULT_CONFFILE = '/etc/synccmssites.yaml'
 DEFAULT_LOGFILE = '/rucio/logs'
@@ -400,20 +401,20 @@ def get_node_diff(pnn, pcli, rcli, conf):
     as in DEFAULT_DATADIFF_DICT
     """
     timing = {}
+    with record_timer_block('cms_sync.node_diff'):
+        multi_das_calls = conf['multi_das_calls']
+        select = conf['select']
+        ignore = conf['ignore']
 
-    multi_das_calls = conf['multi_das_calls']
-    select = conf['select']
-    ignore = conf['ignore']
+        blocks_at_pnn = get_timing(get_blocks_at_pnn(pnn, pcli, multi_das_calls), timing)
 
-    blocks_at_pnn = get_timing(get_blocks_at_pnn(pnn, pcli, multi_das_calls), timing)
+        datasets_at_rse = get_timing(get_datasets_at_rse(rcli), timing)
 
-    datasets_at_rse = get_timing(get_datasets_at_rse(rcli), timing)
+        diff = compare_data_lists(blocks_at_pnn, datasets_at_rse, pnn)
 
-    diff = compare_data_lists(blocks_at_pnn, datasets_at_rse, pnn)
+        _diff_apply_filter(diff, select, ignore)
 
-    _diff_apply_filter(diff, select, ignore)
-
-    diff['timing'].update(timing)
+        diff['timing'].update(timing)
 
     return diff
 
@@ -463,20 +464,23 @@ def get_blocks_at_pnn(pnn, pcli, multi_das_calls=True):
                        list(string.letters + string.digits))
 
         for item in list(string.letters + string.digits):
-            for block in pcli.list_data_items(pnn=pnn, pditem='/' + item + '*/*/*'):
-                if block['block'][0]['is_open'] == 'n' and\
-                    block['block'][0]['replica'][0]['complete'] == 'y':
-                    blocks_at_pnn[block['block'][0]['name']] = block['block'][0]['files']
-            logging.notice('Got blocks for %s', item)
+            with record_timer_block('cms_sync.pnn_blocks_split'):
+                for block in pcli.list_data_items(pnn=pnn, pditem='/' + item + '*/*/*'):
+                    if block['block'][0]['is_open'] == 'n' and\
+                        block['block'][0]['replica'][0]['complete'] == 'y':
+                        blocks_at_pnn[block['block'][0]['name']] = block['block'][0]['files']
+                logging.notice('Got blocks for %s', item)
         return blocks_at_pnn
     else:
     # list(string.letters + string.digits)
-        return {
+    with record_timer_block('cms_sync.pnn_blocks_all'):
+        retval = {
             item['block'][0]['name']: item['block'][0]['files']
             for item in pcli.list_data_items(pnn=pnn)
-            if item['block'][0]['is_open'] == 'n' and\
-                item['block'][0]['replica'][0]['complete'] == 'y'
+            if item['block'][0]['is_open'] == 'n' and \
+               item['block'][0]['replica'][0]['complete'] == 'y'
         }
+    return retval
 
 
 @timer
@@ -488,12 +492,13 @@ def get_datasets_at_rse(rcli):
 
     returns a dictionnary with <dataset name>: <number of files>
     """
-    return {
-        item['name']: item['locks_ok_cnt']
-        for item in rcli.list_account_rules(rcli.__dict__['account'])
-        if item['expires_at'] is None
-    }
-
+    with record_timer_block('cms_sync.rse_datasets'):
+        retval = {
+            item['name']: item['locks_ok_cnt']
+            for item in rcli.list_account_rules(rcli.__dict__['account'])
+            if item['expires_at'] is None
+        }
+    return retval
 
 @timer
 def compare_data_lists(blocks, datasets, pnn):
@@ -506,26 +511,26 @@ def compare_data_lists(blocks, datasets, pnn):
     return the liste of datasets to add, remove and update
     as in DEFAULT_DATADIFF_DICT
     """
+    with record_timer_block('cms_sync.compare_rse_datasets'):
+        ret = copy.deepcopy(DEFAULT_DATADIFF_DICT)
 
-    ret = copy.deepcopy(DEFAULT_DATADIFF_DICT)
+        dataitems = list(set(blocks.keys() + datasets.keys()))
 
-    dataitems = list(set(blocks.keys() + datasets.keys()))
+        for dataset in dataitems:
+            if dataset not in datasets:
+                ret['missing'].append(dataset)
+                ret['summary']['missing'] += 1
 
-    for dataset in dataitems:
-        if dataset not in datasets:
-            ret['missing'].append(dataset)
-            ret['summary']['missing'] += 1
+            elif dataset not in blocks:
+                ret['to_remove'].append(dataset)
+                ret['summary']['to_remove'] += 1
 
-        elif dataset not in blocks:
-            ret['to_remove'].append(dataset)
-            ret['summary']['to_remove'] += 1
+            elif blocks[dataset] != datasets[dataset]:
+                logging.warning("Dataset %s at pnn %s to update", dataset, pnn)
+                ret['to_update'].append(dataset)
+                ret['summary']['to_update'] += 1
 
-        elif blocks[dataset] != datasets[dataset]:
-            logging.warning("Dataset %s at pnn %s to update", dataset, pnn)
-            ret['to_update'].append(dataset)
-            ret['summary']['to_update'] += 1
-
-        ret['summary']['tot'] += 1
+            ret['summary']['tot'] += 1
 
     return ret
 
