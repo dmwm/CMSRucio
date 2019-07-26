@@ -78,12 +78,16 @@ DEFAULT_MAIN_CONF = {
     'verbosity': 'SUMMARY'
 }
 
+
+print('Statsd params: %s and %s' % ( monitor.PORT, monitor.SCOPE))
 try: # New name
     monitor.SERVER='statsd-exporter-rucio-statsd-exporter'
     monitor.CLIENT = statsClient(host=monitor.SERVER, port=monitor.PORT, prefix=monitor.SCOPE)
+    print('Statsd will send to: %s:%s' % (monitor.SERVER, monitor.PORT))
 except: # Old name
     monitor.SERVER = 'statsd-exporter-svc'
     monitor.CLIENT = statsClient(host=monitor.SERVER, port=monitor.PORT, prefix=monitor.SCOPE)
+    print('Statsd will send to: %s:%s' % (monitor.SERVER, monitor.PORT))
 
 
 def _open_yaml(yamlfile, modif=None):
