@@ -29,6 +29,7 @@ from phedex import PhEDEx
 from rucio.client.client import Client
 from rucio.common.exception import RucioException
 from syncaccounts import SYNC_ACCOUNT_FMT
+from pystatsd import Client as statsClient
 
 DEFAULT_CONFFILE = '/etc/synccmssites.yaml'
 DEFAULT_LOGFILE = '/rucio/logs'
@@ -77,7 +78,8 @@ DEFAULT_MAIN_CONF = {
     'verbosity': 'SUMMARY'
 }
 
-monitor.server='statsd-exporter-rucio-statsd-exporter'
+monitor.SERVER='statsd-exporter-rucio-statsd-exporter'
+monitor.CLIENT = statsClient(host=monitor.SERVER, port=monitor.PORT, prefix=monitor.SCOPE)
 
 
 def _open_yaml(yamlfile, modif=None):
