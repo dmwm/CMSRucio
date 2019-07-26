@@ -473,14 +473,14 @@ def get_blocks_at_pnn(pnn, pcli, multi_das_calls=True):
         return blocks_at_pnn
     else:
     # list(string.letters + string.digits)
-    with record_timer_block('cms_sync.pnn_blocks_all'):
-        retval = {
-            item['block'][0]['name']: item['block'][0]['files']
-            for item in pcli.list_data_items(pnn=pnn)
-            if item['block'][0]['is_open'] == 'n' and \
-               item['block'][0]['replica'][0]['complete'] == 'y'
-        }
-    return retval
+        with record_timer_block('cms_sync.pnn_blocks_all'):
+            retval = {
+                item['block'][0]['name']: item['block'][0]['files']
+                for item in pcli.list_data_items(pnn=pnn)
+                if item['block'][0]['is_open'] == 'n' and \
+                   item['block'][0]['replica'][0]['complete'] == 'y'
+            }
+        return retval
 
 
 @timer
