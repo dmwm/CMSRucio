@@ -5,30 +5,29 @@ Service synchronizing the sites
 
 from __future__ import absolute_import, division, print_function
 
-import string
-import functools
-import time
 import argparse
-import sys
-import os
-import traceback
 import copy
-from datetime import datetime, timedelta
-import re
-import yaml
+import functools
+import os
 import random
+import re
+import string
+import sys
+import time
+import traceback
+from datetime import datetime, timedelta
 
-
-from mp_custom import multiprocessing
-from multiprocessing_logging import install_mp_handler
+import yaml
 from cmsdatareplica import _replica_update
 from custom_logging import logging
-from syncaccounts import SYNC_ACCOUNT_FMT
+from instrument import timer, get_timing
+from monitor import record_timer_block  # from rucio.core.monitor import record_timer_block
+from mp_custom import multiprocessing
+from multiprocessing_logging import install_mp_handler
+from phedex import PhEDEx
 from rucio.client.client import Client
 from rucio.common.exception import RucioException
-from instrument import timer, get_timing
-from phedex import PhEDEx
-from rucio.core.monitor import record_timer_block
+from syncaccounts import SYNC_ACCOUNT_FMT
 
 DEFAULT_CONFFILE = '/etc/synccmssites.yaml'
 DEFAULT_LOGFILE = '/rucio/logs'
