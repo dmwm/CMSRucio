@@ -16,8 +16,6 @@ RUN yum install -y httpd mod_wsgi python-pip libaio gcc python-devel.x86_64 \
 RUN pip install --upgrade pip setuptools
 RUN rm -rf /usr/lib/python2.7/site-packages/ipaddress*
 
-RUN pip install rucio-clients multiprocessing-logging jsonschema PyYAML
-
 # Get various repos for yum setup
 
 RUN curl -o /etc/yum.repos.d/ca.repo https://raw.githubusercontent.com/rucio/rucio/master/etc/docker/dev/ca.repo
@@ -37,6 +35,9 @@ RUN yum install -y which krb5-devel gridsite \
                    xrootd-client pylint && \
     yum clean all && \
     rm -rf /var/cache/yum
+
+# Install Rucio and other stuff
+RUN pip install rucio-clients multiprocessing-logging jsonschema PyYAML pystatsd
 
 # Install DAS client to pull info from PhEDEx/DBS
 RUN curl -k -o  /bin/dasgoclient https://www.lns.cornell.edu/~vk/Work/dasgoclient && chmod +x /bin/dasgoclient
