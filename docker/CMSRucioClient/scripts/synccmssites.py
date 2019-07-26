@@ -78,8 +78,12 @@ DEFAULT_MAIN_CONF = {
     'verbosity': 'SUMMARY'
 }
 
-monitor.SERVER='statsd-exporter-rucio-statsd-exporter'
-monitor.CLIENT = statsClient(host=monitor.SERVER, port=monitor.PORT, prefix=monitor.SCOPE)
+try: # New name
+    monitor.SERVER='statsd-exporter-rucio-statsd-exporter'
+    monitor.CLIENT = statsClient(host=monitor.SERVER, port=monitor.PORT, prefix=monitor.SCOPE)
+except: # Old name
+    monitor.SERVER = 'statsd-exporter-svc'
+    monitor.CLIENT = statsClient(host=monitor.SERVER, port=monitor.PORT, prefix=monitor.SCOPE)
 
 
 def _open_yaml(yamlfile, modif=None):
