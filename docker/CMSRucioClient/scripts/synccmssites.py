@@ -77,17 +77,12 @@ DEFAULT_MAIN_CONF = {
     'verbosity': 'SUMMARY'
 }
 
-
-print('Statsd params: %s and %s' % ( monitor.PORT, monitor.SCOPE))
 try: # New name
     monitor.SERVER='statsd-exporter-rucio-statsd-exporter'
     monitor.CLIENT = statsClient(host=monitor.SERVER, port=monitor.PORT, prefix=monitor.SCOPE)
-    print('Statsd will send to: %s:%s' % (monitor.SERVER, monitor.PORT))
 except: # Old name
     monitor.SERVER = 'statsd-exporter-svc'
     monitor.CLIENT = statsClient(host=monitor.SERVER, port=monitor.PORT, prefix=monitor.SCOPE)
-    print('Statsd will send to: %s:%s' % (monitor.SERVER, monitor.PORT))
-
 
 def _open_yaml(yamlfile, modif=None):
     """
@@ -468,8 +463,7 @@ def get_blocks_at_pnn(pnn, pcli, multi_das_calls=True):
     returns a dictionnary with <block name>: <number of files>
     """
 
-    # This is not optimal in terms of calls and time but
-    # prevents dasgoclient to explode memory footprint
+    # This is not optimal in terms of calls and time but reduces the memory footprint
     if multi_das_calls:
         blocks_at_pnn = {}
         logging.notice('Getting blocks with multiple das calls. %s',
@@ -477,22 +471,13 @@ def get_blocks_at_pnn(pnn, pcli, multi_das_calls=True):
 
         for item in list(string.letters + string.digits):
             with monitor.record_timer_block('cms_sync.pnn_blocks_split'):
-                for block in pcli.list_data_items(pnn=pnn, pditem='/' + item + '*/*/*'):
-                    if block['block'][0]['is_open'] == 'n' and\
-                        block['block'][0]['replica'][0]['complete'] == 'y':
-                        blocks_at_pnn[block['block'][0]['name']] = block['block'][0]['files']
-                logging.notice('Got blocks for %s', item)
+                some_blocks_at_pnn = pcli.blocks_at_site(pnn=pnn, prefix=item)
+                blocks_at_pnn.update(some_blocks_at_pnn)
         return blocks_at_pnn
     else:
-    # list(string.letters + string.digits)
         with monitor.record_timer_block('cms_sync.pnn_blocks_all'):
-            retval = {
-                item['block'][0]['name']: item['block'][0]['files']
-                for item in pcli.list_data_items(pnn=pnn)
-                if item['block'][0]['is_open'] == 'n' and \
-                   item['block'][0]['replica'][0]['complete'] == 'y'
-            }
-        return retval
+            blocks_at_pnn = pcli.blocks_at_site(pnn=pnn)
+        return blocks_at_pnn
 
 
 @timer
