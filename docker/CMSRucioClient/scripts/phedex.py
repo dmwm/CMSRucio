@@ -271,6 +271,16 @@ class PhEDEx(object):
 
         return ret
 
+    def blocks_at_site(self, pnn, prefix=None, since=None):
+
+        if prefix:
+            params = {'node': pnn, 'dataset': '/%s*/*/*' % prefix}
+        else:
+            params = {'node': pnn, 'dataset': '/*/*/*'}
+
+        result = self.datasvc('blockreplicas', options=params)
+        retval = {i['name']: i['files'] for i in result['phedex']['block'] if i['replica'][0]['complete'] == 'y'}
+        return retval
 
     def subscriptions(self, pnn, pditem=None, since=None):
         """
