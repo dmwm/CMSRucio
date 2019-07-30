@@ -291,14 +291,15 @@ def block_sync(pnn, rds, pcli, rcli):
         logging.warning('Cannot Ping, aborting.')
         return 'aborted'
 
-    ret = _replica_update(
-        dataset=rds,
-        pnn=pnn,
-        rse=conf['rse'],
-        pcli=pcli,
-        rcli=rcli,
-        dry=conf['dry']
-    )
+    with monitor.record_timer_block('cms_sync.block_sync'):
+        ret = _replica_update(
+            dataset=rds,
+            pnn=pnn,
+            rse=conf['rse'],
+            pcli=pcli,
+            rcli=rcli,
+            dry=conf['dry']
+        )
 
     return ret
 
