@@ -18,7 +18,9 @@ ACCOUNT = 'transfer_ops'
 SUBSCRIPTION = 'Placement_NanoAODv4'
 # rucio list-rules --subscription transfer_ops Placement_NanoAODv4
 
-rules = client.list_subscription_rules(account=ACCOUNT, name=SUBSCRIPTION)
+rule_gen = client.list_subscription_rules(account=ACCOUNT, name=SUBSCRIPTION)
+
+rules = [rule for rule in rule_gen]  # Getting chunking errors if we wait 
 
 for rule in rules:
     rule_id = rule['id']
@@ -26,7 +28,4 @@ for rule in rules:
     expression = rule['rse_expression']
 
     print('Cleanup up rule %s (%s) on %s' % (rule_id, expression, dataset))
-    try:
-        client.delete_replication_rule(rule_id=rule_id)
-    except ChunkedEncodingError:
-        print(' Got a ChunkedEncodingError exception')
+    client.delete_replication_rule(rule_id=rule_id)
