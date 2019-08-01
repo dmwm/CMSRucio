@@ -23,11 +23,10 @@ rules = client.list_subscription_rules(account=ACCOUNT, name=SUBSCRIPTION)
 for rule in rules:
     rule_id = rule['id']
     dataset = rule['name']
-    expression = rule['res_expression']
+    expression = rule['rse_expression']
 
     print('Cleanup up rule %s (%s) on %s' % (rule_id, expression, dataset))
     try:
         client.delete_replication_rule(rule_id=rule_id)
     except ChunkedEncodingError:
         print(' Got a ChunkedEncodingError exception')
-        
