@@ -8,6 +8,7 @@ A bit of code to check on the progress of the million file test
 from __future__ import division, print_function
 
 from rucio.client.client import Client
+from requests.exceptions import ChunkedEncodingError
 import pdb
 
 client = Client()
@@ -25,5 +26,8 @@ for rule in rules:
     expression = rule['res_expression']
 
     print('Cleanup up rule %s (%s) on %s' % (rule_id, expression, dataset))
-
-    client.delete_replication_rule(rule_id=rule_id)
+    try:
+        client.delete_replication_rule(rule_id=rule_id)
+    except ChunkedEncodingError:
+        print(' Got a ChunkedEncodingError exception')
+        
