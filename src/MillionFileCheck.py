@@ -20,7 +20,7 @@ total_bytes_possible = 0
 total_files_possible = 0
 total_blocks = 0
 
-for obj in rses:
+for obj in sorted(rses):
     rse = obj['rse']
     rse_bytes = 0
     rse_files = 0
