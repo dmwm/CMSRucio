@@ -24,6 +24,7 @@ from rucio.common.utils import chunks
 from phedex import PhEDEx
 from syncaccounts import SYNC_ACCOUNT_FMT
 from CMSRucio import replica_file_list
+from pystatsd import Client as statsClient
 
 DEFAULT_RSE_FMT = '%s'
 DEFAULT_SCOPE = 'cms'
