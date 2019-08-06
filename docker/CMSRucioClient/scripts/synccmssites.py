@@ -465,8 +465,10 @@ def get_blocks_at_pnn(pnn, pcli, multi_das_calls=True):
     """
 
     # This is not optimal in terms of calls and time but reduces the memory footprint
+
+    logging.summary('Getting all blocks at %s. Multiple %s' % (pnn, multi_das_calls))
+    blocks_at_pnn = {}
     if multi_das_calls:
-        blocks_at_pnn = {}
         logging.notice('Getting blocks with multiple das calls. %s',
                        list(string.letters + string.digits))
 
@@ -474,11 +476,12 @@ def get_blocks_at_pnn(pnn, pcli, multi_das_calls=True):
             with monitor.record_timer_block('cms_sync.pnn_blocks_split'):
                 some_blocks_at_pnn = pcli.blocks_at_site(pnn=pnn, prefix=item)
                 blocks_at_pnn.update(some_blocks_at_pnn)
-        return blocks_at_pnn
     else:
         with monitor.record_timer_block('cms_sync.pnn_blocks_all'):
             blocks_at_pnn = pcli.blocks_at_site(pnn=pnn)
-        return blocks_at_pnn
+
+    logging.summary('Got all blocks at %s.' % pnn)
+    return blocks_at_pnn
 
 
 @timer
