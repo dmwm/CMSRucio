@@ -131,18 +131,6 @@ class CMSRucioDatasetReplica(object):
 
         return
 
-        metadata = self.pcli.list_data_items(
-            pditem=self.dataset,
-            pnn=self.pnn,
-            locality=True,
-            metadata=True
-        )
-        self.is_at_pnn = bool(len(metadata) == 1 and\
-            'block' in metadata[0] and\
-            'replica' in metadata[0]['block'][0] and\
-            metadata[0]['block'][0]['replica'][0]['complete'] == 'y')
-
-
     def register_container(self, dry=False):
         """
         Register container of the dataset
