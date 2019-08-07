@@ -241,7 +241,7 @@ class PhEDEx(object):
 
         returns: {'<filename>': {'name': <filename>, 'size': <size>, 'checksum': <checksum>}, ...}
         """
-
+        raise NotImplementedError
         logging.debug('phedex.fileblock_files pfb=%s pnn=%s', pfb, pnn)
 
         block_summary = {}
@@ -295,6 +295,8 @@ class PhEDEx(object):
                    {'name': <filename>, 'size': <size>, 'checksum': <checksum>},
                  ...},...}
         """
+        raise NotImplementedError
+
         logging.info("phedex.fileblocks_files pditem=%s, pnn=%s. Start", pditem, pnn)
         ret = {}
 
@@ -763,6 +765,8 @@ if __name__ == '__main__':
         """
         Function to call the method: fileblock_files
         """
+        raise NotImplementedError
+
         if opts.pditem is None:
             print("Function 'fileblock_files' requires the --pditem parameter")
         else:
@@ -772,6 +776,8 @@ if __name__ == '__main__':
         """
         Function to call the method: fileblock_files
         """
+        raise NotImplementedError
+
         print(PCLI.fileblocks_files(pditem=opts.pditem, pnn=opts.pnn))
 
     def fsubscriptions(opts):
