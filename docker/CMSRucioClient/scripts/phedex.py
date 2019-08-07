@@ -6,19 +6,18 @@ and DAS.
 
 from __future__ import absolute_import, division, print_function
 
+import argparse
 import json
+import logging
 import re
 import time
-import logging
-import argparse
-
+import urllib
 import xml.etree.ElementTree as ET
-
 from subprocess import PIPE, Popen
-import requests
-from requests.exceptions import ReadTimeout
 
+import requests
 from cmstfc import tfc_lfn2pfn
+from requests.exceptions import ReadTimeout
 
 DEBUG_FLAG = False
 DEFAULT_DASGOCLIENT = '/usr/bin/dasgoclient'
@@ -82,7 +81,7 @@ class PhEDEx(object):
         """
 
         if options:
-            options = '&'.join([opt + '=' + val for opt, val in options.items()])
+            options = '&'.join([opt + '=' + urllib.quote(val) for opt, val in options.items()])
         else:
             options = ''
 
@@ -107,6 +106,8 @@ class PhEDEx(object):
         logging.debug('phedex.datasvc output %s', req.text)
 
         if req.status_code != 200:
+            import pdb
+            pdb.set_trace()
             raise Exception('Request Failed')
 
         return json.loads(req.text)
@@ -197,6 +198,39 @@ class PhEDEx(object):
 
         return pditems
 
+    def fileblock_files_phedex(self, pfb, pnn=None):
+        """
+        Get the phedex files in a fileblock at a node using the PhEDEx data service
+        :pfb:         phedex fileblock
+        :pnn:         the phedex node name.
+
+        returns: {'<filename>': {'name': <filename>, 'size': <size>, 'checksum': <checksum>}, ...}
+        """
+
+        if not pnn:
+            raise NotImplementedError('fileblock_files_phedex requires a pnn to work')
+
+        logging.debug('phedex.fileblock_files_phedex pfb=%s pnn=%s', pfb, pnn)
+
+
+        params = {'node': pnn, 'block': pfb}
+        phedex_result = self.datasvc('filereplicas', options=params)
+
+        block_summary = {}
+        for block in phedex_result['phedex']['block']:
+            if block['name'] != pfb:
+                continue
+            files = block['file']
+            for file in files:
+                try:
+                    cksum = re.match(r"\S*adler32:([^,]+)", file['checksum']).group(1)
+                    cksum = "{0:0{1}x}".format(int(cksum, 16), 8)
+                except AttributeError:
+                    logging.warning("file %s has no adler32 checksum entry %s" % (file['name'], file['checksum']))
+                    cksum = None
+                block_summary[file['name']] = {'name': file['name'], 'checksum': cksum, 'size': file['bytes']}
+
+        return block_summary
 
     def fileblock_files(self, pfb, pnn=None):
         """
