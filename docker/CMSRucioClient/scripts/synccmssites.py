@@ -474,8 +474,10 @@ def get_blocks_at_pnn(pnn, pcli, multi_das_calls=True):
 
         for item in list(string.letters + string.digits):
             with monitor.record_timer_block('cms_sync.pnn_blocks_split'):
+                logging.summary('Getting blocks at %s starting with %s' % (pnn, item))
                 some_blocks_at_pnn = pcli.blocks_at_site(pnn=pnn, prefix=item)
                 blocks_at_pnn.update(some_blocks_at_pnn)
+                logging.summary('Got blocks at %s starting with %s' % (pnn, item))
     else:
         with monitor.record_timer_block('cms_sync.pnn_blocks_all'):
             blocks_at_pnn = pcli.blocks_at_site(pnn=pnn)
