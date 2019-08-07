@@ -124,8 +124,13 @@ class CMSRucioDatasetReplica(object):
 
     def block_at_pnn(self):
         """
-        Verify if the block is at pnn (using phedex datasvn)
+        Verify if the block is at pnn (using phedex datasvc)
         """
+
+        self.is_at_pnn = self.pcli.block_at_pnn_phedex(block=self.dataset, pnn=self.pnn)
+
+        return
+
         metadata = self.pcli.list_data_items(
             pditem=self.dataset,
             pnn=self.pnn,
