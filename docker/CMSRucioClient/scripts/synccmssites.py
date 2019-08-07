@@ -90,30 +90,33 @@ def _open_yaml(yamlfile, modif=None):
     :yamlfile:  the yaml file
     """
 
-    modif = modif or {}
+    yaml_lock = multiprocessing.Lock()
 
-    retry = 5
+    with yaml_lock:
+        modif = modif or {}
 
-    while True:
-        try:
-            retry -= 1
-            with open(yamlfile, 'r') as stream:
-                conf = dict(
-                    dict(
-                        {'default': {}},
-                        **yaml.load(stream)
-                    ),
-                    **modif
-                )
-            break
-        except TypeError:
-            if retry == 0:
-                raise
-            else:
-                time.sleep(1)
+        retry = 5
 
-    if conf is None:
-        raise Exception("Problem parsing %s" % yamlfile)
+        while True:
+            try:
+                retry -= 1
+                with open(yamlfile, 'r') as stream:
+                    conf = dict(
+                        dict(
+                            {'default': {}},
+                            **yaml.load(stream)
+                        ),
+                        **modif
+                    )
+                break
+            except (TypeError, yaml.composer.ComposerError):
+                if retry == 0:
+                    raise
+                else:
+                    time.sleep(1)
+
+        if conf is None:
+            raise Exception("Problem parsing %s" % yamlfile)
 
     return conf
 
