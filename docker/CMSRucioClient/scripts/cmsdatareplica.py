@@ -89,7 +89,7 @@ class CMSRucioDatasetReplica(object):
         self.block_at_pnn()
 
         if self.is_at_pnn:
-            self.replicas = self.pcli.fileblock_files(pnn=pnn, pfb=rds)
+            self.replicas = self.pcli.fileblock_files_phedex(pnn=pnn, pfb=rds)
         else:
             self.replicas = {}
 
