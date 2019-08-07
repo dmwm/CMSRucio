@@ -198,6 +198,32 @@ class PhEDEx(object):
 
         return pditems
 
+    def block_at_pnn_phedex(self, block=None, pnn=None):
+        """
+        Use the PhEDEx data service to verify that a block is at the PNN
+
+        :param block: Block name (CMS) or dataset name (Rucio)
+        :param pnn: PhEDEx Node
+        :return: boolean
+        """
+
+        if not block or not pnn:
+            raise NotImplementedError('You must supply a block and node name')
+
+        params = {'node': pnn, 'block': block}
+
+        result = self.datasvc('blockreplicas', options=params)
+
+        try:
+            at_pnn = bool('phedex' in result and
+                          'block' in result['phedex'] and
+                          'replica' in result['phedex']['block'][0] and
+                          result['phedex']['block'][0]['replica'][0]['complete'] == 'y')
+        except IndexError:
+            return False
+
+        return at_pnn
+
     def fileblock_files_phedex(self, pfb, pnn=None):
         """
         Get the phedex files in a fileblock at a node using the PhEDEx data service
@@ -211,7 +237,6 @@ class PhEDEx(object):
             raise NotImplementedError('fileblock_files_phedex requires a pnn to work')
 
         logging.debug('phedex.fileblock_files_phedex pfb=%s pnn=%s', pfb, pnn)
-
 
         params = {'node': pnn, 'block': pfb}
         phedex_result = self.datasvc('filereplicas', options=params)
