@@ -18,13 +18,11 @@ RUN rm -rf /usr/lib/python2.7/site-packages/ipaddress*
 
 # Get various repos for yum setup
 
-RUN curl -o /etc/yum.repos.d/ca.repo https://raw.githubusercontent.com/rucio/rucio/master/etc/docker/dev/ca.repo
+RUN curl -o /etc/yum.repos.d/ca.repo https://raw.githubusercontent.com/rucio/rucio/1.20.3/etc/docker/dev/ca.repo
 
 # Install WLCG repo for CMS VOMS
 
-RUN curl -o wlcg-repo-1.0.0-1.el7.noarch.rpm http://linuxsoft.cern.ch/wlcg/centos7/x86_64/wlcg-repo-1.0.0-1.el7.noarch.rpm && \
-    yum -y install wlcg-repo-1.0.0-1.el7.noarch.rpm && \
-    rm wlcg-repo-1.0.0-1.el7.noarch.rpm && \
+RUN yum -y install http://linuxsoft.cern.ch/wlcg/centos7/x86_64/wlcg-repo-1.0.0-1.el7.noarch.rpm && \
     yum clean all && \
     rm -rf /var/cache/yum
 
