@@ -417,13 +417,17 @@ def get_node_diff(pnn, pcli, rcli, conf):
         select = conf['select']
         ignore = conf['ignore']
 
-        blocks_at_pnn = get_timing(get_blocks_at_pnn(pnn, pcli, multi_das_calls), timing)
-
-        datasets_at_rse = get_timing(get_datasets_at_rse(rcli), timing)
-
-        diff = compare_data_lists(blocks_at_pnn, datasets_at_rse, pnn)
-
-        _diff_apply_filter(diff, select, ignore)
+        if multi_das_calls:
+            for prefix in list(string.letters + string.digits):
+                blocks_at_pnn = get_timing(get_blocks_at_pnn(pnn, pcli, multi_das_calls, prefix=prefix), timing)
+                datasets_at_rse = get_timing(get_datasets_at_rse(rcli, prefix=prefix), timing)
+                diff = compare_data_lists(blocks_at_pnn, datasets_at_rse, pnn)
+                _diff_apply_filter(diff, select, ignore)
+        else:
+            blocks_at_pnn = get_timing(get_blocks_at_pnn(pnn, pcli, multi_das_calls), timing)
+            datasets_at_rse = get_timing(get_datasets_at_rse(rcli), timing)
+            diff = compare_data_lists(blocks_at_pnn, datasets_at_rse, pnn)
+            _diff_apply_filter(diff, select, ignore)
 
         diff['timing'].update(timing)
 
@@ -458,7 +462,7 @@ def _diff_apply_filter(diff, select, ignore):
 
 
 @timer
-def get_blocks_at_pnn(pnn, pcli, multi_das_calls=True):
+def get_blocks_at_pnn(pnn, pcli, multi_das_calls=True, prefix=None):
     """
     Get the list of completed replicas of closed blocks at a site
     :pnn:  the phedex node name
@@ -469,12 +473,17 @@ def get_blocks_at_pnn(pnn, pcli, multi_das_calls=True):
 
     # This is not optimal in terms of calls and time but reduces the memory footprint
 
-    logging.summary('Getting all blocks at %s. Multiple %s' % (pnn, multi_das_calls))
     blocks_at_pnn = {}
-    if multi_das_calls:
-        logging.notice('Getting blocks with multiple das calls. %s',
-                       list(string.letters + string.digits))
-
+    if prefix:
+        logging.summary('Getting subset of blocks at %s beginning with %s' % (pnn, prefix))
+        with monitor.record_timer_block('cms_sync.pnn_blocks_split'):
+            logging.summary('Getting blocks at %s starting with %s' % (pnn, prefix))
+            some_blocks_at_pnn = pcli.blocks_at_site(pnn=pnn, prefix=prefix)
+            blocks_at_pnn.update(some_blocks_at_pnn)
+            logging.summary('Got blocks at %s starting with %s' % (pnn, item))
+    elif multi_das_calls:
+        logging.summary('Getting all blocks at %s. Multiple %s' % (pnn, multi_das_calls))
+        logging.notice('Getting blocks with multiple das calls. %s', list(string.letters + string.digits))
         for item in list(string.letters + string.digits):
             with monitor.record_timer_block('cms_sync.pnn_blocks_split'):
                 logging.summary('Getting blocks at %s starting with %s' % (pnn, item))
@@ -482,15 +491,16 @@ def get_blocks_at_pnn(pnn, pcli, multi_das_calls=True):
                 blocks_at_pnn.update(some_blocks_at_pnn)
                 logging.summary('Got blocks at %s starting with %s' % (pnn, item))
     else:
+        logging.summary('Getting all blocks at %s in one call' % pnn)
         with monitor.record_timer_block('cms_sync.pnn_blocks_all'):
             blocks_at_pnn = pcli.blocks_at_site(pnn=pnn)
 
-    logging.summary('Got all blocks at %s.' % pnn)
+    logging.summary('Got blocks at %s.' % pnn)
     return blocks_at_pnn
 
 
 @timer
-def get_datasets_at_rse(rcli):
+def get_datasets_at_rse(rcli, prefix=None):
     """
     Get the list of rucio datasets at a rse, listing the rules
     belonging to the sync account
@@ -502,7 +512,7 @@ def get_datasets_at_rse(rcli):
         retval = {
             item['name']: item['locks_ok_cnt']
             for item in rcli.list_account_rules(rcli.__dict__['account'])
-            if item['expires_at'] is None
+            if item['expires_at'] is None and (prefix is None or item['name'].startswith(prefix))
         }
     return retval
 
