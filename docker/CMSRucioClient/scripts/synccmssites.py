@@ -417,17 +417,10 @@ def get_node_diff(pnn, pcli, rcli, conf):
         select = conf['select']
         ignore = conf['ignore']
 
-        if multi_das_calls:
-            for prefix in list(string.letters + string.digits):
-                blocks_at_pnn = get_timing(get_blocks_at_pnn(pnn, pcli, multi_das_calls, prefix=prefix), timing)
-                datasets_at_rse = get_timing(get_datasets_at_rse(rcli, prefix=prefix), timing)
-                diff = compare_data_lists(blocks_at_pnn, datasets_at_rse, pnn)
-                _diff_apply_filter(diff, select, ignore)
-        else:
-            blocks_at_pnn = get_timing(get_blocks_at_pnn(pnn, pcli, multi_das_calls), timing)
-            datasets_at_rse = get_timing(get_datasets_at_rse(rcli), timing)
-            diff = compare_data_lists(blocks_at_pnn, datasets_at_rse, pnn)
-            _diff_apply_filter(diff, select, ignore)
+        blocks_at_pnn = get_timing(get_blocks_at_pnn(pnn, pcli, multi_das_calls), timing)
+        datasets_at_rse = get_timing(get_datasets_at_rse(rcli), timing)
+        diff = compare_data_lists(blocks_at_pnn, datasets_at_rse, pnn)
+        _diff_apply_filter(diff, select, ignore)
 
         diff['timing'].update(timing)
 
