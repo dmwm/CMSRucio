@@ -480,7 +480,7 @@ def get_blocks_at_pnn(pnn, pcli, multi_das_calls=True, prefix=None):
             logging.summary('Getting blocks at %s starting with %s' % (pnn, prefix))
             some_blocks_at_pnn = pcli.blocks_at_site(pnn=pnn, prefix=prefix)
             blocks_at_pnn.update(some_blocks_at_pnn)
-            logging.summary('Got blocks at %s starting with %s' % (pnn, item))
+            logging.summary('Got blocks at %s starting with %s' % (pnn, prefix))
     elif multi_das_calls:
         logging.summary('Getting all blocks at %s. Multiple %s' % (pnn, multi_das_calls))
         logging.notice('Getting blocks with multiple das calls. %s', list(string.letters + string.digits))
