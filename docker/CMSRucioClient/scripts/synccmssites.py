@@ -328,29 +328,36 @@ def pnn_sync(pnn, pcli):
 
     if _pnn_abort(pnn, summary, rcli):
         return summary
+# Do the loop here? with conf['multi_das']
 
-    diff = get_node_diff(pnn, pcli, rcli, conf)
-    summary['timing'].update(diff['timing'])
-    diff = diff['return']
-    summary['diff'] = diff['summary']
 
-    if (diff['summary']['tot'] == diff['summary']['to_remove']) and \
-        not conf['allow_clean']:
-        logging.warning('All datasets to be removed. Aborting.')
-        summary['status'] = 'aborted'
-        return summary
+    if conf['multi_das_calls']:
+        prefixes = list(string.letters + string.digits)
+    else:
+        prefixes = [None]
 
-    logging.notice("Got diff=%s, timing=%s", summary['diff'],
-                   summary['timing'])
+    for prefix in prefixes:
+        diff = get_node_diff(pnn, pcli, rcli, conf, prefix=prefix)
+        summary['timing'].update(diff['timing'])
+        diff = diff['return']
+        summary['diff'] = diff['summary']
 
-    if _pnn_abort(pnn, summary, rcli):
-        return summary
+        if (diff['summary']['tot'] == diff['summary']['to_remove']) and not conf['allow_clean']:
+            logging.warning('All datasets to be removed. Aborting.')
+            summary['status'] = 'aborted'
+            continue
+#            return summary
 
-    workers = get_timing(
-        _launch_pnn_workers(conf, diff, pnn,
-                            pcli, rcli),
-        summary['timing']
-    )
+        logging.notice("Got diff=%s, timing=%s", summary['diff'], summary['timing'])
+
+        if _pnn_abort(pnn, summary, rcli):
+            return summary
+
+        workers = get_timing(
+            _launch_pnn_workers(conf, diff, pnn,
+                                pcli, rcli),
+            summary['timing']
+        )
 
     summary['workers'] = len(workers)
 
@@ -399,7 +406,7 @@ def _pnn_abort(pnn, summary, rcli):
 
 
 @timer
-def get_node_diff(pnn, pcli, rcli, conf):
+def get_node_diff(pnn, pcli, rcli, conf, prefix=None):
     """
     Get the diff between the rucio and phedex at a node
     :pnn:  node name
@@ -417,8 +424,8 @@ def get_node_diff(pnn, pcli, rcli, conf):
         select = conf['select']
         ignore = conf['ignore']
 
-        blocks_at_pnn = get_timing(get_blocks_at_pnn(pnn, pcli, multi_das_calls), timing)
-        datasets_at_rse = get_timing(get_datasets_at_rse(rcli), timing)
+        blocks_at_pnn = get_timing(get_blocks_at_pnn(pnn, pcli, multi_das_calls, prefix=prefix), timing)
+        datasets_at_rse = get_timing(get_datasets_at_rse(rcli, prefix=prefix), timing)
         diff = compare_data_lists(blocks_at_pnn, datasets_at_rse, pnn)
         _diff_apply_filter(diff, select, ignore)
 
