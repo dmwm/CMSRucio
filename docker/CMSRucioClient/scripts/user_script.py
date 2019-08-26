@@ -35,7 +35,7 @@ class CRABDatasetInjector(CMSRucio):
         """[summary]
 
         """
-        print("Uploading {0}".format(self.replica))
+        print("Uploading {0} ({1})".format(self.replica, self.pfn))
         self.upload([self.local_file], self.source_site, pfns=[self.pfn])
 
         print("{0} uploaded".format(self.replica))
@@ -49,40 +49,39 @@ class CRABDatasetInjector(CMSRucio):
         # }]
 
         self.register_temp_replicas(self.source_site,
-                                                [self.replica],
-                                                [self.pfn],
-                                                [size],
-                                                [checksum])
+                                    [self.replica],
+                                    [self.pfn],
+                                    [size],
+                                    [checksum])
 
-        self.add_rule(["/cms/store/temp/"+self.replica], self.dest_site, "")
+        self.add_rule([self.replica], self.dest_site, "")
 
 
 if __name__ == "__main__":
 
     parser = ArgumentParser(description='Arguments for file Rucio upload')
-    parser.add_argument('file', metavar='f', type=str, help='local file path')
-    parser.add_argument('replica', metavar='n', type=str, help='Rucio replica name')
+    parser.add_argument('file', type=str, help='local file path')
+    parser.add_argument('replica', type=str, help='Rucio replica name')
 
     parser.add_argument('temp', type=str, help='Rucio source temp RSE')
-    parser.add_argument('dest', metavar='d', type=str, help='Rucio destination RSE')
-    parser.add_argument('pfn', type=str, help='Source rse pfn')
+    parser.add_argument('dest', type=str, help='Rucio destination RSE')
+    parser.add_argument('--pfn', type=str, help='Source rse pfn')
 
-    parser.add_argument('account', type=str, help='Rucio account')
-    parser.add_argument('scope', type=str, help='Rucio scope')
+    parser.add_argument('--account', type=str, help='Rucio account')
+    parser.add_argument('--scope', type=str, help='Rucio scope')
 
     args = parser.parse_args()
-    print(args.sum(args.integers))
 
     # TODO: get pfn from CRIC
 
     crabInj = CRABDatasetInjector(args.replica,
-                                                  args.file,
-                                                  args.temp,
-                                                  args.dest,
-                                                  args.account,
-                                                  args.scope,
-                                                  args.pfn
-                                                 )
+				  args.file,
+				  args.temp,
+				  args.dest,
+				  args.pfn,
+				  account=args.account,
+				  scope=args.scope
+                                 )
 
     checksum = None
 

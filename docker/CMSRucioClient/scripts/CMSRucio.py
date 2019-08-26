@@ -360,14 +360,15 @@ class CMSRucio(object):
                     "rse": rse,
                     "pfn": pfn
                 })
+            print("CMSRucio upload file {0} to {1} (pfn={2})".format(files_dict[0]["path"], files_dict[0]["rse"], files_dict[0]["pfn"]))
         else:
             for file_ in files:
                 files_dict.append({
                     "path": file_,
                     "rse": rse
                 }) 
+            print("CMSRucio upload file {0} to {1}".format(files_dict[0]["path"], files_dict[0]["rse"]))
 
-        print("CMSRucio upload file {0} to {1}".format(files_dict[0]["path"], files_dict[0]["rse"]))
 
         UploadClient(_client=self.cli).upload(files_dict)
 
