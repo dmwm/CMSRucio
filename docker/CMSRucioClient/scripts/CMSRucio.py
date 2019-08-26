@@ -341,23 +341,31 @@ class CMSRucio(object):
         except FileAlreadyExists:
             pass
 
-
-    def upload(self, files, rse):
+    def upload(self, files, rse, pfns=None):
         """[summary]
         
         :param filename: [description]
         :type filename: [type]
         :param rse: [description]
         :type rse: [type]
+        :param pfns: [description]
+        :type pfns: [type] 
         """
         files_dict = [] 
 
-        for file_ in files:
-            files_dict.append({
-                "path": file_,
-                "rse": rse,
-                "pfn": "srm://storm-se-01.ba.infn.it:8444/srm/managerv2?SFN=/cms/store/user/dciangot/"+file_
-            }) 
+        if pfns:
+            for file_, pfn in zip(files, pfns):
+                files_dict.append({
+                    "path": file_,
+                    "rse": rse,
+                    "pfn": pfn
+                })
+        else:
+            for file_ in files:
+                files_dict.append({
+                    "path": file_,
+                    "rse": rse
+                }) 
 
         print("CMSRucio upload file {0} to {1}".format(files_dict[0]["path"], files_dict[0]["rse"]))
 

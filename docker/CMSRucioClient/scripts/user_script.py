@@ -5,7 +5,8 @@ Command line tool for registering a CMS dataset into rucio
 
 from __future__ import absolute_import, division, print_function
 
-import re
+import os
+import zlib
 from argparse import ArgumentParser
 
 import rucio.rse.rsemanager as rsemgr
@@ -17,13 +18,15 @@ class CRABDatasetInjector(CMSRucio):
     General Class for injecting a cms dataset in rucio
     """
 
-    def __init__(self, replica, source_site, dest_site, rse=None, scope="",
+    def __init__(self, replica, local_file, source_site, dest_site, pfn, rse=None, scope="",
                  uuid=None, check=True, lifetime=None, dry_run=None, account=None):
 
         super(CRABDatasetInjector, self).__init__(account=account, auth_type=None, scope=scope, dry_run=dry_run)
         self.replica = replica
         self.dest_site = dest_site
         self.source_site = source_site
+        self.local_file = local_file
+        self.pfn = pfn
         self.uuid = uuid
         self.check = check
         self.lifetime = lifetime
@@ -33,31 +36,63 @@ class CRABDatasetInjector(CMSRucio):
 
         """
         print("Uploading {0}".format(self.replica))
-        self.upload([self.replica], self.source_site)
+        self.upload([self.local_file], self.source_site, pfns=[self.pfn])
 
         print("{0} uploaded".format(self.replica))
 
-        REPLICA = [{
-            'scope': self.scope,
-            'name' : self.replica,
-            #'adler32': checksum,
-            'bytes': size
-            #'pfn': URL
-        }]
+        # REPLICA = [{
+        #     'scope': self.scope,
+        #     'name' : self.replica,
+        #     'adler32': checksum,
+        #     'bytes': size
+        #     'pfn': URL
+        # }]
 
-        self.register_temp_replicas(self.source_site, ["/cms/store/temp/"+self.replica], ["srm://storm-se-01.ba.infn.it:8444/srm/managerv2?SFN=/cms/store/temp/"+self.replica], [size], None) #, checksum)
+        self.register_temp_replicas(self.source_site,
+                                                [self.replica],
+                                                [self.pfn],
+                                                [size],
+                                                [checksum])
 
         self.add_rule(["/cms/store/temp/"+self.replica], self.dest_site, "")
 
+
 if __name__ == "__main__":
 
-    crabInj = CRABDatasetInjector("replica5.txt", "T2_IT_Bari_Temp", "T2_IT_Pisa", account="dciangot", scope="user.dciangot")
+    parser = ArgumentParser(description='Arguments for file Rucio upload')
+    parser.add_argument('file', metavar='f', type=str, help='local file path')
+    parser.add_argument('replica', metavar='n', type=str, help='Rucio replica name')
 
+    parser.add_argument('temp', type=str, help='Rucio source temp RSE')
+    parser.add_argument('dest', metavar='d', type=str, help='Rucio destination RSE')
+    parser.add_argument('pfn', type=str, help='Source rse pfn')
+
+    parser.add_argument('account', type=str, help='Rucio account')
+    parser.add_argument('scope', type=str, help='Rucio scope')
+
+    args = parser.parse_args()
+    print(args.sum(args.integers))
+
+    # TODO: get pfn from CRIC
+
+    crabInj = CRABDatasetInjector(args.replica,
+                                                  args.file,
+                                                  args.temp,
+                                                  args.dest,
+                                                  args.account,
+                                                  args.scope,
+                                                  args.pfn
+                                                 )
+
+    checksum = None
+
+    with open(args.file) as f:
+        data = f.read()
+        checksum = zlib.adler32(data)
 
     file_dict = {
-        "size": 0,
-        "checksum": "asd235fs"
+        "size": os.path.getsize(args.file),
+        "checksum": "%08x" % checksum
     }
 
     crabInj.upload_file(file_dict["size"], file_dict["checksum"])
-
