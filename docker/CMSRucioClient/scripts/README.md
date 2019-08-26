@@ -105,3 +105,36 @@ for example
 
 will start the service in background. Logs are appended.
 To see how to stop the service look the `main:run` options in the example configuration yaml file (and comments therein).
+
+## `user_script.py`
+
+This script make the upload of a user file to a temporary RSE and then it registers that in rucio asking for the transfer to a second RSE 
+
+```
+[root@5e05cd8bdf68 scripts]# python user_script.py -h
+usage: user_script.py [-h] [--pfn PFN] [--account ACCOUNT] [--scope SCOPE]
+                      file replica temp dest
+
+Arguments for file Rucio upload
+
+positional arguments:
+  file               local file path
+  replica            Rucio replica name
+  temp               Rucio source temp RSE
+  dest               Rucio destination RSE
+
+optional arguments:
+  -h, --help         show this help message and exit
+  --pfn PFN          Source rse pfn
+  --account ACCOUNT  Rucio account
+  --scope SCOPE      Rucio scope
+```
+
+for example:
+
+```
+python user_script.py replica23.txt /store/user/dciangot/repl14.txt T2_IT_Legnaro_Temp T2_IT_Legnaro --pfn srm://t2-srm-02.lnl.infn.it:8443/srm/managerv2?SFN=/pnfs/lnl.infn.it/data/cms/store/temp/user/dciangot/repl14.txt --scope user.dciangot --account dciangot
+```
+
+This is a preliminary attempt to start working on CMS user file registration in Rucio.
+
