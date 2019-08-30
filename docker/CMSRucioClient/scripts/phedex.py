@@ -106,8 +106,6 @@ class PhEDEx(object):
         logging.debug('phedex.datasvc output %s', req.text)
 
         if req.status_code != 200:
-            import pdb
-            pdb.set_trace()
             raise Exception('Request Failed')
 
         return json.loads(req.text)
