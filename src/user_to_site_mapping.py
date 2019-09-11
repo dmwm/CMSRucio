@@ -39,7 +39,7 @@ def user_to_site_mapping_by_country(country):
     Then update the cric_user dictionary.
     """
     cric_global_user = json.load(urllib2.urlopen(util.CRIC_URL))
-    
+
     for key, user in cric_global_user.items():
         institute_country = user['institute_country'].encode("utf-8")
 
@@ -77,7 +77,7 @@ def create_dict_entry(username, dn, email, institute, institute_country):
             "institute": institute,
             "institute_country": institute_country,
             "email": email,
-            "RSES": {
+            "quota": {
                 rse_key: util.DEFAULT_RSE_SIZE,
                 # 'other_rse': 0,
 
@@ -128,7 +128,7 @@ def reset_user_quota(username=None, rse=None):
     except RSENotFound:
         raise
 
-    cric_user[username]["RSES"][rse] = util.DEFAULT_RSE_SIZE
+    cric_user[username]["quota"][rse] = util.DEFAULT_RSE_SIZE
     client.set_account_limit(username, rse, util.DEFAULT_RSE_SIZE)
 
 
@@ -149,7 +149,7 @@ def set_user_quota(username, rse, quota):
     except RSEOperationNotSupported:
         raise
 
-    cric_user[username]["RSES"][rse] = quota
+    cric_user[username]["quota"][rse] = quota
     client.set_account_limit(username, rse, quota)
 
 
@@ -177,7 +177,7 @@ def delete_user_quota(username=None, rse=None):
     except RSENotFound:
         raise
 
-    del cric_user[username]["RSES"][rse]
+    del cric_user[username]["quota"][rse]
     client.delete_account_limit(username, rse)
 
 
@@ -209,13 +209,13 @@ def check_rse_error(username=None, rse=None, method='get'):
     if rse is None:
         raise RSENotFound
 
-    '''if rse not in user_val['RSES'] and method is 'get':
-        print user_val['RSES'].keys(), method
+    '''if rse not in user_val['quota'] and method is 'get':
+        print user_val['quota'].keys(), method
         raise RSENotFound'''
 
     if method is 'get':
         try:
-            user_val['RSES'][rse]
+            user_val['quota'][rse]
         except KeyError:
             raise RSENotFound
 
@@ -226,4 +226,5 @@ def check_rse_error(username=None, rse=None, method='get'):
 
 
 user_to_site_mapping_by_country('US')
+
 
