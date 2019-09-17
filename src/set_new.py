@@ -5,6 +5,16 @@ from rucio.client.client import Client
 cl = Client(account='root')
 print(cl.whoami())
 
+
+for did in list_dids(scope='cms', filters = {'name': '*NanoAODv5*'}):
+    print(did)
+
+
+
+exit()
+
+
+
 def extract_scope(did):
     # Try to extract the scope from the DSN
     if did.find(':') > -1:
