@@ -40,16 +40,22 @@ LFN2PFN_BYTYPE = {
 
 EXCLUDE_TFC = r'\S+LoadTest\S*'
 
+if 'TEST_SUFFIX' in os.environ:
+    TEST_AREA = 'rucio/%s' % os.environ['TEST_SUFFIX']
+else:
+    TEST_AREA = 'rucio'
+
+
 SE_PROBES_BYTYPE = {
     'real': ['/store/data/prod/file.root', '/store/mc/prod/file.root'],
-    'test': ['/store/test/rucio/test/file.root'],
+    'test': ['/store/test/%s/test/file.root' % TEST_AREA],
     #'temp': ['/store/temp/file.root'], # this will be the correct path in prod
     'temp': ['/store/test/rucio/temp/file.root']
 }
 
 SE_ADD_PREFIX_BYTYPE = {
     'real': '',
-    'test': '/store/test/rucio',
+    'test': '/store/test/%s' % TEST_AREA,
     'temp': '/store/temp', # this will be the correct path in prod
     #'temp': '/store/test/rucio/temp/',
 }
