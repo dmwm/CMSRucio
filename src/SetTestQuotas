@@ -1,0 +1,24 @@
+#! /usr/bin/env python
+
+
+"""
+A bit of code to check on the progress of the million file test
+"""
+
+from __future__ import division, print_function
+
+from rucio.client.client import Client
+
+ACCOUNT = 'transfer_ops'
+LIMIT = 10e12 # 10 TB
+
+client = Client()
+client.whoami()
+
+rses = client.list_rses(rse_expression='cms_type=test')
+
+for obj in sorted(rses):
+    rse = obj['rse']
+    print('Setting quota for RSE %s' % rse)
+    client.set_account_limit(account=ACCOUNT, rse=rse, bytes=LIMIT):
+
