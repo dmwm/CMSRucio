@@ -37,7 +37,7 @@ class CMSRucioDatasetReplica(object):
     """
     #pylint: disable=too-many-arguments
     def __init__(self, rds, pnn, rse=None, scope=DEFAULT_SCOPE,
-                 lifetime=None, pcli=None, rcli=None):
+                 lifetime=None, pcli=None, rcli=None, monitor=None):
         """
         Get the status of replica of pditem at pnn
         considering only closed blocks completely replicated at site.
@@ -52,8 +52,10 @@ class CMSRucioDatasetReplica(object):
         :rcli:   Reference to a rucio Client() instance or a dict
                  {'accont': ..., ... } none of the keys is mandatory.
                  Default is {'account': <sync account>}
+        :monitor: stats monitoring object
         """
 
+        self.monitor = monitor
         self.pnn = pnn
 
         self._get_pcli(pcli)
@@ -88,12 +90,10 @@ class CMSRucioDatasetReplica(object):
         if isinstance(pcli, dict):
             self.pcli = PhEDEx(**pcli)
         elif isinstance(pcli, PhEDEx):
-            #pylint: disable=redefined-variable-type
+            # pylint: disable=redefined-variable-type
             self.pcli = pcli
         else:
-            raise Exception("wrong type for pcli parameter %s" %\
-                            type(pcli))
-
+            raise Exception("wrong type for pcli parameter %s" % type(pcli))
 
     def _get_rcli(self, rcli):
         if rcli is None:
@@ -104,11 +104,10 @@ class CMSRucioDatasetReplica(object):
                 rcli['account'] = SYNC_ACCOUNT_FMT % self.pnn.lower()
             self.rcli = Client(**rcli)
         elif isinstance(rcli, Client):
-            #pylint: disable=redefined-variable-type
+            # pylint: disable=redefined-variable-type
             self.rcli = rcli
         else:
-            raise Exception("wrong type for rcli parameter %s" %\
-                            type(rcli))
+            raise Exception("wrong type for rcli parameter %s" % type(rcli))
 
     def block_at_pnn(self):
         """
@@ -120,11 +119,10 @@ class CMSRucioDatasetReplica(object):
             locality=True,
             metadata=True
         )
-        self.is_at_pnn = bool(len(metadata) == 1 and\
-            'block' in metadata[0] and\
-            'replica' in metadata[0]['block'][0] and\
-            metadata[0]['block'][0]['replica'][0]['complete'] == 'y')
-
+        self.is_at_pnn = bool(len(metadata) == 1 and
+                              'block' in metadata[0] and
+                              'replica' in metadata[0]['block'][0] and
+                              metadata[0]['block'][0]['replica'][0]['complete'] == 'y')
 
     def register_container(self, dry=False):
         """
@@ -149,7 +147,7 @@ class CMSRucioDatasetReplica(object):
             try:
                 self.rcli.add_container(scope=self.scope, name=self.container,
                                         lifetime=self.lifetime)
-
+                self.monitor.record_counter('cms_sync.container_created')
             except DataIdentifierAlreadyExists:
                 logging.warning('Container was created in the meanwhile')
                 return 'exists'
@@ -183,6 +181,8 @@ class CMSRucioDatasetReplica(object):
                                   lifetime=self.lifetime)
             self.rcli.attach_dids(scope=self.scope, name=self.container,
                                   dids=[{'scope': self.scope, 'name': self.dataset}])
+            self.monitor.record_counter('cms_sync.dataset_created')
+
             return 'created'
 
         return 'skipped'
@@ -242,7 +242,7 @@ class CMSRucioDatasetReplica(object):
                         dids=[{
                             'scope': self.scope,
                             'name': lfn
-                        } for lfn in list(set(missing) - set(lfns))]
+                        } for lfn in missing_lfns]
                     )
 
                 except FileAlreadyExists:
@@ -270,6 +270,9 @@ class CMSRucioDatasetReplica(object):
                         if attempt > 3:
                             raise
                         time.sleep(randint(1, 5))
+
+        self.monitor.record_counter('cms_sync.files_removed', delta=len(to_remove))
+        self.monitor.record_counter('cms_sync.files_added', delta=len(missing))
 
         return {'added': missing, 'removed': to_remove}
 
@@ -304,6 +307,8 @@ class CMSRucioDatasetReplica(object):
                     copies=1,
                     rse_expression=rse_exp,
                 )
+                self.monitor.record_counter('cms_sync.rules_added')
+
             action = 'added'
 
         elif rrule is not None and not self.is_at_pnn:
@@ -313,6 +318,8 @@ class CMSRucioDatasetReplica(object):
                             self.dataset, self.rse)
             else:
                 self.rcli.delete_replication_rule(rrule['id'], purge_replicas=False)
+                self.monitor.record_counter('cms_sync.rules_removed')
+
             action = 'removed'
 
         return action
@@ -365,13 +372,14 @@ def dataset_replica_update(dataset, pnn, rse, pcli, account, dry):
 
 
 @timer
-def _replica_update(dataset, pnn, rse, pcli, rcli, dry):
+def _replica_update(dataset, pnn, rse, pcli, rcli, dry, monitor):
     ret = CMSRucioDatasetReplica(
         rds=dataset,
         pnn=pnn,
         rse=rse,
         pcli=pcli,
-        rcli=rcli
+        rcli=rcli,
+        monitor=monitor,
     ).update(
         dry=dry
     )
