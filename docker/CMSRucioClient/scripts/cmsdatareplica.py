@@ -31,14 +31,14 @@ DEFAULT_SCOPE = 'cms'
 
 REMOVE_CHUNK_SIZE = 20
 
-import monitor #  rucio.core.monitor
-
-try: # New name
-    monitor.SERVER='statsd-exporter-rucio-statsd-exporter'
-    monitor.CLIENT = statsClient(host=monitor.SERVER, port=monitor.PORT, prefix=monitor.SCOPE)
-except: # Old name
-    monitor.SERVER = 'statsd-exporter-svc'
-    monitor.CLIENT = statsClient(host=monitor.SERVER, port=monitor.PORT, prefix=monitor.SCOPE)
+# import monitor #  rucio.core.monitor
+#
+# try: # New name
+#     monitor.SERVER='statsd-exporter-rucio-statsd-exporter'
+#     monitor.CLIENT = statsClient(host=monitor.SERVER, port=monitor.PORT, prefix=monitor.SCOPE)
+# except: # Old name
+#     monitor.SERVER = 'statsd-exporter-svc'
+#     monitor.CLIENT = statsClient(host=monitor.SERVER, port=monitor.PORT, prefix=monitor.SCOPE)
 
 
 
@@ -377,15 +377,15 @@ def dataset_replica_update(dataset, pnn, rse, pcli, account, dry):
 
 
 @timer
-
-def _replica_update(dataset, pnn, rse, pcli, rcli, dry):
+def _replica_update(dataset, pnn, rse, pcli, rcli, dry, monitor):
     with monitor.record_timer_block('cms_sync.update_replica'):
         ret = CMSRucioDatasetReplica(
             rds=dataset,
             pnn=pnn,
             rse=rse,
             pcli=pcli,
-            rcli=rcli
+            rcli=rcli,
+            monitor=monitor,
         ).update(
             dry=dry
         )
@@ -397,21 +397,20 @@ def _replica_update(dataset, pnn, rse, pcli, rcli, dry):
 
 @timer
 def _get_dset_list(pcli, datasets):
-    with monitor.record_timer_block('cms_sync.get_dataset_list'):
-        logging.verbose("Getting datasets list for: %s",
-                        datasets)
-        ret = []
+    logging.verbose("Getting datasets list for: %s",
+                    datasets)
+    ret = []
 
-        wildcard = re.compile(r'\S*[*]\S*')
+    wildcard = re.compile(r'\S*[*]\S*')
 
-        for dset in datasets:
-            ret.extend([
-                item for
-                item in pcli.list_data_items(pditem=dset, metadata=False, locality=False)
-                if not wildcard.match(item)
-            ])
+    for dset in datasets:
+        ret.extend([
+            item for
+            item in pcli.list_data_items(pditem=dset, metadata=False, locality=False)
+            if not wildcard.match(item)
+        ])
 
-        ret = list(set(ret))
+    ret = list(set(ret))
 
     logging.verbose("Got %d datasets", len(ret))
 
