@@ -298,7 +298,8 @@ def block_sync(pnn, rds, pcli, rcli):
             rse=conf['rse'],
             pcli=pcli,
             rcli=rcli,
-            dry=conf['dry']
+            dry=conf['dry'],
+            monitor=monitor,
         )
 
     return ret
