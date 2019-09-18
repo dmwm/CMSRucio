@@ -6,7 +6,7 @@ from rucio.client.client import Client
 cl = Client(account='root')
 print(cl.whoami())
 
-for campaign in ['NanoAODv5', 'Nano1June2019']:
+for campaign in ['Nano1June2019', 'NanoAODv5']:
     filters = {'name': '*%s*' % campaign}
 
     for did in list(cl.list_dids(scope='cms', filters=filters)):
