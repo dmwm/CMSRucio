@@ -90,30 +90,33 @@ def _open_yaml(yamlfile, modif=None):
     :yamlfile:  the yaml file
     """
 
-    modif = modif or {}
+    yaml_lock = multiprocessing.Lock()
 
-    retry = 5
+    with yaml_lock:
+        modif = modif or {}
 
-    while True:
-        try:
-            retry -= 1
-            with open(yamlfile, 'r') as stream:
-                conf = dict(
-                    dict(
-                        {'default': {}},
-                        **yaml.load(stream)
-                    ),
-                    **modif
-                )
-            break
-        except TypeError:
-            if retry == 0:
-                raise
-            else:
-                time.sleep(1)
+        retry = 5
 
-    if conf is None:
-        raise Exception("Problem parsing %s" % yamlfile)
+        while True:
+            try:
+                retry -= 1
+                with open(yamlfile, 'r') as stream:
+                    conf = dict(
+                        dict(
+                            {'default': {}},
+                            **yaml.load(stream)
+                        ),
+                        **modif
+                    )
+                break
+            except (TypeError, yaml.composer.ComposerError):
+                if retry == 0:
+                    raise
+                else:
+                    time.sleep(1)
+
+        if conf is None:
+            raise Exception("Problem parsing %s" % yamlfile)
 
     return conf
 
@@ -326,29 +329,36 @@ def pnn_sync(pnn, pcli):
 
     if _pnn_abort(pnn, summary, rcli):
         return summary
+# Do the loop here? with conf['multi_das']
 
-    diff = get_node_diff(pnn, pcli, rcli, conf)
-    summary['timing'].update(diff['timing'])
-    diff = diff['return']
-    summary['diff'] = diff['summary']
 
-    if (diff['summary']['tot'] == diff['summary']['to_remove']) and \
-        not conf['allow_clean']:
-        logging.warning('All datasets to be removed. Aborting.')
-        summary['status'] = 'aborted'
-        return summary
+    if conf['multi_das_calls']:
+        prefixes = list(string.letters + string.digits)
+    else:
+        prefixes = [None]
 
-    logging.notice("Got diff=%s, timing=%s", summary['diff'],
-                   summary['timing'])
+    for prefix in prefixes:
+        diff = get_node_diff(pnn, pcli, rcli, conf, prefix=prefix)
+        summary['timing'].update(diff['timing'])
+        diff = diff['return']
+        summary['diff'] = diff['summary']
 
-    if _pnn_abort(pnn, summary, rcli):
-        return summary
+        if (diff['summary']['tot'] == diff['summary']['to_remove']) and not conf['allow_clean']:
+            logging.warning('All datasets to be removed. Aborting.')
+            summary['status'] = 'aborted'
+            continue
+#            return summary
 
-    workers = get_timing(
-        _launch_pnn_workers(conf, diff, pnn,
-                            pcli, rcli),
-        summary['timing']
-    )
+        logging.notice("Got diff=%s, timing=%s", summary['diff'], summary['timing'])
+
+        if _pnn_abort(pnn, summary, rcli):
+            return summary
+
+        workers = get_timing(
+            _launch_pnn_workers(conf, diff, pnn,
+                                pcli, rcli),
+            summary['timing']
+        )
 
     summary['workers'] = len(workers)
 
@@ -397,7 +407,7 @@ def _pnn_abort(pnn, summary, rcli):
 
 
 @timer
-def get_node_diff(pnn, pcli, rcli, conf):
+def get_node_diff(pnn, pcli, rcli, conf, prefix=None):
     """
     Get the diff between the rucio and phedex at a node
     :pnn:  node name
@@ -415,12 +425,9 @@ def get_node_diff(pnn, pcli, rcli, conf):
         select = conf['select']
         ignore = conf['ignore']
 
-        blocks_at_pnn = get_timing(get_blocks_at_pnn(pnn, pcli, multi_das_calls), timing)
-
-        datasets_at_rse = get_timing(get_datasets_at_rse(rcli), timing)
-
+        blocks_at_pnn = get_timing(get_blocks_at_pnn(pnn, pcli, multi_das_calls, prefix=prefix), timing)
+        datasets_at_rse = get_timing(get_datasets_at_rse(rcli, prefix=prefix), timing)
         diff = compare_data_lists(blocks_at_pnn, datasets_at_rse, pnn)
-
         _diff_apply_filter(diff, select, ignore)
 
         diff['timing'].update(timing)
@@ -456,7 +463,7 @@ def _diff_apply_filter(diff, select, ignore):
 
 
 @timer
-def get_blocks_at_pnn(pnn, pcli, multi_das_calls=True):
+def get_blocks_at_pnn(pnn, pcli, multi_das_calls=True, prefix=None):
     """
     Get the list of completed replicas of closed blocks at a site
     :pnn:  the phedex node name
@@ -466,24 +473,35 @@ def get_blocks_at_pnn(pnn, pcli, multi_das_calls=True):
     """
 
     # This is not optimal in terms of calls and time but reduces the memory footprint
-    if multi_das_calls:
-        blocks_at_pnn = {}
-        logging.notice('Getting blocks with multiple das calls. %s',
-                       list(string.letters + string.digits))
 
+    blocks_at_pnn = {}
+    if prefix:
+        logging.summary('Getting subset of blocks at %s beginning with %s' % (pnn, prefix))
+        with monitor.record_timer_block('cms_sync.pnn_blocks_split'):
+            logging.summary('Getting blocks at %s starting with %s' % (pnn, prefix))
+            some_blocks_at_pnn = pcli.blocks_at_site(pnn=pnn, prefix=prefix)
+            blocks_at_pnn.update(some_blocks_at_pnn)
+            logging.summary('Got blocks at %s starting with %s' % (pnn, prefix))
+    elif multi_das_calls:
+        logging.summary('Getting all blocks at %s. Multiple %s' % (pnn, multi_das_calls))
+        logging.notice('Getting blocks with multiple das calls. %s', list(string.letters + string.digits))
         for item in list(string.letters + string.digits):
             with monitor.record_timer_block('cms_sync.pnn_blocks_split'):
+                logging.summary('Getting blocks at %s starting with %s' % (pnn, item))
                 some_blocks_at_pnn = pcli.blocks_at_site(pnn=pnn, prefix=item)
                 blocks_at_pnn.update(some_blocks_at_pnn)
-        return blocks_at_pnn
+                logging.summary('Got blocks at %s starting with %s' % (pnn, item))
     else:
+        logging.summary('Getting all blocks at %s in one call' % pnn)
         with monitor.record_timer_block('cms_sync.pnn_blocks_all'):
             blocks_at_pnn = pcli.blocks_at_site(pnn=pnn)
-        return blocks_at_pnn
+
+    logging.summary('Got blocks at %s.' % pnn)
+    return blocks_at_pnn
 
 
 @timer
-def get_datasets_at_rse(rcli):
+def get_datasets_at_rse(rcli, prefix=None):
     """
     Get the list of rucio datasets at a rse, listing the rules
     belonging to the sync account
@@ -495,7 +513,7 @@ def get_datasets_at_rse(rcli):
         retval = {
             item['name']: item['locks_ok_cnt']
             for item in rcli.list_account_rules(rcli.__dict__['account'])
-            if item['expires_at'] is None
+            if item['expires_at'] is None and (prefix is None or item['name'].startswith(prefix))
         }
     return retval
 
