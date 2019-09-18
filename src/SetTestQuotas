@@ -20,5 +20,5 @@ rses = client.list_rses(rse_expression='cms_type=test')
 for obj in sorted(rses):
     rse = obj['rse']
     print('Setting quota for RSE %s' % rse)
-    client.set_account_limit(account=ACCOUNT, rse=rse, bytes=LIMIT):
+    client.set_account_limit(account=ACCOUNT, rse=rse, bytes=LIMIT)
 
