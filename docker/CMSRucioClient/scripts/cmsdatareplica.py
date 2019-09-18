@@ -24,11 +24,23 @@ from rucio.common.utils import chunks
 from phedex import PhEDEx
 from syncaccounts import SYNC_ACCOUNT_FMT
 from CMSRucio import replica_file_list
+from pystatsd import Client as statsClient
 
 DEFAULT_RSE_FMT = '%s'
 DEFAULT_SCOPE = 'cms'
 
 REMOVE_CHUNK_SIZE = 20
+
+import monitor #  rucio.core.monitor
+
+try: # New name
+    monitor.SERVER='statsd-exporter-rucio-statsd-exporter'
+    monitor.CLIENT = statsClient(host=monitor.SERVER, port=monitor.PORT, prefix=monitor.SCOPE)
+except: # Old name
+    monitor.SERVER = 'statsd-exporter-svc'
+    monitor.CLIENT = statsClient(host=monitor.SERVER, port=monitor.PORT, prefix=monitor.SCOPE)
+
+
 
 #pylint: disable=too-many-instance-attributes
 class CMSRucioDatasetReplica(object):
@@ -79,7 +91,7 @@ class CMSRucioDatasetReplica(object):
         self.block_at_pnn()
 
         if self.is_at_pnn:
-            self.replicas = self.pcli.fileblock_files(pnn=pnn, pfb=rds)
+            self.replicas = self.pcli.fileblock_files_phedex(pnn=pnn, pfb=rds)
         else:
             self.replicas = {}
 
@@ -111,18 +123,11 @@ class CMSRucioDatasetReplica(object):
 
     def block_at_pnn(self):
         """
-        Verify if the block is at pnn (using phedex datasvn)
+        Verify if the block is at pnn (using phedex datasvc)
         """
-        metadata = self.pcli.list_data_items(
-            pditem=self.dataset,
-            pnn=self.pnn,
-            locality=True,
-            metadata=True
-        )
-        self.is_at_pnn = bool(len(metadata) == 1 and
-                              'block' in metadata[0] and
-                              'replica' in metadata[0]['block'][0] and
-                              metadata[0]['block'][0]['replica'][0]['complete'] == 'y')
+
+        self.is_at_pnn = self.pcli.block_at_pnn_phedex(block=self.dataset, pnn=self.pnn)
+        return
 
     def register_container(self, dry=False):
         """
@@ -372,39 +377,41 @@ def dataset_replica_update(dataset, pnn, rse, pcli, account, dry):
 
 
 @timer
-def _replica_update(dataset, pnn, rse, pcli, rcli, dry, monitor):
-    ret = CMSRucioDatasetReplica(
-        rds=dataset,
-        pnn=pnn,
-        rse=rse,
-        pcli=pcli,
-        rcli=rcli,
-        monitor=monitor,
-    ).update(
-        dry=dry
-    )
 
-    ret['replicas']['added'] = len(ret['replicas']['added'])
-    ret['replicas']['removed'] = len(ret['replicas']['removed'])
+def _replica_update(dataset, pnn, rse, pcli, rcli, dry):
+    with monitor.record_timer_block('cms_sync.update_replica'):
+        ret = CMSRucioDatasetReplica(
+            rds=dataset,
+            pnn=pnn,
+            rse=rse,
+            pcli=pcli,
+            rcli=rcli
+        ).update(
+            dry=dry
+        )
+
+
+        ret['replicas']['added'] = len(ret['replicas']['added'])
+        ret['replicas']['removed'] = len(ret['replicas']['removed'])
     return ret
 
 @timer
 def _get_dset_list(pcli, datasets):
+    with monitor.record_timer_block('cms_sync.get_dataset_list'):
+        logging.verbose("Getting datasets list for: %s",
+                        datasets)
+        ret = []
 
-    logging.verbose("Getting datasets list for: %s",
-                    datasets)
-    ret = []
+        wildcard = re.compile(r'\S*[*]\S*')
 
-    wildcard = re.compile(r'\S*[*]\S*')
+        for dset in datasets:
+            ret.extend([
+                item for
+                item in pcli.list_data_items(pditem=dset, metadata=False, locality=False)
+                if not wildcard.match(item)
+            ])
 
-    for dset in datasets:
-        ret.extend([
-            item for
-            item in pcli.list_data_items(pditem=dset, metadata=False, locality=False)
-            if not wildcard.match(item)
-        ])
-
-    ret = list(set(ret))
+        ret = list(set(ret))
 
     logging.verbose("Got %d datasets", len(ret))
 

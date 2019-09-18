@@ -6,19 +6,18 @@ and DAS.
 
 from __future__ import absolute_import, division, print_function
 
+import argparse
 import json
+import logging
 import re
 import time
-import logging
-import argparse
-
+import urllib
 import xml.etree.ElementTree as ET
-
 from subprocess import PIPE, Popen
-import requests
-from requests.exceptions import ReadTimeout
 
+import requests
 from cmstfc import tfc_lfn2pfn
+from requests.exceptions import ReadTimeout
 
 DEBUG_FLAG = False
 DEFAULT_DASGOCLIENT = '/usr/bin/dasgoclient'
@@ -82,7 +81,7 @@ class PhEDEx(object):
         """
 
         if options:
-            options = '&'.join([opt + '=' + val for opt, val in options.items()])
+            options = '&'.join([opt + '=' + urllib.quote(val) for opt, val in options.items()])
         else:
             options = ''
 
@@ -197,6 +196,64 @@ class PhEDEx(object):
 
         return pditems
 
+    def block_at_pnn_phedex(self, block=None, pnn=None):
+        """
+        Use the PhEDEx data service to verify that a block is at the PNN
+
+        :param block: Block name (CMS) or dataset name (Rucio)
+        :param pnn: PhEDEx Node
+        :return: boolean
+        """
+
+        if not block or not pnn:
+            raise NotImplementedError('You must supply a block and node name')
+
+        params = {'node': pnn, 'block': block}
+
+        result = self.datasvc('blockreplicas', options=params)
+
+        try:
+            at_pnn = bool('phedex' in result and
+                          'block' in result['phedex'] and
+                          'replica' in result['phedex']['block'][0] and
+                          result['phedex']['block'][0]['replica'][0]['complete'] == 'y')
+        except IndexError:
+            return False
+
+        return at_pnn
+
+    def fileblock_files_phedex(self, pfb, pnn=None):
+        """
+        Get the phedex files in a fileblock at a node using the PhEDEx data service
+        :pfb:         phedex fileblock
+        :pnn:         the phedex node name.
+
+        returns: {'<filename>': {'name': <filename>, 'size': <size>, 'checksum': <checksum>}, ...}
+        """
+
+        if not pnn:
+            raise NotImplementedError('fileblock_files_phedex requires a pnn to work')
+
+        logging.debug('phedex.fileblock_files_phedex pfb=%s pnn=%s', pfb, pnn)
+
+        params = {'node': pnn, 'block': pfb}
+        phedex_result = self.datasvc('filereplicas', options=params)
+
+        block_summary = {}
+        for block in phedex_result['phedex']['block']:
+            if block['name'] != pfb:
+                continue
+            files = block['file']
+            for file in files:
+                try:
+                    cksum = re.match(r"\S*adler32:([^,]+)", file['checksum']).group(1)
+                    cksum = "{0:0{1}x}".format(int(cksum, 16), 8)
+                except AttributeError:
+                    logging.warning("file %s has no adler32 checksum entry %s" % (file['name'], file['checksum']))
+                    cksum = None
+                block_summary[file['name']] = {'name': file['name'], 'checksum': cksum, 'size': file['bytes']}
+
+        return block_summary
 
     def fileblock_files(self, pfb, pnn=None):
         """
@@ -207,7 +264,7 @@ class PhEDEx(object):
 
         returns: {'<filename>': {'name': <filename>, 'size': <size>, 'checksum': <checksum>}, ...}
         """
-
+        raise NotImplementedError
         logging.debug('phedex.fileblock_files pfb=%s pnn=%s', pfb, pnn)
 
         block_summary = {}
@@ -261,6 +318,8 @@ class PhEDEx(object):
                    {'name': <filename>, 'size': <size>, 'checksum': <checksum>},
                  ...},...}
         """
+        raise NotImplementedError
+
         logging.info("phedex.fileblocks_files pditem=%s, pnn=%s. Start", pditem, pnn)
         ret = {}
 
@@ -729,6 +788,8 @@ if __name__ == '__main__':
         """
         Function to call the method: fileblock_files
         """
+        raise NotImplementedError
+
         if opts.pditem is None:
             print("Function 'fileblock_files' requires the --pditem parameter")
         else:
@@ -738,6 +799,8 @@ if __name__ == '__main__':
         """
         Function to call the method: fileblock_files
         """
+        raise NotImplementedError
+
         print(PCLI.fileblocks_files(pditem=opts.pditem, pnn=opts.pnn))
 
     def fsubscriptions(opts):
