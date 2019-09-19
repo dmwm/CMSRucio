@@ -357,7 +357,7 @@ def dataset_replica_update(dataset, pnn, rse, pcli, account, dry):
 
 @timer
 def _replica_update(dataset, pnn, rse, pcli, rcli, dry, monitor):
-    with monitor.record_timer_block('cms_sync.update_replica'):
+    with monitor.record_timer_block('cms_sync.time_update_replica'):
         ret = CMSRucioDatasetReplica(
             rds=dataset,
             pnn=pnn,
