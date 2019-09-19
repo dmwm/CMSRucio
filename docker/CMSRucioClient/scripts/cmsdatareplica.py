@@ -31,23 +31,13 @@ DEFAULT_SCOPE = 'cms'
 
 REMOVE_CHUNK_SIZE = 20
 
-# import monitor #  rucio.core.monitor
-#
-# try: # New name
-#     monitor.SERVER='statsd-exporter-rucio-statsd-exporter'
-#     monitor.CLIENT = statsClient(host=monitor.SERVER, port=monitor.PORT, prefix=monitor.SCOPE)
-# except: # Old name
-#     monitor.SERVER = 'statsd-exporter-svc'
-#     monitor.CLIENT = statsClient(host=monitor.SERVER, port=monitor.PORT, prefix=monitor.SCOPE)
 
-
-
-#pylint: disable=too-many-instance-attributes
+# pylint: disable=too-many-instance-attributes
 class CMSRucioDatasetReplica(object):
     """
-    Class repeesenting the replica at a site af a CMS Dataset (PhEDEx FileBlock)
+    Class representing the replica at a site af a CMS Dataset (PhEDEx FileBlock)
     """
-    #pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments
     def __init__(self, rds, pnn, rse=None, scope=DEFAULT_SCOPE,
                  lifetime=None, pcli=None, rcli=None, monitor=None):
         """
@@ -161,7 +151,6 @@ class CMSRucioDatasetReplica(object):
 
         return 'skipped'
 
-
     def register_dataset(self, dry=False):
         """
         Register the dataset (if there is a replica at the pnn)
@@ -191,7 +180,6 @@ class CMSRucioDatasetReplica(object):
             return 'created'
 
         return 'skipped'
-
 
     def update_replicas(self, dry=False):
         """
@@ -236,10 +224,7 @@ class CMSRucioDatasetReplica(object):
 
             missing_lfns = list(set(missing) - set(lfns))
             if missing_lfns:
-                logging.verbose('Attaching lfns %s to dataset %s.',
-                                str(missing_lfns), self.dataset)
-
-
+                logging.verbose('Attaching lfns %s to dataset %s.', str(missing_lfns), self.dataset)
                 try:
                     self.rcli.attach_dids(
                         scope=self.scope,
@@ -281,7 +266,6 @@ class CMSRucioDatasetReplica(object):
 
         return {'added': missing, 'removed': to_remove}
 
-
     def update_rule(self, dry=False):
         """
         Adds or removes the rule for the dataset.
@@ -290,15 +274,13 @@ class CMSRucioDatasetReplica(object):
         returns the action performed: None, added, removed
         """
         rules = self.rcli.list_did_rules(scope=self.scope, name=self.dataset)
-        rrule = None
         account = self.rcli.__dict__['account']
         action = None
         rse_exp = 'rse=' + self.rse
 
         rrule = next((
             rule for rule in rules
-            if rule['account'] == account and\
-                rule['rse_expression'] == rse_exp
+            if rule['account'] == account and rule['rse_expression'] == rse_exp
         ), None)
 
         if rrule is None and self.is_at_pnn:
@@ -331,21 +313,19 @@ class CMSRucioDatasetReplica(object):
 
     def update(self, dry=False):
         """
-        syncronize the dataset replica info.
-        :dry:  Drydrun. default false
+        synchronize the dataset replica info.
+        :dry:  Dryrun. default false
         """
-        ret = {'at_node': self.is_at_pnn}
+        # datasets and containers are only added
 
-        #datasets and containers are only added
-        ret['container'] = self.register_container(dry)
-        ret['dataset'] = self.register_dataset(dry)
-
-        ret['replicas'] = self.update_replicas(dry)
-        ret['rule'] = self.update_rule(dry)
+        ret = {'at_node': self.is_at_pnn, 'container': self.register_container(dry),
+               'dataset': self.register_dataset(dry), 'replicas': self.update_replicas(dry),
+               'rule': self.update_rule(dry)}
 
         return ret
 
-#pylint: disable=too-many-arguments
+
+# pylint: disable=too-many-arguments
 def dataset_replica_update(dataset, pnn, rse, pcli, account, dry):
     """
     Just wrapping the update method.
@@ -358,7 +338,6 @@ def dataset_replica_update(dataset, pnn, rse, pcli, account, dry):
                         account, pnn)
         return None
 
-
     logging.my_fmt(label='update:rse=%s:rds=%s' % (pnn, dataset))
 
     logging.notice('Starting.')
@@ -366,7 +345,7 @@ def dataset_replica_update(dataset, pnn, rse, pcli, account, dry):
     try:
         ret = _replica_update(dataset, pnn, rse, pcli, rcli, dry)
 
-    #pylint: disable=broad-except
+    # pylint: disable=broad-except
     except Exception as exc:
         logging.error('Exception %s raised: %s',
                       type(exc).__name__,
@@ -378,7 +357,7 @@ def dataset_replica_update(dataset, pnn, rse, pcli, account, dry):
 
 @timer
 def _replica_update(dataset, pnn, rse, pcli, rcli, dry, monitor):
-    with monitor.record_timer_block('cms_sync.update_replica'):
+    with monitor.record_timer_block('cms_sync.time_update_replica'):
         ret = CMSRucioDatasetReplica(
             rds=dataset,
             pnn=pnn,
@@ -390,10 +369,10 @@ def _replica_update(dataset, pnn, rse, pcli, rcli, dry, monitor):
             dry=dry
         )
 
-
         ret['replicas']['added'] = len(ret['replicas']['added'])
         ret['replicas']['removed'] = len(ret['replicas']['removed'])
     return ret
+
 
 @timer
 def _get_dset_list(pcli, datasets):
@@ -415,6 +394,7 @@ def _get_dset_list(pcli, datasets):
     logging.verbose("Got %d datasets", len(ret))
 
     return ret
+
 
 @timer
 def _launch_workers(pnns, datasets, pool, options, pcli):
@@ -448,6 +428,7 @@ def _launch_workers(pnns, datasets, pool, options, pcli):
             ))
 
     return procs
+
 
 @timer
 def _get_workers(pool, procs):
