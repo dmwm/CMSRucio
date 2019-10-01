@@ -9,6 +9,7 @@ RUN yum upgrade -y && \
     yum clean all && \
     rm -rf /var/cache/yum
 RUN yum install -y httpd mod_wsgi python-pip libaio gcc python-devel.x86_64 \
+                   install wget unzip java-1.8.0-openjdk-devel \
                    mod_ssl openssl-devel.x86_64 bind-utils nano git && \
     yum clean all && \
     rm -rf /var/cache/yum
@@ -34,13 +35,18 @@ RUN yum install -y which krb5-devel gridsite \
     yum clean all && \
     rm -rf /var/cache/yum
 
+# Install Oracle SQLCL and stuff needed for Oracle reporting (rpms for install wget unzip java-1.8.0-openjdk-devel also)
+RUN mkdir /root/sqlcl
+ADD sqlcl/ /root/sqlcl
+ENV PATH=/root/sqlcl/bin:$PATH
+RUN pip install statsd
+
 # Install Rucio and other stuff
 RUN pip install rucio-clients multiprocessing-logging jsonschema PyYAML pystatsd
 
 # Install DAS client to pull info from PhEDEx/DBS
 RUN curl -k -o  /bin/dasgoclient https://www.lns.cornell.edu/~vk/Work/dasgoclient && chmod +x /bin/dasgoclient
 RUN curl -o /etc/ca.crt https://cafiles.cern.ch/cafiles/certificates/CERN%20Root%20Certification%20Authority%202.crt
-
 
 WORKDIR /tmp
 
