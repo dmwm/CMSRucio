@@ -333,7 +333,7 @@ def pnn_sync(pnn, pcli):
 
 
     if conf['multi_das_calls']:
-        prefixes = list(string.letters + string.digits)
+        prefixes = random.shuffle(list(string.letters + string.digits))
     else:
         prefixes = [None]
 
