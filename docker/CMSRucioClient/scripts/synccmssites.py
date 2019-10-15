@@ -485,7 +485,7 @@ def get_blocks_at_pnn(pnn, pcli, multi_das_calls=True, prefix=None):
     elif multi_das_calls:
         logging.summary('Getting all blocks at %s. Multiple %s' % (pnn, multi_das_calls))
         logging.notice('Getting blocks with multiple das calls. %s', list(string.letters + string.digits))
-        for item in list(string.letters + string.digits):
+        for item in random.shuffle(list(string.letters + string.digits)):
             with monitor.record_timer_block('cms_sync.time_pnn_blocks_split'):
                 logging.summary('Getting blocks at %s starting with %s' % (pnn, item))
                 some_blocks_at_pnn = pcli.blocks_at_site(pnn=pnn, prefix=item)
