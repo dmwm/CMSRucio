@@ -341,7 +341,7 @@ class CMSRucio(object):
         except FileAlreadyExists:
             pass
 
-    def upload(self, files, rse, pfns=None):
+    def upload(self, files, rse, pfns=None, no_register=False):
         """[summary]
         
         :param filename: [description]
@@ -358,14 +358,16 @@ class CMSRucio(object):
                 files_dict.append({
                     "path": file_,
                     "rse": rse,
-                    "pfn": pfn
+                    "pfn": pfn,
+                    "no_register": no_register
                 })
             print("CMSRucio upload file {0} to {1} (pfn={2})".format(files_dict[0]["path"], files_dict[0]["rse"], files_dict[0]["pfn"]))
         else:
             for file_ in files:
                 files_dict.append({
                     "path": file_,
-                    "rse": rse
+                    "rse": rse,
+                    "no_register": no_register
                 }) 
             print("CMSRucio upload file {0} to {1}".format(files_dict[0]["path"], files_dict[0]["rse"]))
 

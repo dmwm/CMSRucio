@@ -36,7 +36,7 @@ class CRABDatasetInjector(CMSRucio):
 
         """
         print("Uploading {0} ({1})".format(self.replica, self.pfn))
-        self.upload([self.local_file], self.source_site, pfns=[self.pfn])
+        self.upload([self.local_file], self.source_site, pfns=[self.pfn], no_register=True )
 
         print("{0} uploaded".format(self.replica))
 
@@ -94,4 +94,5 @@ if __name__ == "__main__":
         "checksum": "%08x" % checksum
     }
 
+    print(file_dict)
     crabInj.upload_file(file_dict["size"], file_dict["checksum"])
