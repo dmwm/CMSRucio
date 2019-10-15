@@ -23,8 +23,8 @@ DEBUG_FLAG = False
 DEFAULT_DASGOCLIENT = '/usr/bin/dasgoclient'
 
 DEFAULT_PHEDEX_INST = 'prod'
-#DEFAULT_DATASVC_URL = 'https://cmsweb.cern.ch/phedex/datasvc'
-DEFAULT_DATASVC_URL = 'https://cmsweb-test.cern.ch/phedex/datasvc'
+DEFAULT_DATASVC_URL = 'https://cmsweb.cern.ch/phedex/datasvc'
+#DEFAULT_DATASVC_URL = 'https://cmsweb-test.cern.ch/phedex/datasvc'
 DATASVC_MAX_RETRY = 3
 DATASVC_RETRY_SLEEP = 10
 DATASVC_URL_FORMAT = '%s/json/%s/%s?%s'
