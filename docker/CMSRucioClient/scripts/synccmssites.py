@@ -333,7 +333,8 @@ def pnn_sync(pnn, pcli):
 
 
     if conf['multi_das_calls']:
-        prefixes = random.shuffle(list(string.letters + string.digits))
+        prefixes = list(string.letters + string.digits)
+        random.shuffle(prefixes)
     else:
         prefixes = [None]
 
@@ -484,8 +485,10 @@ def get_blocks_at_pnn(pnn, pcli, multi_das_calls=True, prefix=None):
             logging.summary('Got blocks at %s starting with %s' % (pnn, prefix))
     elif multi_das_calls:
         logging.summary('Getting all blocks at %s. Multiple %s' % (pnn, multi_das_calls))
-        logging.notice('Getting blocks with multiple das calls. %s', list(string.letters + string.digits))
-        for item in random.shuffle(list(string.letters + string.digits)):
+        prefixes = list(string.letters + string.digits)
+        random.shuffle(prefixes)
+        logging.notice('Getting blocks with multiple das calls. %s', prefixes)
+        for item in prefixes:
             with monitor.record_timer_block('cms_sync.time_pnn_blocks_split'):
                 logging.summary('Getting blocks at %s starting with %s' % (pnn, item))
                 some_blocks_at_pnn = pcli.blocks_at_site(pnn=pnn, prefix=item)
