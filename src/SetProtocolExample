@@ -1,0 +1,50 @@
+#! /usr/bin/env python
+
+
+"""
+A bit of code to check on the progress of the million file test
+"""
+
+from __future__ import division, print_function
+
+import pprint
+
+# from rucio.client.client import Client
+
+token = None
+
+tfc = [
+    {'path': '/+(.*)', 'out': 'blah', 'chain': 'direct', 'proto': 'srmv2'},
+]
+
+proto = {
+    'scheme': 'root?',
+    'hostname': 'blah.cern.ch',
+    'port': 1094,
+    'extended_attributes': {},
+    'domains': {'wan' : ' blah, copy from existing'}
+}
+
+proto['impl'] = 'rucio.rse.protocols.gfalv2.Default'
+
+# proto['extended_attributes']['web_service_path'] = ?
+
+proto['prefix'] = '/'
+proto['extended_attributes']['tfc_proto'] = 'srmv2'
+proto['extended_attributes']['tfc'] = tfc
+
+if token:
+    proto['extended_attributes']['space_token'] = token
+
+if proto['extended_attributes'] == {}:
+    proto['extended_attributes'] = None
+
+proto['impl'] = 'rucio.rse.protocols.gfal.Default'
+
+pprint.pprint(proto)
+# client = Client()
+# client.whoami()
+
+
+#client.add_protocol(rse='T1_CH_NOTCERN', proto=proto)
+
