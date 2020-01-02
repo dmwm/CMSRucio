@@ -197,6 +197,19 @@ class PhEDEx(object):
 
         return pditems
 
+    def summary_blocks_at_site(self, pnn, prefix=None, since=None):
+        if prefix:
+            params = {'node': pnn, 'dataset': '/%s*/*/*' % prefix}
+        else:
+            params = {'node': pnn, 'dataset': '/*/*/*'}
+
+        if since:
+            params['update_since'] = str(since)
+
+        result = self.datasvc('blockreplicasummary', options=params)
+        retval = {i['name']: True for i in result['phedex']['block'] if i['replica'][0]['complete'] == 'y'}
+        return retval
+
     def block_at_pnn_phedex(self, block=None, pnn=None):
         """
         Use the PhEDEx data service to verify that a block is at the PNN

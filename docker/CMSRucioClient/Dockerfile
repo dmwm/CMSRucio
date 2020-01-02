@@ -55,13 +55,16 @@ COPY scripts /scripts
 COPY rucio-testbed.cfg /opt/rucio-testbed/etc/rucio.cfg
 COPY rucio-dev.cfg /opt/rucio-dev/etc/rucio.cfg
 COPY rucio-int.cfg /opt/rucio-int/etc/rucio.cfg
-COPY rucio-testbed.cfg /opt/rucio/etc/rucio.cfg
 
-# Pull some usefule stuff out of git
+# Pull some useful stuff out of git
 WORKDIR /root
 
 RUN git clone https://github.com/rucio/rucio.git
 RUN git clone https://github.com/dmwm/CMSRucio.git
+
+#ADD baseclient.py /usr/lib/python2.7/site-packages/rucio/client/baseclient.py
+#ADD sessions.py /usr/lib/python2.7/site-packages/requests/sessions.py
+#ADD adapters.py /usr/lib/python2.7/site-packages/requests/adapters.py
 
 ENV X509_USER_PROXY=/tmp/x509up
 ENTRYPOINT ["/bin/bash", "-c", "sleep infinity"]
