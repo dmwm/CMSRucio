@@ -9,7 +9,7 @@ RUN yum upgrade -y && \
     yum clean all && \
     rm -rf /var/cache/yum
 RUN yum install -y httpd mod_wsgi python-pip libaio gcc python-devel.x86_64 \
-                   install wget unzip java-1.8.0-openjdk-devel \
+                   install wget unzip \
                    mod_ssl openssl-devel.x86_64 bind-utils nano git && \
     yum clean all && \
     rm -rf /var/cache/yum
@@ -35,10 +35,6 @@ RUN yum install -y which krb5-devel gridsite \
     yum clean all && \
     rm -rf /var/cache/yum
 
-# Install Oracle SQLCL and stuff needed for Oracle reporting (rpms for install wget unzip java-1.8.0-openjdk-devel also)
-RUN mkdir /root/sqlcl
-ADD sqlcl/ /root/sqlcl
-ENV PATH=/root/sqlcl/bin:$PATH
 RUN pip install statsd
 
 # Install Rucio and other stuff
