@@ -31,25 +31,15 @@ DEFAULT_SCOPE = 'cms'
 
 REMOVE_CHUNK_SIZE = 20
 
-import monitor #  rucio.core.monitor
 
-try: # New name
-    monitor.SERVER='statsd-exporter-rucio-statsd-exporter'
-    monitor.CLIENT = statsClient(host=monitor.SERVER, port=monitor.PORT, prefix=monitor.SCOPE)
-except: # Old name
-    monitor.SERVER = 'statsd-exporter-svc'
-    monitor.CLIENT = statsClient(host=monitor.SERVER, port=monitor.PORT, prefix=monitor.SCOPE)
-
-
-
-#pylint: disable=too-many-instance-attributes
+# pylint: disable=too-many-instance-attributes
 class CMSRucioDatasetReplica(object):
     """
-    Class repeesenting the replica at a site af a CMS Dataset (PhEDEx FileBlock)
+    Class representing the replica at a site af a CMS Dataset (PhEDEx FileBlock)
     """
-    #pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments
     def __init__(self, rds, pnn, rse=None, scope=DEFAULT_SCOPE,
-                 lifetime=None, pcli=None, rcli=None):
+                 lifetime=None, pcli=None, rcli=None, monitor=None):
         """
         Get the status of replica of pditem at pnn
         considering only closed blocks completely replicated at site.
@@ -64,8 +54,10 @@ class CMSRucioDatasetReplica(object):
         :rcli:   Reference to a rucio Client() instance or a dict
                  {'accont': ..., ... } none of the keys is mandatory.
                  Default is {'account': <sync account>}
+        :monitor: stats monitoring object
         """
 
+        self.monitor = monitor
         self.pnn = pnn
 
         self._get_pcli(pcli)
@@ -100,12 +92,10 @@ class CMSRucioDatasetReplica(object):
         if isinstance(pcli, dict):
             self.pcli = PhEDEx(**pcli)
         elif isinstance(pcli, PhEDEx):
-            #pylint: disable=redefined-variable-type
+            # pylint: disable=redefined-variable-type
             self.pcli = pcli
         else:
-            raise Exception("wrong type for pcli parameter %s" %\
-                            type(pcli))
-
+            raise Exception("wrong type for pcli parameter %s" % type(pcli))
 
     def _get_rcli(self, rcli):
         if rcli is None:
@@ -116,11 +106,10 @@ class CMSRucioDatasetReplica(object):
                 rcli['account'] = SYNC_ACCOUNT_FMT % self.pnn.lower()
             self.rcli = Client(**rcli)
         elif isinstance(rcli, Client):
-            #pylint: disable=redefined-variable-type
+            # pylint: disable=redefined-variable-type
             self.rcli = rcli
         else:
-            raise Exception("wrong type for rcli parameter %s" %\
-                            type(rcli))
+            raise Exception("wrong type for rcli parameter %s" % type(rcli))
 
     def block_at_pnn(self):
         """
@@ -128,7 +117,6 @@ class CMSRucioDatasetReplica(object):
         """
 
         self.is_at_pnn = self.pcli.block_at_pnn_phedex(block=self.dataset, pnn=self.pnn)
-
         return
 
     def register_container(self, dry=False):
@@ -154,7 +142,7 @@ class CMSRucioDatasetReplica(object):
             try:
                 self.rcli.add_container(scope=self.scope, name=self.container,
                                         lifetime=self.lifetime)
-
+                self.monitor.record_counter('cms_sync.container_created')
             except DataIdentifierAlreadyExists:
                 logging.warning('Container was created in the meanwhile')
                 return 'exists'
@@ -162,7 +150,6 @@ class CMSRucioDatasetReplica(object):
             return 'created'
 
         return 'skipped'
-
 
     def register_dataset(self, dry=False):
         """
@@ -188,10 +175,11 @@ class CMSRucioDatasetReplica(object):
                                   lifetime=self.lifetime)
             self.rcli.attach_dids(scope=self.scope, name=self.container,
                                   dids=[{'scope': self.scope, 'name': self.dataset}])
+            self.monitor.record_counter('cms_sync.dataset_created')
+
             return 'created'
 
         return 'skipped'
-
 
     def update_replicas(self, dry=False):
         """
@@ -236,10 +224,7 @@ class CMSRucioDatasetReplica(object):
 
             missing_lfns = list(set(missing) - set(lfns))
             if missing_lfns:
-                logging.verbose('Attaching lfns %s to dataset %s.',
-                                str(missing_lfns), self.dataset)
-
-
+                logging.verbose('Attaching lfns %s to dataset %s.', str(missing_lfns), self.dataset)
                 try:
                     self.rcli.attach_dids(
                         scope=self.scope,
@@ -247,7 +232,7 @@ class CMSRucioDatasetReplica(object):
                         dids=[{
                             'scope': self.scope,
                             'name': lfn
-                        } for lfn in list(set(missing) - set(lfns))]
+                        } for lfn in missing_lfns]
                     )
 
                 except FileAlreadyExists:
@@ -276,8 +261,10 @@ class CMSRucioDatasetReplica(object):
                             raise
                         time.sleep(randint(1, 5))
 
-        return {'added': missing, 'removed': to_remove}
+        self.monitor.record_counter('cms_sync.files_removed', delta=len(to_remove))
+        self.monitor.record_counter('cms_sync.files_added', delta=len(missing))
 
+        return {'added': missing, 'removed': to_remove}
 
     def update_rule(self, dry=False):
         """
@@ -287,15 +274,13 @@ class CMSRucioDatasetReplica(object):
         returns the action performed: None, added, removed
         """
         rules = self.rcli.list_did_rules(scope=self.scope, name=self.dataset)
-        rrule = None
         account = self.rcli.__dict__['account']
         action = None
         rse_exp = 'rse=' + self.rse
 
         rrule = next((
             rule for rule in rules
-            if rule['account'] == account and\
-                rule['rse_expression'] == rse_exp
+            if rule['account'] == account and rule['rse_expression'] == rse_exp
         ), None)
 
         if rrule is None and self.is_at_pnn:
@@ -309,6 +294,8 @@ class CMSRucioDatasetReplica(object):
                     copies=1,
                     rse_expression=rse_exp,
                 )
+                self.monitor.record_counter('cms_sync.rules_added')
+
             action = 'added'
 
         elif rrule is not None and not self.is_at_pnn:
@@ -318,27 +305,27 @@ class CMSRucioDatasetReplica(object):
                             self.dataset, self.rse)
             else:
                 self.rcli.delete_replication_rule(rrule['id'], purge_replicas=False)
+                self.monitor.record_counter('cms_sync.rules_removed')
+
             action = 'removed'
 
         return action
 
     def update(self, dry=False):
         """
-        syncronize the dataset replica info.
-        :dry:  Drydrun. default false
+        synchronize the dataset replica info.
+        :dry:  Dryrun. default false
         """
-        ret = {'at_node': self.is_at_pnn}
+        # datasets and containers are only added
 
-        #datasets and containers are only added
-        ret['container'] = self.register_container(dry)
-        ret['dataset'] = self.register_dataset(dry)
-
-        ret['replicas'] = self.update_replicas(dry)
-        ret['rule'] = self.update_rule(dry)
+        ret = {'at_node': self.is_at_pnn, 'container': self.register_container(dry),
+               'dataset': self.register_dataset(dry), 'replicas': self.update_replicas(dry),
+               'rule': self.update_rule(dry)}
 
         return ret
 
-#pylint: disable=too-many-arguments
+
+# pylint: disable=too-many-arguments
 def dataset_replica_update(dataset, pnn, rse, pcli, account, dry):
     """
     Just wrapping the update method.
@@ -351,7 +338,6 @@ def dataset_replica_update(dataset, pnn, rse, pcli, account, dry):
                         account, pnn)
         return None
 
-
     logging.my_fmt(label='update:rse=%s:rds=%s' % (pnn, dataset))
 
     logging.notice('Starting.')
@@ -359,7 +345,7 @@ def dataset_replica_update(dataset, pnn, rse, pcli, account, dry):
     try:
         ret = _replica_update(dataset, pnn, rse, pcli, rcli, dry)
 
-    #pylint: disable=broad-except
+    # pylint: disable=broad-except
     except Exception as exc:
         logging.error('Exception %s raised: %s',
                       type(exc).__name__,
@@ -370,14 +356,15 @@ def dataset_replica_update(dataset, pnn, rse, pcli, account, dry):
 
 
 @timer
-def _replica_update(dataset, pnn, rse, pcli, rcli, dry):
-    with monitor.record_timer_block('cms_sync.update_replica'):
+def _replica_update(dataset, pnn, rse, pcli, rcli, dry, monitor):
+    with monitor.record_timer_block('cms_sync.time_update_replica'):
         ret = CMSRucioDatasetReplica(
             rds=dataset,
             pnn=pnn,
             rse=rse,
             pcli=pcli,
-            rcli=rcli
+            rcli=rcli,
+            monitor=monitor,
         ).update(
             dry=dry
         )
@@ -386,27 +373,28 @@ def _replica_update(dataset, pnn, rse, pcli, rcli, dry):
         ret['replicas']['removed'] = len(ret['replicas']['removed'])
     return ret
 
+
 @timer
 def _get_dset_list(pcli, datasets):
-    with monitor.record_timer_block('cms_sync.get_dataset_list'):
-        logging.verbose("Getting datasets list for: %s",
-                        datasets)
-        ret = []
+    logging.verbose("Getting datasets list for: %s",
+                    datasets)
+    ret = []
 
-        wildcard = re.compile(r'\S*[*]\S*')
+    wildcard = re.compile(r'\S*[*]\S*')
 
-        for dset in datasets:
-            ret.extend([
-                item for
-                item in pcli.list_data_items(pditem=dset, metadata=False, locality=False)
-                if not wildcard.match(item)
-            ])
+    for dset in datasets:
+        ret.extend([
+            item for
+            item in pcli.list_data_items(pditem=dset, metadata=False, locality=False)
+            if not wildcard.match(item)
+        ])
 
-        ret = list(set(ret))
+    ret = list(set(ret))
 
     logging.verbose("Got %d datasets", len(ret))
 
     return ret
+
 
 @timer
 def _launch_workers(pnns, datasets, pool, options, pcli):
@@ -440,6 +428,7 @@ def _launch_workers(pnns, datasets, pool, options, pcli):
             ))
 
     return procs
+
 
 @timer
 def _get_workers(pool, procs):

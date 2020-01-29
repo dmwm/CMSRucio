@@ -294,14 +294,15 @@ def block_sync(pnn, rds, pcli, rcli):
         logging.warning('Cannot Ping, aborting.')
         return 'aborted'
 
-    with monitor.record_timer_block('cms_sync.block_sync'):
+    with monitor.record_timer_block('cms_sync.time_block_sync'):
         ret = _replica_update(
             dataset=rds,
             pnn=pnn,
             rse=conf['rse'],
             pcli=pcli,
             rcli=rcli,
-            dry=conf['dry']
+            dry=conf['dry'],
+            monitor=monitor,
         )
 
     return ret
@@ -333,6 +334,7 @@ def pnn_sync(pnn, pcli):
 
     if conf['multi_das_calls']:
         prefixes = list(string.letters + string.digits)
+        random.shuffle(prefixes)
     else:
         prefixes = [None]
 
@@ -419,7 +421,7 @@ def get_node_diff(pnn, pcli, rcli, conf, prefix=None):
     as in DEFAULT_DATADIFF_DICT
     """
     timing = {}
-    with monitor.record_timer_block('cms_sync.node_diff'):
+    with monitor.record_timer_block('cms_sync.time_node_diff'):
         multi_das_calls = conf['multi_das_calls']
         select = conf['select']
         ignore = conf['ignore']
@@ -476,23 +478,25 @@ def get_blocks_at_pnn(pnn, pcli, multi_das_calls=True, prefix=None):
     blocks_at_pnn = {}
     if prefix:
         logging.summary('Getting subset of blocks at %s beginning with %s' % (pnn, prefix))
-        with monitor.record_timer_block('cms_sync.pnn_blocks_split'):
+        with monitor.record_timer_block('cms_sync.time_pnn_blocks_split'):
             logging.summary('Getting blocks at %s starting with %s' % (pnn, prefix))
             some_blocks_at_pnn = pcli.blocks_at_site(pnn=pnn, prefix=prefix)
             blocks_at_pnn.update(some_blocks_at_pnn)
             logging.summary('Got blocks at %s starting with %s' % (pnn, prefix))
     elif multi_das_calls:
         logging.summary('Getting all blocks at %s. Multiple %s' % (pnn, multi_das_calls))
-        logging.notice('Getting blocks with multiple das calls. %s', list(string.letters + string.digits))
-        for item in list(string.letters + string.digits):
-            with monitor.record_timer_block('cms_sync.pnn_blocks_split'):
+        prefixes = list(string.letters + string.digits)
+        random.shuffle(prefixes)
+        logging.notice('Getting blocks with multiple das calls. %s', prefixes)
+        for item in prefixes:
+            with monitor.record_timer_block('cms_sync.time_pnn_blocks_split'):
                 logging.summary('Getting blocks at %s starting with %s' % (pnn, item))
                 some_blocks_at_pnn = pcli.blocks_at_site(pnn=pnn, prefix=item)
                 blocks_at_pnn.update(some_blocks_at_pnn)
                 logging.summary('Got blocks at %s starting with %s' % (pnn, item))
     else:
         logging.summary('Getting all blocks at %s in one call' % pnn)
-        with monitor.record_timer_block('cms_sync.pnn_blocks_all'):
+        with monitor.record_timer_block('cms_sync.time_pnn_blocks_all'):
             blocks_at_pnn = pcli.blocks_at_site(pnn=pnn)
 
     logging.summary('Got blocks at %s.' % pnn)
@@ -508,7 +512,7 @@ def get_datasets_at_rse(rcli, prefix=None):
 
     returns a dictionnary with <dataset name>: <number of files>
     """
-    with monitor.record_timer_block('cms_sync.rse_datasets'):
+    with monitor.record_timer_block('cms_sync.time_rse_datasets'):
         retval = {
             item['name']: item['locks_ok_cnt']
             for item in rcli.list_account_rules(rcli.__dict__['account'])
@@ -527,7 +531,7 @@ def compare_data_lists(blocks, datasets, pnn):
     return the liste of datasets to add, remove and update
     as in DEFAULT_DATADIFF_DICT
     """
-    with monitor.record_timer_block('cms_sync.compare_rse_datasets'):
+    with monitor.record_timer_block('cms_sync.time_compare_rse_datasets'):
         ret = copy.deepcopy(DEFAULT_DATADIFF_DICT)
 
         dataitems = list(set(blocks.keys() + datasets.keys()))

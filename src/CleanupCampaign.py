@@ -16,7 +16,7 @@ client = Client()
 client.whoami()
 
 ACCOUNT = 'transfer_ops'
-SUBSCRIPTION = 'Placement_NanoAODv4'
+SUBSCRIPTION = 'Placement_NanoAODv5'
 
 attempts=0
 while attempts < 4:
@@ -27,6 +27,7 @@ while attempts < 4:
         pass
 
 rules = [rule for rule in rule_gen]  # Getting chunking errors if we wait
+print('Cleaning up %s rules' % len(rules))
 
 for rule in rules:
     rule_id = rule['id']
