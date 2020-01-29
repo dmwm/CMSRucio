@@ -15,10 +15,12 @@ export RUCIO_ACCOUNT=root
 
 echo Using config file in $RUCIO_HOME
 
+set -x
+
 cd docker/CMSRucioClient/scripts/
 
 ./cmsrses.py --pnn all --select 'T2_\S+' --exclude 'T2_MY_\S+' --exclude '\S+CERN\S+' --type real --type temp --type test --fts https://fts3.cern.ch:8446
-./cmsrses.py --pnn all --select 'T1_\S+' --exclude '.*MSS' --type real --type test --fts https://fts3.cern.ch:8446
+./cmsrses.py --pnn all --select 'T1_\S+' --exclude '.*MSS' --exclude 'T1_UK_RAL_\S+' --exclude '\S+_Tape_Test' --type real --type test --fts https://fts3.cern.ch:8446
 ./syncaccounts.py --identity "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=cmsrucio/CN=430796/CN=Robot: CMS Rucio Data Transfer" --type x509
 ./cmslinks.py --phedex_link --overwrite --disable
 

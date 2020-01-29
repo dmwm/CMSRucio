@@ -1,7 +1,1 @@
-tests/
-/src/user_to_site_mapping.pyc
-/src/test_user_to_site_mapping.py
-/src/test_user_to_site_mapping.pyc
-/src/config_institute_policy.json
-/src/fake_cric_users.json 
-/src/index.html?json
+/docker/CMSRucioClient/sqlcl/

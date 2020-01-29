@@ -9,6 +9,7 @@ RUN yum upgrade -y && \
     yum clean all && \
     rm -rf /var/cache/yum
 RUN yum install -y httpd mod_wsgi python-pip libaio gcc python-devel.x86_64 \
+                   install wget unzip \
                    mod_ssl openssl-devel.x86_64 bind-utils nano git && \
     yum clean all && \
     rm -rf /var/cache/yum
@@ -34,13 +35,14 @@ RUN yum install -y which krb5-devel gridsite \
     yum clean all && \
     rm -rf /var/cache/yum
 
+RUN pip install statsd
+
 # Install Rucio and other stuff
 RUN pip install rucio-clients multiprocessing-logging jsonschema PyYAML pystatsd
 
 # Install DAS client to pull info from PhEDEx/DBS
 RUN curl -k -o  /bin/dasgoclient https://www.lns.cornell.edu/~vk/Work/dasgoclient && chmod +x /bin/dasgoclient
 RUN curl -o /etc/ca.crt https://cafiles.cern.ch/cafiles/certificates/CERN%20Root%20Certification%20Authority%202.crt
-
 
 WORKDIR /tmp
 
@@ -49,13 +51,16 @@ COPY scripts /scripts
 COPY rucio-testbed.cfg /opt/rucio-testbed/etc/rucio.cfg
 COPY rucio-dev.cfg /opt/rucio-dev/etc/rucio.cfg
 COPY rucio-int.cfg /opt/rucio-int/etc/rucio.cfg
-COPY rucio-testbed.cfg /opt/rucio/etc/rucio.cfg
 
-# Pull some usefule stuff out of git
+# Pull some useful stuff out of git
 WORKDIR /root
 
 RUN git clone https://github.com/rucio/rucio.git
 RUN git clone https://github.com/dmwm/CMSRucio.git
+
+#ADD baseclient.py /usr/lib/python2.7/site-packages/rucio/client/baseclient.py
+#ADD sessions.py /usr/lib/python2.7/site-packages/requests/sessions.py
+#ADD adapters.py /usr/lib/python2.7/site-packages/requests/adapters.py
 
 ENV X509_USER_PROXY=/tmp/x509up
 ENTRYPOINT ["/bin/bash", "-c", "sleep infinity"]
