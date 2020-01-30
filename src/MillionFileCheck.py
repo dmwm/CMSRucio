@@ -29,7 +29,7 @@ for obj in sorted(rses):
     rse_blocks = 0
 
     for dsn in client.list_datasets_per_rse(rse):
-        if 'NANOAODSIM' in dsn['name']:
+        if '/NANOAOD' in dsn['name']:
             total_blocks += 1
             rse_blocks += 1
             try:
