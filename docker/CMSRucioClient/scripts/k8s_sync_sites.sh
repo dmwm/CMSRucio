@@ -24,3 +24,7 @@ cd docker/CMSRucioClient/scripts/
 ./syncaccounts.py --identity "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=cmsrucio/CN=430796/CN=Robot: CMS Rucio Data Transfer" --type x509
 ./cmslinks.py --phedex_link --overwrite --disable
 
+echo "Syncing account roles for managers and group accounts"
+
+./syncRolesToAttributes.py
+./syncRolesToGroupAccounts.py

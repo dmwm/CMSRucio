@@ -11,6 +11,7 @@ TO_STRIP = ['_Disk', '_Tape', '_Temp', '_Test', '_Disk_Test', '_Tape_Test']
 
 CRIC_GROUP_API = 'https://cms-cric.cern.ch/api/accounts/group/query/?json'
 
+# FIXME: Make this be read from a file
 role_group_mapping = {'CMS_higgs_DataManager': {'name': 'higgs', 'email': ''},
                       'CMS_heavy-ions_DataManager': {'name': 'heavy_ions', 'email': ''},
                       'CMS_top_DataManager': {'name': 'top', 'email': ''},
@@ -18,14 +19,7 @@ role_group_mapping = {'CMS_higgs_DataManager': {'name': 'higgs', 'email': ''},
                       }
 
 
-def main():
-    # Needed on the Mac to ignore certificate issues
-    # import ssl
-    # ctx = ssl.create_default_context()
-    # ctx.check_hostname = False
-    # ctx.verify_mode = ssl.CERT_NONE
-    #
-    # all_cric_groups = json.load(urllib2.urlopen(CRIC_GROUP_API, context=ctx))
+def sync_roles_to_group_accounts():
     all_cric_groups = json.load(urllib2.urlopen(CRIC_GROUP_API))
 
     client = Client()
@@ -59,4 +53,8 @@ def main():
                 client.del_identity(account=group_name, identity=identity, authtype='X509')
 
 
-main()
+if __name__ == '__main__':
+    """
+    Run the sync
+    """
+    sync_roles_to_group_accounts()
