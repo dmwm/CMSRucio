@@ -7,7 +7,6 @@ from collections import defaultdict
 
 from rucio.client.client import Client
 from rucio.common.exception import RSEAttributeNotFound
-from rucio.common.exception import RSEProtocolNotSupported, RSENotFound
 
 TO_STRIP = ['_Disk', '_Tape', '_Temp', '_Test', '_Disk_Test', '_Tape_Test']
 
@@ -26,12 +25,11 @@ def set_rse_manager(client, rse_name, site_managers, alt_rse=None):
     client.add_rse_attribute(rse=rse_name, key='rule_approvers', value=rule_approvers)
 
 
-def main():
+def sync_roles_to_rses():
     all_cric_users = json.load(urllib2.urlopen(CRIC_USERS_API))
 
     site_managers = defaultdict(set)
     for user in all_cric_users:
-        # dn = user['DN']
         roles = user['ROLES']
         username = user['LOGIN']
         if 'data-manager' in roles:
@@ -62,4 +60,8 @@ def main():
                 print("No site manager found for %s" % rse_name)
 
 
-main()
+if __name__ == '__main__':
+    """
+    Run the sync
+    """
+    sync_roles_to_rses()
