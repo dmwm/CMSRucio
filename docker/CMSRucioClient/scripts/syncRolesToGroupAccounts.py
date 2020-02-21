@@ -2,10 +2,16 @@
 from __future__ import print_function
 
 import json
+import ssl
 import urllib2
 
 from rucio.client.client import Client
 from rucio.common.exception import AccountNotFound
+
+# Pods don't like the CRIC certificate
+SSL_CONTEXT = ssl.create_default_context()
+SSL_CONTEXT.check_hostname = False
+SSL_CONTEXT.verify_mode = ssl.CERT_NONE
 
 TO_STRIP = ['_Disk', '_Tape', '_Temp', '_Test', '_Disk_Test', '_Tape_Test']
 
@@ -20,7 +26,7 @@ role_group_mapping = {'CMS_higgs_DataManager': {'name': 'higgs', 'email': ''},
 
 
 def sync_roles_to_group_accounts():
-    all_cric_groups = json.load(urllib2.urlopen(CRIC_GROUP_API))
+    all_cric_groups = json.load(urllib2.urlopen(CRIC_GROUP_API, context=SSL_CONTEXT))
 
     client = Client()
 
