@@ -1,0 +1,36 @@
+{
+ "site": "T1_UK_RAL",
+ "storage_unit": "Buffer",
+ "type": "DISK",
+ "protocols": [
+   {
+     "protocol": "SRMv2",
+     "comment": "name SRMv2 used for historic reason, it's really gsiftp",
+     "access": "read-write",
+     "tfc_rules": {
+         "chain": null,
+         "lfn-to-pfn-s": [
+            {
+               "lfn": ".*/LoadTest07_(.*)_.*_.*",
+               "pfn": "/local/PhEDEx_LoadTest07/LoadTest07_$1",
+               "comment": "keep load test ouside storage system"
+            },
+            {
+               "lfn": "/+store/(.*)",
+               "pfn": "gsiftp://gridftp.echo.stfc.ac.uk:2811/cms:/store/$1"
+            }
+         ],
+         "comment": "historic, imported from PhEDEx"
+     }
+   },
+   {
+     "protocol": "XRootD",
+     "access": "read-only",
+     "tfc_prefix": "root://xrootd.echo.stfc.ac.uk/",
+     "comment": "i assume Rucio is able to handle default ports, or?"
+   }
+ ],
+ "comment": "FTS will have a default",
+ "fts": "https://fts3.cern.ch:8446"
+}
+

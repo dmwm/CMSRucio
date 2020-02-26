@@ -10,8 +10,8 @@ import os
 import re
 import json
 
-from phedex import PhEDEx, DEFAULT_PHEDEX_INST, DEFAULT_DASGOCLIENT,\
-DEFAULT_DATASVC_URL, DEFAULT_PROTOCOL
+from phedex import PhEDEx, DEFAULT_PHEDEX_INST, DEFAULT_DASGOCLIENT, \
+    DEFAULT_DATASVC_URL, DEFAULT_PROTOCOL
 from rucio.client.client import Client
 from rucio.common.exception import RSEProtocolNotSupported, RSENotFound
 from cmstfc import cmstfc
@@ -45,19 +45,18 @@ if 'TEST_SUFFIX' in os.environ:
 else:
     TEST_AREA = 'rucio'
 
-
 SE_PROBES_BYTYPE = {
     'real': ['/store/data/prod/file.root', '/store/mc/prod/file.root'],
     'test': ['/store/test/%s/test/file.root' % TEST_AREA],
-    #'temp': ['/store/temp/file.root'], # this will be the correct path in prod
+    # 'temp': ['/store/temp/file.root'], # this will be the correct path in prod
     'temp': ['/store/test/rucio/temp/file.root']
 }
 
 SE_ADD_PREFIX_BYTYPE = {
     'real': '',
     'test': '/store/test/%s' % TEST_AREA,
-    'temp': '/store/temp', # this will be the correct path in prod
-    #'temp': '/store/test/rucio/temp/',
+    'temp': '/store/temp',  # this will be the correct path in prod
+    # 'temp': '/store/test/rucio/temp/',
 }
 
 PNN_MATCH = re.compile(r'T(\d+)\_(\S{2})\_\S+')
@@ -88,11 +87,11 @@ class CMSRSE(object):
         if pnn.endswith('_MSS'):
             raise ValueError('Please import PhEDEx _Buffer pnns rather than _MSS for tape endpoints')
         elif pnn.endswith('_Buffer'):
-             self.rsename = pnn.replace('_Buffer', '_Tape') + self.suffix
-             self.rucio_rse_type = 'TAPE'
+            self.rsename = pnn.replace('_Buffer', '_Tape') + self.suffix
+            self.rucio_rse_type = 'TAPE'
         else:
-             self.rsename = pnn + self.suffix
-             self.rucio_rse_type = 'DISK'
+            self.rsename = pnn + self.suffix
+            self.rucio_rse_type = 'DISK'
 
         if tfc and os.path.isdir(tfc):
             self.tfc = tfc + '/' + pnn + '/PhEDEx/storage.xml'
@@ -109,7 +108,6 @@ class CMSRSE(object):
         self._get_settings()
 
         self._get_protocol(seinfo, add_prefix, tfc_exclude, domains, space_token, proto)
-
 
     def _get_attributes(self, fts, tier, lfn2pfn_algorithm, country, xattrs):
         """
@@ -146,7 +144,6 @@ class CMSRSE(object):
 
         self.attrs = attrs
 
-
     def _set_attributes(self):
         try:
             rattrs = self.rcli.list_rse_attributes(rse=self.rsename)
@@ -160,7 +157,7 @@ class CMSRSE(object):
                 # Hack. I can find no way to define an attribute to 1
                 # (systematically reinterpreted as True)
                 if key in rattrs and rattrs[key] is True and \
-                    (str(value) == '1' or str(value) == 'True'):
+                        (str(value) == '1' or str(value) == 'True'):
                     continue
 
                 if key not in rattrs:
@@ -176,7 +173,6 @@ class CMSRSE(object):
 
         return changed
 
-
     def _get_settings(self):
         """
         Get expected settings for the RSE
@@ -188,7 +184,6 @@ class CMSRSE(object):
         else:
             self.settings['deterministic'] = True
 
-
     def _check_lfn2pfn(self):
         """
         Checks that lfn2pfn works properly
@@ -196,32 +191,37 @@ class CMSRSE(object):
         for lfn in SE_PROBES_BYTYPE[self.rsetype]:
 
             # this is what rucio does
-            pfn = self.proto['scheme']  + '://' + self.proto['hostname'] +\
-                ':' +  str(self.proto['port'])
+            pfn = self.proto['scheme'] + '://' + self.proto['hostname'] + \
+                  ':' + str(self.proto['port'])
 
             if 'web_service_path' in self.proto['extended_attributes']:
                 pfn = pfn + self.proto['extended_attributes']['web_service_path']
-
 
             pfn = pfn + '/' + cmstfc('cms', lfn, None, None, self.proto)
 
             # this should match dataservice pfn, modulo some normalization
             # (e.g.: adding the port number)
             pfn_datasvc = []
-            pfn_datasvc.append(self.pcli.lfn2pfn(
+
+            wo_port = self.pcli.lfn2pfn(
                 pnn=self.pnn, lfn=lfn, tfc=self.tfc,
-                protocol=self.proto['extended_attributes']['tfc_proto']))
-            pfn_datasvc.append(pfn_datasvc[0].replace(
+                protocol=self.proto['extended_attributes']['tfc_proto'])
+            wo_port = re.sub('/+', '/', wo_port)
+            w_port = wo_port.replace(
                 self.proto['hostname'],
                 self.proto['hostname'] + ':' + str(self.proto['port'])
-            ))
+            )
+
+            # Get rid of ALL multiple slashes, including separating protocol from host (valid for comparison only)
+            pfn_datasvc.append(wo_port)
+            pfn_datasvc.append(w_port)
+            pfn = re.sub('/+', '/', pfn)
 
             if pfn not in pfn_datasvc:
                 raise Exception("rucio and datasvc lfn2pfn mismatch, rucio: %s ; datasvc: %s" %
                                 (pfn, pfn_datasvc))
 
             logging.debug("checking lfn2pfn ok %s", pfn)
-
 
     def _get_protocol(self, seinfo, add_prefix, exclude, domains, token, proto):
         """
@@ -238,7 +238,6 @@ class CMSRSE(object):
         :token:       space token. default None
         :proto:       protocol to be considered. default DEFAULT_PROTOCOL.
         """
-
 
         seinfo = seinfo or self.pcli.seinfo(pnn=self.pnn, probes=SE_PROBES_BYTYPE[self.rsetype],
                                             protocol=proto, tfc=self.tfc)
@@ -293,7 +292,6 @@ class CMSRSE(object):
 
         self.proto['impl'] = 'rucio.rse.protocols.gfalv2.Default'
 
-
     def _set_protocol(self):
         try:
             rprotos = self.rcli.get_protocols(
@@ -325,11 +323,12 @@ class CMSRSE(object):
             except RSEProtocolNotSupported:
                 logging.debug("Cannot remove protocol (scheme, rse) = (%s,%s)",
                               self.proto['scheme'], self.rsename)
-
-            self.rcli.add_protocol(rse=self.rsename, params=self.proto)
+            if (self.proto['scheme'] == 'srm'
+                and 'extended_attribute' in self.proto
+                and 'web_service_path' in self.proto['extended_attributes']):
+                self.rcli.add_protocol(rse=self.rsename, params=self.proto)
 
         return update
-
 
     def _create_rse(self):
 
@@ -349,11 +348,11 @@ class CMSRSE(object):
                 logging.info('creating rse %s with deterministic %s and type %s. Dry run, skipping',
                              self.rsename, self.settings['deterministic'], self.rucio_rse_type)
             else:
-                self.rcli.add_rse(self.rsename, deterministic=self.settings['deterministic'], rse_type=self.rucio_rse_type)
+                self.rcli.add_rse(self.rsename, deterministic=self.settings['deterministic'],
+                                  rse_type=self.rucio_rse_type)
                 logging.debug('created rse %s', self.rsename)
 
         return create
-
 
     def update(self):
         """
@@ -414,7 +413,7 @@ if __name__ == '__main__':
                         help='Protocol. default %s' % DEFAULT_PROTOCOL)
     PARSER.add_argument('--tfc_exclude', dest='tfc_exclude', default=EXCLUDE_TFC,
                         help='Regexp for rule paths to be excluded from TFC. default %s'
-                        % EXCLUDE_TFC)
+                             % EXCLUDE_TFC)
     PARSER.add_argument('--select', dest='select', action='append', default=None,
                         help='selecting regexps for pnn listing. Can be multiple.')
     PARSER.add_argument('--exclude', dest='exclude', action='append', default=None,
