@@ -35,7 +35,7 @@ RUN yum install -y which krb5-devel gridsite \
     yum clean all && \
     rm -rf /var/cache/yum
 
-RUN pip install statsd
+RUN pip install statsd python-gitlab
 
 # Install Rucio and other stuff
 RUN pip install rucio-clients multiprocessing-logging jsonschema PyYAML pystatsd
