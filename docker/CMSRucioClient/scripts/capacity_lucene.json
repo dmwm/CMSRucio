@@ -1,0 +1,49 @@
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "match_phrase": {
+            "metadata.type": "ssbmetric"
+          }
+        },
+        {
+          "match_phrase": {
+            "metadata.type_prefix": "raw"
+          }
+        },
+        {
+          "match_phrase": {
+            "metadata.path": "scap15min"
+          }
+        }
+      ],
+      "filter": {
+        "range": {
+          "metadata.timestamp": {
+            "gte": 0,
+            "lt": 0,
+            "format": "epoch_second"
+          }
+        }
+      }
+    }
+  },
+  "_source": {
+    "includes": [
+      "metadata.timestamp",
+      "metadata.kafka_timestamp",
+      "data.name",
+      "data.disk_pledge",
+      "data.disk_usable",
+      "data.disk_experiment_use",
+      "data.tape_pledge",
+      "data.tape_usable"
+    ]
+  },
+  "size": 10000,
+  "search_after": [ 0 ],
+  "sort": [
+    { "metadata.timestamp": "asc" }
+  ]
+}
