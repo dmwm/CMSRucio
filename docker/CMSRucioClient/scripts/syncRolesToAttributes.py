@@ -2,15 +2,21 @@
 from __future__ import print_function
 
 import json
+import ssl
 import urllib2
 from collections import defaultdict
 
 from rucio.client.client import Client
 from rucio.common.exception import RSEAttributeNotFound
 
+# Pods don't like the CRIC certificate
+SSL_CONTEXT = ssl.create_default_context()
+SSL_CONTEXT.check_hostname = False
+SSL_CONTEXT.verify_mode = ssl.CERT_NONE
+
 TO_STRIP = ['_Disk', '_Tape', '_Temp', '_Test', '_Disk_Test', '_Tape_Test']
 
-CRIC_USERS_API = 'https://cms-cric.cern.ch/api/accounts/user/query/list/?json&preset=roles '
+CRIC_USERS_API = 'https://cms-cric.cern.ch/api/accounts/user/query/list/?json&preset=roles'
 
 
 def set_rse_manager(client, rse_name, site_managers, alt_rse=None):
@@ -26,7 +32,7 @@ def set_rse_manager(client, rse_name, site_managers, alt_rse=None):
 
 
 def sync_roles_to_rses():
-    all_cric_users = json.load(urllib2.urlopen(CRIC_USERS_API))
+    all_cric_users = json.load(urllib2.urlopen(CRIC_USERS_API, context=SSL_CONTEXT))
 
     site_managers = defaultdict(set)
     for user in all_cric_users:
