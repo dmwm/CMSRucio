@@ -272,7 +272,13 @@ class CMSRSE(object):
             self.proto['extended_attributes']['tfc'] = self.tfc
             self._check_lfn2pfn()
         else:
-            self.proto['prefix'] = seinfo['prefix']
+            if self.rsetype == "temp":
+                if 'webpath' in seinfo:
+                    self.proto['prefix'] = seinfo['prefix']
+                else:
+                    self.proto['prefix'] = '/' + seinfo['prefix']
+            else:
+                self.proto['prefix'] = seinfo['prefix']
 
         if add_prefix is None:
             add_prefix = SE_ADD_PREFIX_BYTYPE[self.rsetype]
