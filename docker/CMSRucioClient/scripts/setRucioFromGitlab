@@ -1,0 +1,39 @@
+#! /usr/bin/env python
+
+from __future__ import print_function, division, absolute_import
+
+import base64
+import os
+import subprocess
+
+import gitlab
+
+SKIP_SITES = ['T2_FI_HIP','T2_ES_IFCA', 'T2_CH_CERN', 'T1_US_FNAL_Disk', 'T1_US_FNAL', 'T1_UK_RAL']
+DO_SITES = []
+
+private_token = os.environ['GITLAB_TOKEN']
+
+gl = gitlab.Gitlab('https://gitlab.cern.ch', private_token=private_token)
+
+group = gl.groups.get('siteconf')
+
+projects = group.projects.list(all=True)
+
+for project in projects:
+    full_project = gl.projects.get(project.id)
+    if project.name.startswith('T3'):
+        continue
+    if project.name in SKIP_SITES:
+        continue
+    if DO_SITES and project.name not in DO_SITES:
+        continue
+
+    try:
+        f = full_project.files.get('PhEDEx/storage.xml', 'master')
+        storage_xml = base64.b64decode(f.content)
+        with open('/tmp/storage.xml', 'w') as xml_file:
+            xml_file.write(storage_xml)
+        subprocess.call(["./cmsrses.py", "--pnn", project.name, "--type", "real",
+                         "--fts", "https://fts3.cern.ch:8446", "--tfc", '/tmp/storage.xml'])
+    except gitlab.exceptions.GitlabGetError:
+        print("Unable to download storage.xml for %s" % project.name)

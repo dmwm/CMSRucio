@@ -17,7 +17,7 @@ MAX_CHAIN_DEPTH = 5
 
 def cmstfc(scope, name, rse, rse_attrs, proto_attrs):
     """
-    Map lfn into pfn accoring to the declared tfc in the protocol.
+    Map lfn into pfn according to the declared tfc in the protocol.
     """
 
     # Prevents unused argument warnings in pylint
