@@ -23,8 +23,8 @@ DEBUG_FLAG = False
 DEFAULT_DASGOCLIENT = '/usr/bin/dasgoclient'
 
 DEFAULT_PHEDEX_INST = 'prod'
-#DEFAULT_DATASVC_URL = 'https://cmsweb.cern.ch/phedex/datasvc'
-DEFAULT_DATASVC_URL = 'https://cmsweb-test.cern.ch/phedex/datasvc'
+DEFAULT_DATASVC_URL = 'https://cmsweb.cern.ch/phedex/datasvc'
+#DEFAULT_DATASVC_URL = 'https://cmsweb-test.cern.ch/phedex/datasvc'
 DATASVC_MAX_RETRY = 3
 DATASVC_RETRY_SLEEP = 10
 DATASVC_URL_FORMAT = '%s/json/%s/%s?%s'
@@ -196,6 +196,19 @@ class PhEDEx(object):
             pditems = [item[outtype][0]['name'] for item in pditems]
 
         return pditems
+
+    def summary_blocks_at_site(self, pnn, prefix=None, since=None):
+        if prefix:
+            params = {'node': pnn, 'dataset': '/%s*/*/*' % prefix}
+        else:
+            params = {'node': pnn, 'dataset': '/*/*/*'}
+
+        if since:
+            params['update_since'] = str(since)
+
+        result = self.datasvc('blockreplicasummary', options=params)
+        retval = {i['name']: True for i in result['phedex']['block'] if i['replica'][0]['complete'] == 'y'}
+        return retval
 
     def block_at_pnn_phedex(self, block=None, pnn=None):
         """
