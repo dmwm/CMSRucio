@@ -1,22 +1,22 @@
 #! /usr/bin/env python
 
-from policy import Policy
-from quota import Quota
+import json
 
 from rucio.client import Client
 from rucio.common.exception import RSENotFound
 
-import json
-import sys
+from policy import Policy
+from quota import Quota
 
 """
 This class represent the US CMS Policy.
 """
 
+
 class InstitutePolicy(Policy):
 
     def __init__(self):
-        self.default_quota = (10 ** 6)  # 1 MB for testing
+        self.default_quota = (100 * 10 ** 9)  # 100 GB
         self.client = Client()
         self.CRIC_USERS_API = 'https://cms-cric.cern.ch/api/accounts/user/query/list/?json'
 
@@ -46,27 +46,29 @@ class InstitutePolicy(Policy):
             option = kwargs['option']
             quota = None
             if rse is None:
-                sys.stderr.write('User ' + kwargs['username'] + 'no longer belong to CMS (institute is empty)\n')
+                print('User ' + kwargs['username'] + 'no longer belong to CMS (institute is empty)\n')
                 return
-
+            print ("Getting quota")
             if option == 'reset-all':
                 quota = self.default_quota
             elif option == 'set-new-only':
-                quota = self.client.get_account_limit(account=kwargs['username'], rse=rse)[rse]
+                print('Set new only for', kwargs['username'], rse)
+                quota = self.client.get_local_account_limit(account=kwargs['username'], rse=rse)[rse]
+                print ('Quota for %s at %s is %s', (kwargs['username'], quota, rse))
                 if quota is None:
                     message = "[quota SET] User {0} has now {1} bytes at the {2} site\n".format(kwargs['username'],
                                                                                                 quota,
                                                                                                 rse)
-                    sys.stdout.write(message)
+                    print(message)
                     quota = self.default_quota
 
                 elif quota != self.default_quota:
                     message = "[quota ALREADY SET] User {0} has already {1} bytes at the {2} site and you can not " \
                               "overwrite default quota of {3} bytes. " \
                               "Use 'reset-all' option.\n".format(kwargs['username'], quota, rse, self.default_quota)
-                    sys.stderr.write(message)
+                    print(message)
                     raise Exception
-
+            print("Making Quota object with %s and %s" % (rse, quota))
             rse_quota = Quota(rse, quota)
             rses_list.append(rse_quota)
             return rses_list
@@ -81,28 +83,25 @@ class InstitutePolicy(Policy):
         """
         if not institute:
             return None
-        
+
+        # TODO: Should have multiple countries in the institute policy and have a default per country like FNAL
         if institute_country == 'US':
             with open('config_institute_policy.json') as institutes_per_rse:
                 rses_by_country = json.load(institutes_per_rse)
 
             institutes_by_country = rses_by_country[institute_country]
 
-            """Currently using the test RSEs like T2_US_MIT_Test_
-            for testing purposes. In future it will be not needed
-            anymore and will be deleted to use the standard RSES.
-            Now using RSEs ending with another underscore because
-            of the deletion of RSEs."""
+            # Can uncomment to go back to using Test RSEs. Better to use a different JSON file
             rucio_rses = [r['rse'] for r in self.client.list_rses()]
             for rse_key, institutes_val in institutes_by_country.items():
+                rse = rse_key  # Not needed anymore + '_Test'
                 if institute in institutes_val:
-                    if rse_key + '_Test_' not in rucio_rses:
-                        raise RSENotFound
-                    return rse_key + "_Test_"
+                    if rse not in rucio_rses:
+                        raise RSENotFound('RSE %s not found' % rse)
+                    return rse
             """
             This last return should not be hardcoded! Needs to be obtained from the JSON file
             """
-            return u'T1_US_FNAL_Disk' + "_Test_"
+            return u'T1_US_FNAL_Disk'  # Not needed anymore + "_Test"
         else:  # for other policies
             pass
-
