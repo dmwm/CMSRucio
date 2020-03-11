@@ -41,4 +41,8 @@ echo "Syncing quotas"
 
 
 echo "Creating links"
-./cmslinks.py --phedex_link --overwrite --disable
+
+# Remove the --disable flag for Katy's RSE
+
+# ./cmslinks.py --phedex_link --overwrite --disable
+./cmslinks.py --phedex_link --overwrite
