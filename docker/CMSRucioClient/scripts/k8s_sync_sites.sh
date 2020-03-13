@@ -29,7 +29,7 @@ echo "Syncing RSEs"
 
 # OR ./setRucioFromGitlab with some new parameters
 
-./cmslinks.py --phedex_link --overwrite --disable
+#./cmslinks.py --phedex_link --overwrite --disable
 
 
 echo "Creating sync accounts"
