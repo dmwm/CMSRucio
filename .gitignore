@@ -1,1 +1,2 @@
 /docker/CMSRucioClient/sqlcl/
+*.pyc
