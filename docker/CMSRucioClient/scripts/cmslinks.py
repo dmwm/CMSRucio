@@ -21,7 +21,7 @@ DEFAULT_EXCLUDE_LINKS = (
     {'dest': {'type': 'temp'}, 'src': {}}
 )
 
-DEFAULT_DISTANCE_RULES = {'site': 13, 'region': 11, 'other': 9}
+DEFAULT_DISTANCE_RULES = {'site': 13, 'region&country': 12, 'region': 11, 'country': 10, 'other': 9}
 
 class LinksMatrix(object):
     """
@@ -57,12 +57,12 @@ class LinksMatrix(object):
                     'rse':  rse,
                     'pnn': attrs['pnn'],
                     'type': attrs['cms_type'],
-                    'country': attrs['country']
+                    'country': attrs['country'],
+                    'region': attrs.get('region', None)
                 })
             except KeyError:
                 logging.warning('No expected attributes for RSE %s. Skipping',
                                 rse)
-
 
     def _get_matrix(self, distance, phedex_links, exclude):
 
@@ -76,32 +76,36 @@ class LinksMatrix(object):
         for src in self.rselist:
             for dest in self.rselist:
 
-                srse = src['rse']
-                drse = dest['rse']
-                spnn = src['pnn']
-                dpnn = dest['pnn']
-                sctry = src['country']
-                dctry = dest['country']
+                src_rse = src['rse']
+                dest_rse = dest['rse']
+                src_pnn = src['pnn']
+                dest_pnn = dest['pnn']
 
                 link = -1
 
-                if dpnn == spnn:
+                # Within site or in defined region, don't consult PhEDEx
+                if dest_pnn == src_pnn:
                     link = distance['site']
-
-                elif spnn in matrix and dpnn in matrix[spnn]:
-                    link = distance['site'] - matrix[spnn][dpnn]
-
-                elif not phedex_links:
-                    if sctry == dctry:
+                elif src['region'] and dest['region'] and src['region'] == dest['region'] :
+                    if src['country'] == dest['country']:
+                        link = distance['region&country']
+                    else:
                         link = distance['region']
+                elif src_pnn in matrix and dest_pnn in matrix[src_pnn]:
+                    # If no information, use PhEDEx info if it exists
+                    link = distance['site'] - matrix[src_pnn][dest_pnn]
+                else:
+                # elif not phedex_links:
+                    # Fall back to best guess
+                    if src['country'] == dest['country']:
+                        link = distance['country']
                     else:
                         link = distance['other']
 
+                if src_rse not in self.links:
+                    self.links[src_rse] = {}
 
-                if srse not in self.links:
-                    self.links[srse] = {}
-
-                self.links[srse][drse] = link
+                self.links[src_rse][dest_rse] = link
 
         self._filter_matrix(exclude)
 
@@ -129,8 +133,7 @@ class LinksMatrix(object):
                         self.links[src['rse']][dest['rse']] = -1
                         break
 
-    def update(self, overwrite=False, disable=True, dry=False,
-               srcselect=r'\S+', dstselect=r'\S+'):
+    def update(self, overwrite=False, disable=True, dry=False, srcselect=r'\S+', dstselect=r'\S+'):
         """
         Updates distances according to what is expected
         :overwrite:   overwrite distance of the links that already exist
@@ -140,17 +143,16 @@ class LinksMatrix(object):
 
         count = {'checked': [], 'created': [], 'updated': [], 'disabled': []}
 
-        srcregex = re.compile(srcselect)
-        dstregex = re.compile(dstselect)
+        src_regex = re.compile(srcselect)
+        dst_regex = re.compile(dstselect)
 
         for src in self.rselist:
+            srse = src['rse']
+            logging.info("Setting links from %s to %s other RSEs.", srse, len(self.rselist))
             for dest in self.rselist:
-                srse = src['rse']
                 drse = dest['rse']
 
-                if srse == drse or\
-                    not srcregex.match(srse) or\
-                    not dstregex.match(drse):
+                if srse == drse or not src_regex.match(srse) or not dst_regex.match(drse):
                     continue
 
                 count['checked'].append([srse, drse])
@@ -158,14 +160,12 @@ class LinksMatrix(object):
                 # Todo.. doublecheck I'm not reversing things
                 link = self.rcli.get_distance(srse, drse)
 
-                if srse in self.links and drse in self.links[srse] and\
-                    self.links[srse][drse] >= 0:
+                if srse in self.links and drse in self.links[srse] and self.links[srse][drse] >= 0:
                     if not link:
                         pars = {'distance': 1, 'ranking': self.links[srse][drse]}
 
                         if dry:
-                            logging.info("adding link from %s to %s with %s. Dry Run",
-                                         srse, drse, str(pars))
+                            logging.info("adding link from %s to %s with %s. Dry Run", srse, drse, str(pars))
                         else:
                             self.rcli.add_distance(srse, drse, pars)
 
@@ -176,10 +176,10 @@ class LinksMatrix(object):
                             logging.info("setting distance %s for link from %s to %s. Dry run.",
                                          self.links[srse][drse], srse, drse)
                         else:
-                            self.rcli.update_distance(srse, drse, {
-                                'ranking': self.links[srse][drse],
-                                'distance': 1
-                            })
+                            self.rcli.update_distance(srse, drse,
+                                                      {'ranking': self.links[srse][drse],
+                                                       'distance': 1
+                                                       })
 
                         count['updated'].append([srse, drse])
 
@@ -264,11 +264,11 @@ if __name__ == '__main__':
 
     logging.debug(str(COUNT['checked']))
 
-    logging.info(str(COUNT['updated']))
+    logging.debug(str(COUNT['updated']))
 
-    logging.info(str(COUNT['disabled']))
+    logging.debug(str(COUNT['disabled']))
 
-    logging.info(str(COUNT['created']))
+    logging.debug(str(COUNT['created']))
 
-    logging.info("Summary: updated %d; disabled %d; created %d;",
+    logging.info("Link summary: updated %d, disabled %d, created %d;",
                  len(COUNT['updated']), len(COUNT['disabled']), len(COUNT['created']))

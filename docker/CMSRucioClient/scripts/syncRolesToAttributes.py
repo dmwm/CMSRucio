@@ -22,13 +22,19 @@ CRIC_USERS_API = 'https://cms-cric.cern.ch/api/accounts/user/query/list/?json&pr
 def set_rse_manager(client, rse_name, site_managers, alt_rse=None):
     if not alt_rse:
         alt_rse = rse_name.lower()
-
+    else:
+        alt_rse = alt_rse.lower()
     try:
         client.delete_rse_attribute(rse=rse_name, key='rule_approvers')
+        client.delete_rse_attribute(rse=rse_name, key='quota_approvers')
     except RSEAttributeNotFound:
         pass
     rule_approvers = ','.join(site_managers[alt_rse])
+    print("Setting managers for %s to %s" % (rse_name, rule_approvers))
+
     client.add_rse_attribute(rse=rse_name, key='rule_approvers', value=rule_approvers)
+    # For now, quota approvers are also rule approvers
+    client.add_rse_attribute(rse=rse_name, key='quota_approvers', value=rule_approvers)
 
 
 def sync_roles_to_rses():
@@ -45,7 +51,6 @@ def sync_roles_to_rses():
                     site_managers[site].add(username)
 
     client = Client()
-
     all_rses = client.list_rses()
 
     for rse in all_rses:
