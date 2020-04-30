@@ -1,18 +1,19 @@
 #! /usr/bin/env python
 
 import getopt
-import sys
 import json
+import ssl
+import sys
 import urllib2
 
 from rucio.client import Client
-from rucio.common.exception import AccountNotFound
+from rucio.common.exception import AccountNotFound, Duplicate
 
 from institute_policy import InstitutePolicy
+
 sys.path.insert(1, './tests')
 from policy_test import TestPolicy
 from cric_user import CricUser
-
 
 client = Client()
 institute_policy = InstitutePolicy()
@@ -23,29 +24,38 @@ cric_user_list = []
 This function loads the JSON file by CRIC API or by local file depending on the dry_run option.
 """
 
+
 def load_cric_users(policy, dry_run):
     if not dry_run:
-        worldwide_cric_users = json.load(urllib2.urlopen(policy.CRIC_USERS_API))
+        # Ignore the certificate on CRIC
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+
+        worldwide_cric_users = json.load(urllib2.urlopen(policy.CRIC_USERS_API, context=ctx))
     else:
         sys.stdout.write('\t- dry_run version with the new fake user loaded\n')
         with open('fake_cric_users.json') as json_file:
             worldwide_cric_users = json.load(json_file)
+    print("Found % users from CRIC" % len(worldwide_cric_users))
     return worldwide_cric_users
+
 
 """
 For each CRIC user build a CricUser object with all the info needed to apply the US CMS policy in Rucio.
 """
 
+
 def map_cric_users(country, option, dry_run):
     worldwide_cric_users = load_cric_users(institute_policy, dry_run)
-
-    for key, user in worldwide_cric_users.items():            
+    print('Dry run %s' % dry_run)
+    for key, user in worldwide_cric_users.items():
         if option == 'delete-all':
             try:
                 username = user['profiles'][0]['login'].encode("utf-8")
-            except Exception,KeyError:
+            except (Exception, KeyError):
                 continue
-            for rse, val in client.get_account_limits(username).items(): 
+            for rse, val in client.get_account_limits(username).items():
                 client.delete_account_limit(username, rse)
 
         institute_country = user['institute_country'].encode("utf-8")
@@ -59,13 +69,13 @@ def map_cric_users(country, option, dry_run):
             if not institute or not institute_country:
                 policy = test_policy
                 message = "TestPolicy applied to the user {0} (missing info for the US CMS policy)\n".format(username)
-                #sys.stdout.write(message)
+                # sys.stdout.write(message)
                 raise Exception
             elif country != "" and country in institute_country:
                 if username == 'perichmo':
                     continue
                 policy = institute_policy
-        except Exception, KeyError:
+        except (Exception, KeyError):
             continue
 
         cric_user = CricUser(username, email, dn, account_type, institute, institute_country, policy, option)
@@ -76,13 +86,39 @@ def map_cric_users(country, option, dry_run):
 """
 This function sets the Rucio limits, and if needed it also create a Rucio account.
 """
+
+
 def set_rucio_limits(cric_user):
+    # FIXME: Add and subtract identities
+    # FIXME: Pay attention to mode and add/subtract quotas
+    # Move into cric user class
+
+    account = cric_user.username
+    email = cric_user.email
+    dn = cric_user.dn
+    print("Add account for %s %s %s" % (account, email, dn))
+
     try:
-        client.get_account(cric_user.username)
+        client.get_account(account)
     except AccountNotFound:
-        client.add_account(cric_user.username, cric_user.account_type, cric_user.email)
+        client.add_account(account, cric_user.account_type, email)
+
+    identities = list(client.list_identities(account=account))
+    if cric_user.dn not in identities:
+        try:
+            client.add_identity(account=account, identity=dn, authtype='X509', email=email)
+            print(' added %s for account %s' % (dn, account))
+        except Duplicate:  # Sometimes idmissing doesn't seem to work
+            print(' identity %s for account %s existed' % (dn, account))
+        except:
+            print(' Unknown problem with identity %s' % dn)
+    else:
+        # TODO Remove other identities for user accounts?
+        pass
+
     for rse in cric_user.rses_list:
-        client.set_account_limit(cric_user.username, rse.sitename, rse.quota)
+        print(" quota at %s: %s" % (rse.sitename, rse.quota))
+        client.set_local_account_limit(account, rse.sitename, rse.quota)
 
 
 def get_cric_user(username):
@@ -91,9 +127,12 @@ def get_cric_user(username):
             return user
     raise KeyError
 
+
 """
 This function modify the policy of one user.
 """
+
+
 def change_cric_user_policy(username, policy):
     cric_user = get_cric_user(username)
     cric_user.change_policy(policy)
@@ -111,6 +150,8 @@ def usage():
 def main():
     option = 'set-new-only'
     dry_run = False
+
+    # FIXME: Make dry run work in the standard way
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], "ho:o:d:", ["help", "option=", "dry_run="])
@@ -141,4 +182,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
