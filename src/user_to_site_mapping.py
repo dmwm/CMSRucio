@@ -37,7 +37,7 @@ def load_cric_users(policy, dry_run):
         sys.stdout.write('\t- dry_run version with the new fake user loaded\n')
         with open('fake_cric_users.json') as json_file:
             worldwide_cric_users = json.load(json_file)
-    print ("Found % users from CRIC" % len(worldwide_cric_users))
+    print("Found % users from CRIC" % len(worldwide_cric_users))
     return worldwide_cric_users
 
 
@@ -78,8 +78,6 @@ def map_cric_users(country, option, dry_run):
         except (Exception, KeyError):
             continue
 
-        print("Making CRIC user with ", username, account_type, institute, institute_country, policy, option)
-
         cric_user = CricUser(username, email, dn, account_type, institute, institute_country, policy, option)
         cric_user_list.append(cric_user)
         set_rucio_limits(cric_user)
@@ -95,16 +93,10 @@ def set_rucio_limits(cric_user):
     # FIXME: Pay attention to mode and add/subtract quotas
     # Move into cric user class
 
-    print("Setting limits etc for cric user")
     account = cric_user.username
     email = cric_user.email
     dn = cric_user.dn
-    print("Add account for ", account, cric_user.account_type, email)
-    print(" and identity %s " % dn)
-    print()
-    for rse in cric_user.rses_list:
-        print("  add limit for ", account, rse.sitename, rse.quota)
-    # return
+    print("Add account for %s %s %s" % (account, email, dn))
 
     try:
         client.get_account(account)
@@ -117,14 +109,15 @@ def set_rucio_limits(cric_user):
             client.add_identity(account=account, identity=dn, authtype='X509', email=email)
             print(' added %s for account %s' % (dn, account))
         except Duplicate:  # Sometimes idmissing doesn't seem to work
-            print('identity %s for account %s existed' % (dn, account))
+            print(' identity %s for account %s existed' % (dn, account))
         except:
-            print('Unknown problem with identity %s' % dn)
+            print(' Unknown problem with identity %s' % dn)
     else:
         # TODO Remove other identities for user accounts?
         pass
 
     for rse in cric_user.rses_list:
+        print(" quota at %s: %s" % (rse.sitename, rse.quota))
         client.set_local_account_limit(account, rse.sitename, rse.quota)
 
 
