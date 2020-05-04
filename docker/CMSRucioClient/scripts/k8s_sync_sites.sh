@@ -25,24 +25,17 @@ echo "Syncing account roles for managers and group accounts"
 
 echo "Syncing RSEs"
 ./cmsrses.py --pnn all --select 'T2_\S+' --exclude 'T2_MY_\S+' --exclude '\S+CERN\S+' --type real --type temp --type test --fts https://fts3.cern.ch:8446
-./cmsrses.py --pnn all --select 'T1_\S+' --exclude '.*MSS' --exclude 'T1_UK_RAL_\S+' --exclude '\S+_Tape_Test' --type real --type test --fts https://fts3.cern.ch:8446
-
+./cmsrses.py --pnn all --select 'T1_\S+' --exclude '.*MSS' --exclude '\S+_Tape_Test' --type real --type test --fts https://fts3.cern.ch:8446
+./cmsrses.py --pnn all --select 'T3_US_NotreDame' --type real --type test --fts https://fts3.cern.ch:8446
 # OR ./setRucioFromGitlab with some new parameters
-
-#./cmslinks.py --phedex_link --overwrite --disable
-
 
 echo "Creating sync accounts"
 ./syncaccounts.py --identity "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=cmsrucio/CN=430796/CN=Robot: CMS Rucio Data Transfer" --type x509
 
-
 echo "Syncing quotas"
 ./setSiteQuotas
 
-
 echo "Creating links"
-
 # Remove the --disable flag for Katy's RSE
-
-# ./cmslinks.py --phedex_link --overwrite --disable
 ./cmslinks.py --phedex_link --overwrite
+# ./cmslinks.py --phedex_link --overwrite --disable
