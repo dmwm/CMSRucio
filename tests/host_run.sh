@@ -24,6 +24,11 @@ if [[ ! -d rucio ]]; then
   git apply ../mocktool.patch
   popd
 fi
+
+if [[ ! -d probes ]]; then
+  git clone -b more_cms_probes https://github.com/ericvaandering/probes.git
+fi
+
 docker-compose --file docker-compose.yml up -d
 docker exec tests_rucio_1 /tests/setup.sh
 if test ${interactive}; then
