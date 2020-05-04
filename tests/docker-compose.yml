@@ -10,6 +10,7 @@ services:
       - ./rucio/bin:/opt/rucio/bin
       - ./rucio/lib:/opt/rucio/lib
       - ./rucio.cfg:/opt/rucio/etc/rucio.cfg
+      - ./probes/common:/opt/rucio/probes
   ruciodb:
     image: postgres:11
     environment:

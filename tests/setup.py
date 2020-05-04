@@ -84,12 +84,3 @@ for rse in prod_rses:
             client.add_distance(rse, rse2, {"distance": 1, "ranking": 1})
         except RucioException:
             pass
-
-
-client.add_key(
-    key="workflowActivity",
-    key_type="COLLECTION",
-    # https://github.com/rucio/rucio/issues/3512
-    # value_type=str,
-    # value_regexp="\w{,50}",
-)
