@@ -1,0 +1,79 @@
+commit 84887c4053dfb48e4da544b97cb2a2e6c0ed9c02
+Author: Nick Smith <nick.smith@cern.ch>
+Date:   Tue Apr 28 14:40:38 2020 -0500
+
+    Implement a mock transfertool that always succeeds
+
+diff --git a/lib/rucio/core/transfer.py b/lib/rucio/core/transfer.py
+index 184b0426e..37b6ee395 100644
+--- a/lib/rucio/core/transfer.py
++++ b/lib/rucio/core/transfer.py
+@@ -165,6 +165,9 @@ def submit_bulk_transfers(external_host, files, transfertool='fts3', job_params=
+             job_files.append(job_file)
+         logging.debug('job_files: %s' % job_files)
+         transfer_id = GlobusTransferTool(external_host=None).bulk_submit(submitjob=job_files, timeout=timeout)
++    elif transfertool == 'mock':
++        import uuid
++        transfer_id = str(uuid.uuid1())
+     return transfer_id
+ 
+ 
+diff --git a/lib/rucio/daemons/conveyor/poller.py b/lib/rucio/daemons/conveyor/poller.py
+index 05c921830..305317e95 100644
+--- a/lib/rucio/daemons/conveyor/poller.py
++++ b/lib/rucio/daemons/conveyor/poller.py
+@@ -233,6 +233,12 @@ def poll_transfers(external_host, xfers, prepend_str='', request_ids=None, timeo
+     :param timeout:          Timeout.
+     """
+     try:
++        if TRANSFER_TOOL == 'mock':
++            logging.debug(prepend_str + 'Setting %s transfer requests status to DONE per mock tool' % (len(xfers)))
++            for task_id in xfers:
++                ret = transfer_core.update_transfer_state(external_host=None, transfer_id=task_id, state=RequestState.DONE)
++                record_counter('daemons.conveyor.poller.update_request_state.%s' % ret)
++            return
+         try:
+             tss = time.time()
+             logging.info(prepend_str + 'Polling %i transfers against %s with timeout %s' % (len(xfers), external_host, timeout))
+diff --git a/lib/rucio/daemons/conveyor/submitter.py b/lib/rucio/daemons/conveyor/submitter.py
+index 142503112..9b9bb3ab0 100644
+--- a/lib/rucio/daemons/conveyor/submitter.py
++++ b/lib/rucio/daemons/conveyor/submitter.py
+@@ -183,7 +183,7 @@ def submitter(once=False, rses=None, mock=False,
+ 
+                 logging.info('%s Starting to submit transfers for %s', prepend_str, activity)
+ 
+-                if TRANSFER_TOOL == 'fts3':
++                if TRANSFER_TOOL in ['fts3', 'mock']:
+                     for external_host in grouped_jobs:
+                         if not user_transfer:
+                             for job in grouped_jobs[external_host]:
+diff --git a/lib/rucio/transfertool/mock.py b/lib/rucio/transfertool/mock.py
+new file mode 100644
+index 000000000..23d5abd83
+--- /dev/null
++++ b/lib/rucio/transfertool/mock.py
+@@ -0,0 +1,23 @@
++from rucio.transfertool.transfertool import Transfertool
++import uuid
++
++
++class MockTransfertool(Transfertool):
++    """
++    Mock implementation of a Rucio transfertool
++    """
++
++    def __init__(self, external_host, token=None):
++        super(FTS3Transfertool, self).__init__(external_host)
++
++    def submit(self, files, job_params, timeout=None):
++        return uuid.uuid1()
++
++    def query(self, transfer_ids, details=False, timeout=None):
++        return [{'status': 'ok', 'idontknowthefields': True}]
++
++    def cancel(self, transfer_ids, timeout=None):
++        return True
++
++    def update_priority(self, transfer_id, priority, timeout=None):
++        return True

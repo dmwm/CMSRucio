@@ -1,0 +1,26 @@
+version: "2"
+services:
+  rucio:
+    image: rucio/rucio-dev
+    hostname: rucio
+    ports:
+      - "443:443"
+    volumes:
+      - .:/tests
+      - ./rucio/bin:/opt/rucio/bin
+      - ./rucio/lib:/opt/rucio/lib
+      - ./rucio.cfg:/opt/rucio/etc/rucio.cfg
+      - ./probes/common:/opt/rucio/probes
+  ruciodb:
+    image: postgres:11
+    environment:
+      - POSTGRES_USER=rucio
+      - POSTGRES_DB=rucio
+      - POSTGRES_PASSWORD=secret
+    ports:
+      - "5432:5432"
+    command: ["-c", "fsync=off","-c", "synchronous_commit=off","-c", "full_page_writes=off"]
+  graphite:
+    image: graphiteapp/graphite-statsd
+    ports:
+      - "80:80"
