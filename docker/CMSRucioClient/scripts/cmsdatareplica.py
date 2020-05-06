@@ -57,6 +57,7 @@ class CMSRucioDatasetReplica(object):
         :monitor: stats monitoring object
         """
 
+        self.is_at_pnn, self.group, self.custodial = False, None, False
         self.monitor = monitor
         self.pnn = pnn
 
@@ -116,7 +117,9 @@ class CMSRucioDatasetReplica(object):
         Verify if the block is at pnn (using phedex datasvc)
         """
 
-        self.is_at_pnn = self.pcli.block_at_pnn_phedex(block=self.dataset, pnn=self.pnn)
+        self.group, self.custodial = self.pcli.block_at_pnn_phedex(block=self.dataset, pnn=self.pnn)
+        self.is_at_pnn = bool(self.group)
+
         return
 
     def register_container(self, dry=False):
