@@ -60,16 +60,15 @@ def map_cric_users(country, option, dry_run):
 
         institute_country = user['institute_country'].encode("utf-8")
         institute = user['institute'].encode("utf-8")
-        dn = user['dn'].encode("utf-8")
+        dns = set([user['dn'].encode("utf-8")])
         email = user['email'].encode("utf-8")
         account_type = "USER"
         policy = ''
+
         try:
             username = user['profiles'][0]['login'].encode("utf-8")
             if not institute or not institute_country:
                 policy = test_policy
-                message = "TestPolicy applied to the user {0} (missing info for the US CMS policy)\n".format(username)
-                # sys.stdout.write(message)
                 raise Exception
             elif country != "" and country in institute_country:
                 if username == 'perichmo':
@@ -78,7 +77,17 @@ def map_cric_users(country, option, dry_run):
         except (Exception, KeyError):
             continue
 
-        cric_user = CricUser(username, email, dn, account_type, institute, institute_country, policy, option)
+        # Collect other DNs
+        try:
+            profiles = user['profiles']
+            for profile in profiles:
+                if 'dn' in profile:
+                    dns.add(profile['dn'])
+        except KeyError:
+            continue
+
+        dns = list(dns)
+        cric_user = CricUser(username, email, dns, account_type, institute, institute_country, policy, option)
         cric_user_list.append(cric_user)
         set_rucio_limits(cric_user)
 
@@ -95,26 +104,14 @@ def set_rucio_limits(cric_user):
 
     account = cric_user.username
     email = cric_user.email
-    dn = cric_user.dn
-    print("Add account for %s %s %s" % (account, email, dn))
+    print("Add account for %s %s" % (account, email))
 
     try:
         client.get_account(account)
     except AccountNotFound:
         client.add_account(account, cric_user.account_type, email)
 
-    identities = list(client.list_identities(account=account))
-    if cric_user.dn not in identities:
-        try:
-            client.add_identity(account=account, identity=dn, authtype='X509', email=email)
-            print(' added %s for account %s' % (dn, account))
-        except Duplicate:  # Sometimes idmissing doesn't seem to work
-            print(' identity %s for account %s existed' % (dn, account))
-        except:
-            print(' Unknown problem with identity %s' % dn)
-    else:
-        # TODO Remove other identities for user accounts?
-        pass
+    cric_user.add_identities_to_rucio(client=client)
 
     for rse in cric_user.rses_list:
         print(" quota at %s: %s" % (rse.sitename, rse.quota))
