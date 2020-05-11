@@ -6,6 +6,7 @@ function usage {
   echo ''
   echo '  -h    Show usage.'
   echo '  -i    Start an interactive shell rather than run tests'
+  echo '  -u    Update docker images'
   exit
 }
 
@@ -14,6 +15,7 @@ do
   case "$opt" in
     h) usage;;
     i) interactive="true";;
+    u) update="true";;
   esac
 done
 
@@ -27,6 +29,10 @@ fi
 
 if [[ ! -d probes ]]; then
   git clone -b more_cms_probes https://github.com/ericvaandering/probes.git
+fi
+
+if test ${update}; then
+  docker-compose --file docker-compose.yml pull
 fi
 
 docker-compose --file docker-compose.yml up -d
