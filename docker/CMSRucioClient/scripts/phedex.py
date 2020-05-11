@@ -232,9 +232,15 @@ class PhEDEx(object):
                           'replica' in result['phedex']['block'][0] and
                           result['phedex']['block'][0]['replica'][0]['complete'] == 'y')
         except IndexError:
-            return False
+            return None, False
 
-        return at_pnn
+        if not at_pnn:
+            return None, False
+
+        group = result['phedex']['block'][0]['replica'][0]['group']
+        custodial = (result['phedex']['block'][0]['replica'][0]['group'] == u'y')
+
+        return group, custodial
 
     def fileblock_files_phedex(self, pfb, pnn=None):
         """
