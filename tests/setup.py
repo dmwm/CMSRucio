@@ -14,13 +14,16 @@ client = Client(
 )
 
 
-prod_rses = [
-    "T1_US_FNAL_Mock",
-    "T2_CH_CERN_Mock",
-    "T2_US_Florida_Mock",
-    "T2_US_Wisconsin_Mock",
-]
-for rse in prod_rses:
+prod_rses = {
+    "T1_US_FNAL_Mock": {"cms_type": "real", "region": "A"},
+    "T2_CH_CERN_Mock": {"cms_type": "real", "region": "B"},
+    "T2_US_Florida_Mock": {"cms_type": "real", "region": "A"},
+    "T2_US_Wisconsin_Mock": {"cms_type": "real", "region": "A"},
+    "T2_BE_IIHE_Mock": {"cms_type": "real", "region": "B"},
+    "T2_CN_Beijing_Mock": {"cms_type": "real", "region": "C"},
+}
+
+for rse, attr in prod_rses.items():
     client.add_rse(
         rse,
         deterministic=True,
@@ -48,7 +51,8 @@ for rse in prod_rses:
             "prefix": "/tmp/rucio_rse/"
         },
     )
-    client.add_rse_attribute(rse, "production_buffer", True)
+    for key, value in attr.items():
+        client.add_rse_attribute(rse, key, value)
 
 for rse in prod_rses:
     for rse2 in prod_rses:
@@ -57,9 +61,10 @@ for rse in prod_rses:
         client.add_distance(rse, rse2, {"distance": 1, "ranking": 1})
 
 client.add_scope(account="root", scope="cms")
-client.add_account("wma_prod", "SERVICE", "wmagent@cern.ch")
+
+client.add_account("transfer_ops", "SERVICE", "wmagent@cern.ch")
 client.add_identity(
-    account="wma_prod",
+    account="transfer_ops",
     identity="ddmlab",
     authtype="USERPASS",
     email="blah@asfd.com",
@@ -67,6 +72,15 @@ client.add_identity(
 # why is this still a workaround?
 from rucio.core.account import add_account_attribute
 from rucio.common.types import InternalAccount
+add_account_attribute(InternalAccount("transfer_ops"), "admin", True)
+
+client.add_account("wma_prod", "SERVICE", "wmagent@cern.ch")
+client.add_identity(
+    account="wma_prod",
+    identity="ddmlab",
+    authtype="USERPASS",
+    email="blah@asfd.com",
+)
 add_account_attribute(InternalAccount("wma_prod"), "admin", True)
 # as wma_prod is an admin account, this has no effect
 client.set_account_limit('wma_prod', 'T2_US_Wisconsin_Mock', int(20e9), 'local')
