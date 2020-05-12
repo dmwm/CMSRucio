@@ -44,7 +44,8 @@ RUN pip install rucio-clients multiprocessing-logging jsonschema PyYAML pystatsd
 RUN curl -k -o  /bin/dasgoclient https://www.lns.cornell.edu/~vk/Work/dasgoclient && chmod +x /bin/dasgoclient
 RUN curl -o /etc/ca.crt https://cafiles.cern.ch/cafiles/certificates/CERN%20Root%20Certification%20Authority%202.crt
 
-WORKDIR /tmp
+WORKDIR /root
+RUN git clone https://github.com/rucio/rucio.git
 
 COPY scripts /scripts
 
@@ -56,8 +57,6 @@ COPY rucio-futureprod.cfg /opt/rucio-futureprod/etc/rucio.cfg
 
 # Pull some useful stuff out of git
 WORKDIR /root
-
-RUN git clone https://github.com/rucio/rucio.git
 RUN git clone https://github.com/dmwm/CMSRucio.git
 
 #ADD baseclient.py /usr/lib/python2.7/site-packages/rucio/client/baseclient.py
