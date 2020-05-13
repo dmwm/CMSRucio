@@ -291,6 +291,7 @@ class CMSRSE(object):
             self.proto['extended_attributes'] = None
 
         self.proto['impl'] = 'rucio.rse.protocols.gfalv2.Default'
+        logging.info('From get protocol proto is %s', self.proto)
 
     def _set_protocol(self):
         try:
@@ -309,7 +310,7 @@ class CMSRSE(object):
 
         update = False
         if self.proto != rproto:
-            logging.debug("protocol definition not as expected: rucio=%s, expected=%s",
+            logging.info("protocol definition not as expected: rucio=%s, expected=%s",
                           str(rproto), str(self.proto))
             update = True
 
@@ -323,9 +324,9 @@ class CMSRSE(object):
             except RSEProtocolNotSupported:
                 logging.debug("Cannot remove protocol (scheme, rse) = (%s,%s)",
                               self.proto['scheme'], self.rsename)
-            logging.info('Checking to add protocol: %s %s %s', self.proto['scheme'], 'extended_attribute' in self.proto, 'web_service_path' in self.proto['extended_attributes'])
+            logging.info('Checking to add protocol: %s %s %s', self.proto['scheme'], 'extended_attributes' in self.proto, 'web_service_path' in self.proto['extended_attributes'])
             if (self.proto['scheme'] == 'srm'
-                and 'extended_attribute' in self.proto
+                and 'extended_attributes' in self.proto
                 and 'web_service_path' in self.proto['extended_attributes']):
                 logging.info('Adding %s to %s', self.proto, self.rsename)
                 self.rcli.add_protocol(rse=self.rsename, params=self.proto)
