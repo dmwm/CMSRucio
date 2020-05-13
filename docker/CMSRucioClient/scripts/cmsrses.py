@@ -323,9 +323,11 @@ class CMSRSE(object):
             except RSEProtocolNotSupported:
                 logging.debug("Cannot remove protocol (scheme, rse) = (%s,%s)",
                               self.proto['scheme'], self.rsename)
+            logging.info('Checking to add protocol: %s %s %s', self.proto['scheme'], 'extended_attribute' in self.proto, 'web_service_path' in self.proto['extended_attributes'])
             if (self.proto['scheme'] == 'srm'
                 and 'extended_attribute' in self.proto
                 and 'web_service_path' in self.proto['extended_attributes']):
+                logging.info('Adding %s to %s', self.proto, self.rsename)
                 self.rcli.add_protocol(rse=self.rsename, params=self.proto)
 
         return update
