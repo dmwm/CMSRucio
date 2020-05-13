@@ -8,12 +8,15 @@ chmod 400 /tmp/key.pem
 
 # Generate a proxy with the voms extension if requested
 voms-proxy-init -voms cms  -cert /tmp/cert.pem -key /tmp/key.pem
+voms-proxy-info
 
 cd /root/CMSRucio
 git pull origin master
 export RUCIO_ACCOUNT=root
 
 echo Using config file in $RUCIO_HOME
+
+cat $RUCIO_HOME/etc/rucio.cfg
 
 set -x
 
