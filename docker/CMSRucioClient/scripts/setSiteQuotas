@@ -43,7 +43,7 @@ for site in sites:
     except RSENotFound:
         try:
             rucio.get_rse(rse + '_Disk')
-            rucio.set_account_limit(account='transfer_ops', rse=rse, bytes=byte_limit, locality='local')
+            rucio.set_account_limit(account='transfer_ops', rse=rse + '_Disk', bytes=byte_limit, locality='local')
             print('  Set the quota at %s to %6.0f TB' % (rse + '_Disk', terabytes))
         except RSENotFound:
             print('  Could not find %s or %s' % (rse, rse + '_Disk'))
