@@ -322,14 +322,13 @@ class CMSRSE(object):
             try:
                 self.rcli.delete_protocols(rse=self.rsename, scheme=self.proto['scheme'])
             except RSEProtocolNotSupported:
-                logging.debug("Cannot remove protocol (scheme, rse) = (%s,%s)",
-                              self.proto['scheme'], self.rsename)
-            # logging.info('Checking to add protocol: %s %s %s', self.proto['scheme'], 'extended_attributes' in self.proto, 'web_service_path' in self.proto['extended_attributes'])
-            if (self.proto['scheme'] == 'srm'
-                and 'extended_attributes' in self.proto
-                and 'web_service_path' in self.proto['extended_attributes']):
-                logging.info('Adding %s to %s', self.proto, self.rsename)
-                self.rcli.add_protocol(rse=self.rsename, params=self.proto)
+                logging.debug("Cannot remove protocol (scheme, rse) = (%s,%s)", self.proto['scheme'], self.rsename)
+
+            if self.proto['scheme'] in ['srm', 'srmv2', 'gsiftp'] and 'extended_attributes' in self.proto:
+                if self.proto['scheme'] in ['gsiftp'] or (self.proto['scheme'] in ['srm', 'srmv2']
+                                                          and 'web_service_path' in self.proto['extended_attributes']):
+                    logging.info('Adding %s to %s', self.proto, self.rsename)
+                    self.rcli.add_protocol(rse=self.rsename, params=self.proto)
 
         return update
 
