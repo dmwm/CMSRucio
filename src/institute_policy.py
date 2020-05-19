@@ -99,9 +99,6 @@ class InstitutePolicy(Policy):
                     if rse not in rucio_rses:
                         raise RSENotFound('RSE %s not found' % rse)
                     return rse
-            """
-            This last return should not be hardcoded! Needs to be obtained from the JSON file
-            """
-            return u'T1_US_FNAL_Disk'  # Not needed anymore + "_Test"
+            return u'T3_US_FNALLPC'  # This last return should not be hardcoded! Needs to be obtained from the JSON file
         else:  # for other policies
             pass
