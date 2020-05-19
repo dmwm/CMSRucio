@@ -17,11 +17,10 @@ from rucio.client.client import Client
 #    {'dest': {'rse': r'.*(?<!_TMP)(?<!_TEST)$'}, 'dest': r'\S+_(TEST|TMP)'},
 
 DEFAULT_EXCLUDE_LINKS = (
-    {'dest': {'type': 'real'}, 'src': {}},
-    {'dest': {'type': 'temp'}, 'src': {}}
+    {'dest': {'type': 'temp'}, 'src': {}},
 )
 
-DEFAULT_DISTANCE_RULES = {'site': 13, 'region&country': 12, 'region': 11, 'country': 10, 'other': 9}
+DEFAULT_DISTANCE_RULES = {'site': 13, 'region&country': 10, 'country': 7, 'region': 4, 'other': 1}
 
 class LinksMatrix(object):
     """
@@ -29,7 +28,7 @@ class LinksMatrix(object):
     """
 
     def __init__(self, account, auth_type=None, exclude=DEFAULT_EXCLUDE_LINKS,
-                 distance=None, phedex_links=True, rselist=None,
+                 distance=None, phedex_links=False, rselist=None,
                  instance=DEFAULT_PHEDEX_INST, datasvc=DEFAULT_DATASVC_URL):
 
         if distance is None:
@@ -86,7 +85,7 @@ class LinksMatrix(object):
                 # Within site or in defined region, don't consult PhEDEx
                 if dest_pnn == src_pnn:
                     link = distance['site']
-                elif src['region'] and dest['region'] and src['region'] == dest['region'] :
+                elif src['region'] and dest['region'] and src['region'] == dest['region']:
                     if src['country'] == dest['country']:
                         link = distance['region&country']
                     else:
@@ -95,8 +94,6 @@ class LinksMatrix(object):
                     # If no information, use PhEDEx info if it exists
                     link = distance['site'] - matrix[src_pnn][dest_pnn]
                 else:
-                # elif not phedex_links:
-                    # Fall back to best guess
                     if src['country'] == dest['country']:
                         link = distance['country']
                     else:
