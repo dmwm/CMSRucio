@@ -74,18 +74,26 @@ class CricUser:
         :return:
         """
 
+        redo_identity = True
+
         account = self.username
         identities = list(client.list_identities(account=account))
         for dn in self.dns:
             if dn not in identities:
                 try:
-                    client.add_identity(account=account, identity=dn, authtype='X509', email=self.email)
+                    client.add_identity(account=account, identity=dn, authtype='X509', email=self.email, default=True)
                     print(' added %s for account %s' % (dn, account))
                 except Duplicate:  # Sometimes idmissing doesn't seem to work
                     print(' identity %s for account %s existed' % (dn, account))
                 except:
                     print(' Unknown problem with identity for %s' % account)
-            else:
-                # TODO Remove other identities for user accounts?
-                pass
+            elif redo_identity:
+                try:
+                    client.del_identity(account=account, identity=dn, authtype='X509')
+                    client.add_identity(account=account, identity=dn, authtype='X509', email=self.email, default=True)
+                    print(' added %s for account %s' % (dn, account))
+                except Duplicate:  # Sometimes idmissing doesn't seem to work
+                    print(' identity %s for account %s existed' % (dn, account))
+                except:
+                    print(' Unknown problem with identity for %s' % account)
 
