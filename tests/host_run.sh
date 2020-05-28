@@ -21,10 +21,7 @@ done
 
 
 if [[ ! -d rucio ]]; then
-  git clone -b cms_nano1 https://github.com/ericvaandering/rucio.git
-  pushd rucio
-  git apply ../mocktool.patch
-  popd
+  git clone -b cms_nano2 https://github.com/ericvaandering/rucio.git
 fi
 
 if [[ ! -d probes ]]; then
