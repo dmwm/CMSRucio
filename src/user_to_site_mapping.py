@@ -114,13 +114,17 @@ def set_rucio_limits(cric_user):
     cric_user.add_identities_to_rucio(client=client)
 
     # Clear out old quotas. May want to remove this soon.
-    if cric_user.rses_list:
-        for rse in client.get_local_account_limits(account=account):
-            client.delete_local_account_limit(account=account, rse=rse)
+
+    limits = dict(client.get_local_account_limits(account=account))
+
+    # if cric_user.rses_list:
+    #     for rse in client.get_local_account_limits(account=account):
+    #         client.delete_local_account_limit(account=account, rse=rse)
 
     for rse in cric_user.rses_list:
-        print(" quota at %s: %s" % (rse.sitename, rse.quota))
-        client.set_local_account_limit(account, rse.sitename, rse.quota)
+        if rse.quota > limits.get(rse.sitename, 0):
+            print(" quota at %s: %s" % (rse.sitename, rse.quota))
+            client.set_local_account_limit(account, rse.sitename, rse.quota)
 
 
 def get_cric_user(username):
