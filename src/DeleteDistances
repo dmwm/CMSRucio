@@ -1,0 +1,11 @@
+#! /usr/bin/env python
+
+
+"""
+Example code to delete all the distances to/from an RSE. This functionality is not exposed in REST, python, or CLI
+so you need to run this in a daemon environment.
+"""
+
+from rucio.core.distance import delete_distances
+delete_distances(src_rse_id='495cd8b4d9604621bee43c76174c98cf')
+delete_distances(dest_rse_id='495cd8b4d9604621bee43c76174c98cf')
