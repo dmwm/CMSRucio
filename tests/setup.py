@@ -15,12 +15,12 @@ client = Client(
 
 
 prod_rses = {
-    "T1_US_FNAL_Mock": {"cms_type": "real", "region": "A"},
-    "T2_CH_CERN_Mock": {"cms_type": "real", "region": "B"},
-    "T2_US_Florida_Mock": {"cms_type": "real", "region": "A"},
-    "T2_US_Wisconsin_Mock": {"cms_type": "real", "region": "A"},
-    "T2_BE_IIHE_Mock": {"cms_type": "real", "region": "B"},
-    "T2_CN_Beijing_Mock": {"cms_type": "real", "region": "C"},
+    "T1_US_FNAL_Mock": {"cms_type": "real", "region": "A", "ddm_quota": int(10e12)},
+    "T2_CH_CERN_Mock": {"cms_type": "real", "region": "B", "ddm_quota": int(10e12)},
+    "T2_US_Florida_Mock": {"cms_type": "real", "region": "A", "ddm_quota": int(5e12)},
+    "T2_US_Wisconsin_Mock": {"cms_type": "real", "region": "A", "ddm_quota": int(5e12)},
+    "T2_BE_IIHE_Mock": {"cms_type": "real", "region": "B", "ddm_quota": int(1e12)},
+    "T2_CN_Beijing_Mock": {"cms_type": "real", "region": "C", "ddm_quota": int(1e12)},
 }
 
 for rse, attr in prod_rses.items():
