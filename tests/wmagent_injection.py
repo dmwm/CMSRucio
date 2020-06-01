@@ -11,49 +11,7 @@ import datetime
 client = Client(account="wma_prod")
 
 
-sname = 'ASample5'
-
-mock_request = {
-    "campaign": "RunIIBlah",
-    "outputdataset": "/%s/RunIIBlah-something/AODSIM" % sname,
-    "primarydataset": sname,
-    "processingstring": "something",
-    "prepid": "BPH-RunIIBlah-00001",
-    "NonCustodialSites": "T1_US_FNAL_Mock",  # treating this as an RSE expression
-    "NonCustodialCopies": 1,
-}
-
-# Common metadata for container and block
-did_metadata = {
-    'campaign': mock_request['campaign'],
-    #'datatype': 'AODSIM', # character varying(50)
-    'phys_group': 'BPH', # character varying(25)
-    'prod_step': 'idk', # character varying(50)
-    'project': 'RelVal', # character varying(50)
-    'provenance': 'XX', # character varying(2)
-    'stream_name': sname, # character varying(70)
-    'version': 'unknown', # character varying(50)
-}
-
-# Register output container despite having no files in it
-client.add_container(scope="cms", name=mock_request["outputdataset"], meta=did_metadata)
-
-# Create a rule that initially matches no data but will update as files are injected
-# (this is done asynchronously by rucio-judge-evaluator)
-client.add_replication_rule(
-    dids=[{"scope": "cms", "name": mock_request["outputdataset"]}],
-    grouping="ALL",
-    copies=mock_request["NonCustodialCopies"],
-    rse_expression=mock_request["NonCustodialSites"],
-    activity="Production Output",
-    comment="something useful",
-    meta=json.dumps(
-        {"campaign": mock_request["campaign"], "prepid": mock_request["prepid"]}
-    ),
-)
-
-
-def make_block(rse, n_files):
+def make_block(mock_request, did_metadata, rse, n_files):
     # Open a new block
     blockname = mock_request["outputdataset"] + "#" + str(uuid.uuid1())
     # client.add_dataset(scope="cms", name=blockname, meta=did_metadata)
@@ -81,7 +39,9 @@ def make_block(rse, n_files):
         # The lifetime is somewhat arbitrary, as even if the rule expires, any replicas that
         # are needed for transfer (to satsify the container rule) will not be removed until
         # the transfers complete, so there is no race condition.
-        lifetime=datetime.timedelta(days=7).total_seconds(),
+        # *update* since TaskChains may force these blocks to stay at a site for indefinite period,
+        # we let WMAgent hold onto the rule and release it when they deem appropriate
+        # lifetime=datetime.timedelta(days=7).total_seconds(),
     )
 
     # For the container rule to be updated, we have to attach the block to the container
@@ -117,8 +77,90 @@ def make_block(rse, n_files):
     client.close(scope="cms", name=blockname)
 
 
+def mock_injection(mock_request, injection_sites):
+    # Common metadata for container and block
+    did_metadata = {
+        'campaign': mock_request['campaign'],
+        #'datatype': 'AODSIM', # character varying(50)
+        'phys_group': mock_request['prepid'].split('-')[0], # character varying(25)
+        'prod_step': 'idk', # character varying(50)
+        'project': mock_request['project'], # character varying(50)
+        'provenance': 'XX', # character varying(2)
+        'stream_name': mock_request['primarydataset'], # character varying(70)
+        'version': 'unknown', # character varying(50)
+    }
 
-# These should be able to run concurrently
-make_block("T2_US_Florida_Mock", 6)
-make_block("T1_US_FNAL_Mock", 10)
-make_block("T2_CH_CERN_Mock", 7)
+    # Register output container despite having no files in it
+    client.add_container(scope="cms", name=mock_request["outputdataset"], meta=did_metadata)
+
+    if "NonCustodialSites" in mock_request:
+        # Create a rule that initially matches no data but will update as files are injected
+        # (this is done asynchronously by rucio-judge-evaluator)
+        client.add_replication_rule(
+            dids=[{"scope": "cms", "name": mock_request["outputdataset"]}],
+            grouping="ALL",
+            copies=mock_request["NonCustodialCopies"],
+            rse_expression=mock_request["NonCustodialSites"],
+            activity="Production Output",
+            comment="something useful",
+            meta=json.dumps(
+                {"campaign": mock_request["campaign"], "prepid": mock_request["prepid"]}
+            ),
+        )
+
+    # These should be able to run concurrently
+    for site in injection_sites:
+        make_block(mock_request, did_metadata, site, random.randint(1, 20))
+
+
+mock_injection(
+    {
+        "campaign": "RunIIBlah",
+        "outputdataset": "/ASample5/RunIIBlah-something/AODSIM",
+        "primarydataset": "Asample5",
+        "processingstring": "something",
+        "prepid": "BPH-RunIIBlah-00001",
+        "NonCustodialSites": "T1_US_FNAL_Mock",  # treating this as an RSE expression
+        "NonCustodialCopies": 1,
+        "project": "Production",  # synonymous with WMAgent "Team"
+    },
+    ["T2_US_Florida_Mock", "T2_CH_CERN_Mock"],
+)
+
+mock_injection(
+    {
+        "campaign": "RelValCMSSW",
+        "outputdataset": "/MinBias/RelValCMSSW-something/AODSIM",
+        "primarydataset": "MinBias",
+        "processingstring": "something",
+        "prepid": "PPD-RelVal-00001",
+        "NonCustodialSites": "T1_US_FNAL_Mock",  # treating this as an RSE expression
+        "NonCustodialCopies": 1,
+        "project": "RelVal",  # synonymous with WMAgent "Team"
+    },
+    ["T1_US_FNAL_Mock", "T2_CH_CERN_Mock"],
+)
+
+mock_injection(
+    {
+        "campaign": "RelValCMSSW",
+        "outputdataset": "/MinBias/RelValCMSSW-something/NANOAODSIM",
+        "primarydataset": "MinBias",
+        "processingstring": "something",
+        "prepid": "PPD-RelVal-00001",
+        "project": "RelVal",
+    },
+    ["T1_US_FNAL_Mock", "T2_CH_CERN_Mock"],
+)
+
+mock_injection(
+    {
+        "campaign": "01Apr2020",
+        "outputdataset": "/EGamma/01Apr2020-something/NANOAOD",
+        "primarydataset": "EGamma",
+        "processingstring": "something",
+        "prepid": "PPD-01Apr2020-00001",
+        "project": "Production",
+    },
+    ["T2_US_Wisconsin_Mock", "T2_CH_CERN_Mock"],
+)

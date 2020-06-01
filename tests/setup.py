@@ -13,74 +13,84 @@ client = Client(
     account="root",
 )
 
-try:
-    client.add_scope(account="root", scope="cms")
-    client.add_account("wma_prod", "SERVICE", "wmagent@cern.ch")
-    client.add_identity(
-        account="wma_prod",
-        identity="ddmlab",
-        authtype="USERPASS",
-        email="blah@asfd.com",
+
+prod_rses = {
+    "T1_US_FNAL_Mock": {"cms_type": "real", "region": "A", "ddm_quota": int(10e12)},
+    "T2_CH_CERN_Mock": {"cms_type": "real", "region": "B", "ddm_quota": int(10e12)},
+    "T2_US_Florida_Mock": {"cms_type": "real", "region": "A", "ddm_quota": int(5e12)},
+    "T2_US_Wisconsin_Mock": {"cms_type": "real", "region": "A", "ddm_quota": int(5e12)},
+    "T2_BE_IIHE_Mock": {"cms_type": "real", "region": "B", "ddm_quota": int(1e12)},
+    "T2_CN_Beijing_Mock": {"cms_type": "real", "region": "C", "ddm_quota": int(1e12)},
+}
+
+for rse, attr in prod_rses.items():
+    client.add_rse(
+        rse,
+        deterministic=True,
+        volatile=False,
+        country_name=rse.split("_")[1],
     )
-
-    # why is this still a workaround?
-    from rucio.core.account import add_account_attribute
-    from rucio.common.types import InternalAccount
-
-    add_account_attribute(InternalAccount("wma_prod"), "admin", True)
-
-    # as wma_prod is an admin account, this has no effect
-    # client.set_account_limit('wma_prod', 'T2_US_Wisconsin_Mock', int(20e9), 'local')
-except RucioException:
-    print("already made wma_prod")
-    pass
-
-
-prod_rses = [
-    "T1_US_FNAL_Mock",
-    "T2_CH_CERN_Mock",
-    "T2_US_Florida_Mock",
-    "T2_US_Wisconsin_Mock",
-]
-for rse in prod_rses:
-    try:
-        client.add_rse(
-            rse,
-            deterministic=True,
-            volatile=False,
-            country_name=rse.split("_")[1],
-        )
-        client.add_protocol(
-            rse,
-            params={
-                "scheme": "mock",
-                "impl": "rucio.rse.protocols.mock.Default",
-                "domains": {
-                    "lan": {
-                        "read": 1,
-                        "write": 1,
-                        "delete": 1
-                    },
-                    "wan": {
-                        "read": 1,
-                        "write": 1,
-                        "third_party_copy": 1,
-                        "delete": 1
-                    }
+    client.add_protocol(
+        rse,
+        params={
+            "scheme": "mock",
+            "impl": "rucio.rse.protocols.mock.Default",
+            "domains": {
+                "lan": {
+                    "read": 1,
+                    "write": 1,
+                    "delete": 1
                 },
-                "prefix": "/tmp/rucio_rse/"
+                "wan": {
+                    "read": 1,
+                    "write": 1,
+                    "third_party_copy": 1,
+                    "delete": 1
+                }
             },
-        )
-        client.add_rse_attribute(rse, "production_buffer", True)
-    except RucioException:
-        print("Already added RSE %s" % rse)
-        pass
+            "prefix": "/tmp/rucio_rse/"
+        },
+    )
+    for key, value in attr.items():
+        client.add_rse_attribute(rse, key, value)
 
 for rse in prod_rses:
     for rse2 in prod_rses:
         if rse2 == rse:
             continue
-        try:
-            client.add_distance(rse, rse2, {"distance": 1, "ranking": 1})
-        except RucioException:
-            pass
+        client.add_distance(rse, rse2, {"distance": 1, "ranking": 1})
+
+client.add_scope(account="root", scope="cms")
+
+client.add_account("transfer_ops", "SERVICE", "wmagent@cern.ch")
+client.add_identity(
+    account="transfer_ops",
+    identity="ddmlab",
+    authtype="USERPASS",
+    email="blah@asfd.com",
+)
+# why is this still a workaround?
+from rucio.core.account import add_account_attribute
+from rucio.common.types import InternalAccount
+add_account_attribute(InternalAccount("transfer_ops"), "admin", True)
+
+client.add_account("wma_prod", "SERVICE", "wmagent@cern.ch")
+client.add_identity(
+    account="wma_prod",
+    identity="ddmlab",
+    authtype="USERPASS",
+    email="blah@asfd.com",
+)
+add_account_attribute(InternalAccount("wma_prod"), "admin", True)
+# as wma_prod is an admin account, this has no effect
+client.set_account_limit('wma_prod', 'T2_US_Wisconsin_Mock', int(20e9), 'local')
+
+client.add_account("jdoe", "USER", "j@doe.com")
+client.add_scope(account="jdoe", scope="user.jdoe")
+client.add_identity(
+    account="jdoe",
+    identity="ddmlab",
+    authtype="USERPASS",
+    email="blah@asfd.com",
+)
+client.set_account_limit('jdoe', 'T2_US_Florida_Mock', int(20e9), 'local')
