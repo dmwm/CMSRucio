@@ -18,22 +18,30 @@ rules = [
     {
         "copies": 1,
         "rse_expression": "region=A&cms_type=real",
-        "activity": "Production Output"
+        "activity": "Production Output",
+        "grouping": "ALL",
+        "weight": "ddm_quota",
     },
     {
         "copies": 1,
         "rse_expression": "region=B&cms_type=real",
-        "activity": "Production Output"
+        "activity": "Production Output",
+        "grouping": "ALL",
+        "weight": "ddm_quota",
     },
     {
         "copies": 1,
         "rse_expression": "region=C&cms_type=real",
-        "activity": "Production Output"
+        "activity": "Production Output",
+        "grouping": "ALL",
+        "weight": "ddm_quota",
     },
     {
         "copies": 1,
         "rse_expression": "region=D&cms_type=real",
-        "activity": "Production Output"
+        "activity": "Production Output",
+        "grouping": "ALL",
+        "weight": "ddm_quota",
     },
 ]
 
