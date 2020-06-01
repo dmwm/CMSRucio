@@ -14,7 +14,15 @@ function transfer {
   rucio-conveyor-finisher --run-once
 }
 
+python subscriptions.py
 python wmagent_injection.py
 rucio-judge-evaluator --run-once
+rucio-transmogrifier --run-once
 abacus
 transfer
+
+if [[ ! $(rucio list-rules --account transfer_ops --csv |wc -l) == 4 ]];
+then
+  echo "Did not find the expected number of subscription-generated rules"
+  exit 1
+fi

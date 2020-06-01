@@ -6,6 +6,7 @@ function usage {
   echo ''
   echo '  -h    Show usage.'
   echo '  -i    Start an interactive shell rather than run tests'
+  echo '  -u    Update docker images'
   exit
 }
 
@@ -14,19 +15,21 @@ do
   case "$opt" in
     h) usage;;
     i) interactive="true";;
+    u) update="true";;
   esac
 done
 
 
 if [[ ! -d rucio ]]; then
-  git clone -b cms_nano1 https://github.com/ericvaandering/rucio.git
-  pushd rucio
-  git apply ../mocktool.patch
-  popd
+  git clone -b cms_nano2 https://github.com/ericvaandering/rucio.git
 fi
 
 if [[ ! -d probes ]]; then
   git clone -b more_cms_probes https://github.com/ericvaandering/probes.git
+fi
+
+if test ${update}; then
+  docker-compose --file docker-compose.yml pull
 fi
 
 docker-compose --file docker-compose.yml up -d
