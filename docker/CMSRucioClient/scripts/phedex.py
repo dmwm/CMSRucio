@@ -258,7 +258,9 @@ class PhEDEx(object):
         result = self.datasvc('blockreplicas', options=params)
 
         try:
-            exists = bool('phedex' in result and 'block' in result['phedex'])
+            exists = bool('phedex' in result and
+                          'block' in result['phedex'] and
+                          'replica' in result['phedex']['block'][0])
         except IndexError:
             return False
 
