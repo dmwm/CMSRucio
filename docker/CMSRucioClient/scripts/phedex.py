@@ -242,6 +242,28 @@ class PhEDEx(object):
 
         return group, custodial
 
+    def block_exists(self, block=None):
+        """
+        Use the PhEDEx data service to verify that a block exists
+
+        :param block: Block name (CMS) or dataset name (Rucio)
+        :return: boolean
+        """
+
+        if not block:
+            raise RuntimeError('You must supply a block and node name')
+
+        params = {'block': block}
+
+        result = self.datasvc('blockreplicas', options=params)
+
+        try:
+            exists = bool('phedex' in result and 'block' in result['phedex'])
+        except IndexError:
+            return False
+
+        return exists
+
     def fileblock_files_phedex(self, pfb, pnn=None):
         """
         Get the phedex files in a fileblock at a node using the PhEDEx data service
