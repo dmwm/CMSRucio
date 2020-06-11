@@ -111,6 +111,12 @@ def set_rucio_limits(cric_user):
     except AccountNotFound:
         client.add_account(account, cric_user.account_type, email)
 
+    try:
+        client.add_scope(account, 'user.%s' % account)
+        print('Scope added for user %s' % account)
+    except Duplicate:
+        print('Scope for user %s already existed' % account)
+
     cric_user.add_identities_to_rucio(client=client)
 
     # Clear out old quotas. May want to remove this soon.
