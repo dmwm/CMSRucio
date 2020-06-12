@@ -34,6 +34,8 @@ echo "Syncing account roles for managers and group accounts"
 #                       --select 'T3_US_Colorado' --select 'T3_US_FNALLPC' --select 'T3_US_Baylor' --select 'T3_IT_Trieste' \
 #                       --select 'T3_US_UMD' --select 'T3_US_Princeton_ICSE' --type real --fts https://fts3.cern.ch:8446
 
+./cmsrses.py --pnn all --select 'T3_TW_NCU'  --type real --type temp  --fts https://fts3.cern.ch:8446 
+
 # OR ./setRucioFromGitlab with some new parameters
 
 #echo "Creating sync accounts"
