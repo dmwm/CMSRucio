@@ -10,7 +10,7 @@ function usage {
   exit
 }
 
-while getopts hir opt
+while getopts hiu opt
 do
   case "$opt" in
     h) usage;;
