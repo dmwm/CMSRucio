@@ -12,6 +12,7 @@ import requests
 from rucio.client.client import Client
 from rucio.common.exception import RSENotFound
 
+SKIP_SITES = ['T3_US_NERSC']
 QUERY_HEADER = '{"search_type":"query_then_fetch","ignore_unavailable":true,"index":["monit_prod_cmssst_*"]}'
 
 with open('capacity_lucene.json', 'r') as lucene_json:
@@ -34,6 +35,8 @@ sites = [record['_source']['data'] for record in j['responses'][0]['hits']['hits
 rucio = Client()
 for site in sites:
     rse = site['name']
+    if rse in SKIP_SITES:
+        continue
     terabytes = int(site['disk_experiment_use'])
     byte_limit = terabytes * 1E12
     print('Setting quota at %s to %6.0f TB' % (rse, terabytes))
