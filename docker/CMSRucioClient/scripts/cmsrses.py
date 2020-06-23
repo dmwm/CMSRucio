@@ -38,6 +38,8 @@ LFN2PFN_BYTYPE = {
     'temp': 'hash',
 }
 
+APPROVAL_REQUIRED = ['T1_DE_KIT_Tape', 'T1_ES_PIC_Tape', 'T1_RU_JINR_Tape', 'T1_UK_RAL_Tape', 'T1_US_FNAL_Tape']
+
 EXCLUDE_TFC = r'\S+LoadTest\S*'
 
 if 'TEST_SUFFIX' in os.environ:
@@ -138,6 +140,9 @@ class CMSRSE(object):
         attrs['pnn'] = self.pnn
 
         attrs['cms_type'] = self.rsetype
+
+        if self.rsename in APPROVAL_REQUIRED:
+            attrs['requires_approval'] = 'True'
 
         for (key, value) in xattrs:
             attrs[key] = value
