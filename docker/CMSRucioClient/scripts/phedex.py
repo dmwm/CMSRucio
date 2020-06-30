@@ -232,15 +232,15 @@ class PhEDEx(object):
                           'replica' in result['phedex']['block'][0] and
                           result['phedex']['block'][0]['replica'][0]['complete'] == 'y')
         except IndexError:
-            return None, False
+            return None, False, False
 
         if not at_pnn:
-            return None, False
+            return None, False, False
 
         group = result['phedex']['block'][0]['replica'][0]['group']
         custodial = (result['phedex']['block'][0]['replica'][0]['group'] == u'y')
 
-        return group, custodial
+        return group, custodial, at_pnn
 
     def block_exists(self, block=None):
         """
