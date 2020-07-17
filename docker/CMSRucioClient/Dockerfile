@@ -1,5 +1,9 @@
 FROM centos:7
+RUN yum install -y epel-release.noarch 
 
+RUN yum upgrade -y && \
+    yum clean all && \
+    rm -rf /var/cache/yum
 
 RUN yum install -y epel-release.noarch && \
     yum clean all && \
@@ -12,12 +16,13 @@ RUN yum install -y python-pip  voms-clients-java gfal2-all gfal2-util \
     yum clean all && \
     rm -rf /var/cache/yum
 
+RUN yum install -y python3 python3-pip && \
+    yum clean all && \
+    rm -rf /var/cache/yum
+
 WORKDIR /tmp
 
 
-RUN yum upgrade -y && \
-    yum clean all && \
-    rm -rf /var/cache/yum
 RUN yum install -y httpd mod_wsgi libaio gcc python-devel.x86_64 \
                    install wget unzip \
                    mod_ssl openssl-devel.x86_64 bind-utils nano git && \
@@ -54,6 +59,10 @@ RUN pip install statsd python-gitlab
 
 # Install Rucio and other stuff
 RUN pip install rucio-clients multiprocessing-logging jsonschema PyYAML pystatsd
+
+RUN pip3 install --upgrade pip
+RUN pip3 install --upgrade setuptools
+RUN pip3 install rucio-clients
 
 # Install DAS client to pull info from PhEDEx/DBS
 RUN curl -k -o  /bin/dasgoclient https://www.lns.cornell.edu/~vk/Work/dasgoclient && chmod +x /bin/dasgoclient
