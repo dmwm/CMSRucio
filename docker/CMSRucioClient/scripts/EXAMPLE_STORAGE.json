@@ -1,0 +1,115 @@
+[
+  {
+    "site": "T1_DE_KIT",
+    "volume": "KIT_dCache",
+    "protocols": [
+      {
+        "protocol": "old-nrg-xrootd",
+        "access": "virtual",
+        "rules": [
+          {
+            "lfn": "/+store/test/xrootd/T3_DE_KIT/+(.*)",
+            "pfn": "/pnfs/gridka.de/cms/disk-only/$1"
+          },
+          {
+            "lfn": "/+store/(.*)",
+            "pfn": "/pnfs/gridka.de/dcms/disk-only/store/$1"
+          }
+        ]
+      },
+      {
+        "protocol": "local-xrootd",
+        "access": "virtual",
+        "comment": "path translations for CMS xrootd module",
+        "rules": [
+          {
+            "lfn": "/+store/test/xrootd/T1_DE_KIT/+(.*)",
+            "pfn": "/pnfs/gridka.de/cms/disk-only/$1"
+          },
+          {
+            "lfn": "/+store/(.*)",
+            "pfn": "/pnfs/gridka.de/cms/disk-only/store/$1"
+          }
+        ]
+      },
+      {
+        "protocol": "dcap",
+        "access": "site-ro",
+        "prefix": "dcap://cmsdcap-kit.gridka.de:22125/pnfs/gridka.de/cms/disk-only"
+      },
+      {
+        "protocol": "nfs_v4.1",
+        "access": "site-ro",
+        "prefix": "file:/grid/fzk.de/mounts/nfs4/data/cms"
+      },
+      {
+        "protocol": "SRMv2",
+        "access": "global-rw",
+        "prefix": "srm://cmssrm-kit.gridka.de:8443/srm/managerv2?SFN=/pnfs/gridka.de/cms/disk-only"
+      },
+      {
+        "protocol": "WebDAV",
+        "access": "global-rw",
+        "prefix": "davs://cmswebdav-kit.gridka.de:2880/pnfs/gridka.de/cms/disk-only"
+      },
+      {
+        "protocol": "XRootD",
+        "access": "global-ro",
+        "prefix": "root://cmsxrootd-redirectors.gridka.de:1094/"
+      }
+    ],
+    "type": "DISK",
+    "rse": "T1_DE_KIT_Disk",
+    "fts": [
+      "https://fts3.cern.ch:8446"
+    ]
+  },
+  {
+    "site": "T1_DE_KIT",
+    "volume": "KIT_MSS",
+    "protocols": [
+      {
+        "protocol": "pnfs",
+        "access": "virtual",
+        "rules": [
+          {
+            "lfn": "(/store/temp/user/.*)",
+            "pfn": "/pnfs/gridka.de/cms/disk-only$1"
+          },
+          {
+            "lfn": "(.*)",
+            "pfn": "/pnfs/gridka.de/cms$1"
+          }
+        ],
+        "comment": "redirect temporary user files to disk instance"
+      },
+      {
+        "protocol": "SRMv2",
+        "access": "global-rw",
+        "rules": [
+          {
+            "lfn": "/+(.*)",
+            "pfn": "srm://cmssrm-kit.gridka.de:8443/srm/managerv2?SFN=/$1",
+            "chain": "pnfs"
+          }
+        ]
+      },
+      {
+        "protocol": "WebDAV",
+        "access": "global-rw",
+        "rules": [
+          {
+            "lfn": "/+(.*)",
+            "pfn": "davs://cmswebdav-kit.gridka.de:2880/$1",
+            "chain": "pnfs"
+          }
+        ]
+      }
+    ],
+    "type": "TAPE",
+    "rse": "T1_DE_KIT_Tape",
+    "fts": [
+      "https://fts3.cern.ch:8446"
+    ]
+  }
+]
