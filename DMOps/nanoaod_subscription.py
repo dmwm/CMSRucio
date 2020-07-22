@@ -43,9 +43,15 @@ rules = [
         "grouping": "ALL",
         "weight": "ddm_quota",
     },
+    {
+        "copies": 1,
+        "rse_expression": "T1_FR_CCIN2P3_Tape|T1_UK_RAL_Tape|T1_RU_JINR_Tape",
+        "activity": "Production Output",
+        "grouping": "ALL",
+    },
 ]
 
-res = client.add_subscription(
+res = client.update_subscription(
     name='ProductionNanoAOD',
     account='transfer_ops',
     filter=filter,
@@ -77,7 +83,7 @@ rules = [
     },
 ]
 
-res = client.add_subscription(
+res = client.update_subscription(
     name='RelValNanoAOD',
     account='transfer_ops',
     filter=filter,
