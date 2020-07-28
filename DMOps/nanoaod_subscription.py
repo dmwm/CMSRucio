@@ -45,7 +45,7 @@ rules = [
     },
     {
         "copies": 1,
-        "rse_expression": "T1_FR_CCIN2P3_Tape|T1_UK_RAL_Tape|T1_RU_JINR_Tape",
+        "rse_expression": "T1_FR_CCIN2P3_Tape|T1_UK_RAL_Tape|T1_RU_JINR_Tape|T1_IT_CNAF_Tape",
         "activity": "Production Output",
         "grouping": "ALL",
     },
