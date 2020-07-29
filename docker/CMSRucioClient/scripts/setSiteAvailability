@@ -1,0 +1,71 @@
+#! /usr/bin/env python
+
+
+from __future__ import absolute_import, division, print_function
+
+import StringIO
+import json
+import os
+import time
+
+import requests
+from rucio.client.client import Client
+from rucio.common.exception import RSENotFound
+
+SKIP_SITES = ['T3_US_NERSC']
+QUERY_HEADER = '{"search_type":"query_then_fetch","ignore_unavailable":true,"index":["monit_prod_cmssst_*"]}'
+
+with open('availability_lucene.json', 'r') as lucene_json:
+    lucene = json.load(lucene_json)
+
+lucene["query"]["bool"]["filter"]["range"]["metadata.timestamp"]["gte"] = int(time.time() - 3 * 24 * 60 * 60)
+lucene["query"]["bool"]["filter"]["range"]["metadata.timestamp"]["lt"] = int(time.time() + 900)
+
+query = StringIO.StringIO(QUERY_HEADER + '\n' + json.dumps(lucene) + '\n')
+
+headers = {'Authorization': 'Bearer %s' % os.environ['MONIT_TOKEN'],
+           'Content-Type': 'application/json'}
+
+r = requests.post('https://monit-grafana.cern.ch/api/datasources/proxy/9475/_msearch', data=query, headers=headers)
+
+j = json.loads(r.text)
+
+sites = [record['_source']['data'] for record in j['responses'][0]['hits']['hits']]
+
+rucio = Client()
+
+available_map = {}
+
+# Records are sorted most recent to least recent. Pick up the value for the most recent for a site
+for site in sites:
+    rse = site['name']
+    if rse in SKIP_SITES:
+        continue
+    if rse in available_map:
+        continue
+    ssb_status = site.get('status', None)
+    if not ssb_status or ssb_status != 'enabled':
+        available_map[rse] = False
+    else:
+        available_map[rse] = True
+
+for rse, available in available_map.items():
+    print('Setting availability for %s to %s' % (rse, available))
+    try:
+        rucio.get_rse(rse)
+        rucio.update_rse(rse, {"availability_write": available, "availability_delete": available})
+        print('  Set the availability for %s to %s' % (rse, available))
+    except RSENotFound:  # This might be a Tier1, let's try _Tape and _Disk instead
+        if rse.startswith('T1_'):
+            try:
+                rucio.get_rse(rse + '_Disk')
+                rucio.update_rse(rse + '_Disk', {"availability_write": available, "availability_delete": available})
+                print('  Set the availability for %s to %s' % (rse + '_Disk', available))
+            except RSENotFound:
+                print('  Could not find %s or %s' % (rse, rse + '_Disk'))
+            try:
+                rucio.get_rse(rse + '_Tape')
+                rucio.update_rse(rse + '_Tape', {"availability_write": available, "availability_delete": available})
+                print('  Set the availability for %s to %s' % (rse + '_Tape', available))
+            except RSENotFound:
+                print('  Could not find %s or %s' % (rse, rse + '_Tape'))

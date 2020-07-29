@@ -40,8 +40,10 @@ echo "Syncing account roles for managers and group accounts"
 #echo "Creating sync accounts"
 #./syncaccounts.py --identity "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=cmsrucio/CN=430796/CN=Robot: CMS Rucio Data Transfer" --type x509
 
-echo "Syncing quotas"
+echo "Setting quotas"
 ./setSiteQuotas
+echo "Setting availability"
+./setSiteAvailability
 
 #echo "Creating links"
 #./cmslinks.py --phedex_link --overwrite # Remove the --disable flag for Katy's RSE

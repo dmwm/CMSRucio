@@ -1,0 +1,45 @@
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "match_phrase": {
+            "metadata.type": "ssbmetric"
+          }
+        },
+        {
+          "match_phrase": {
+            "metadata.type_prefix": "raw"
+          }
+        },
+        {
+          "match_phrase": {
+            "metadata.path": "sts15min"
+          }
+        }
+      ],
+      "filter": {
+        "range": {
+          "metadata.timestamp": {
+            "gte": 0,
+            "lt": 0,
+            "format": "epoch_second"
+          }
+        }
+      }
+    }
+  },
+  "_source": {
+    "includes": [
+      "metadata.timestamp",
+      "metadata.kafka_timestamp",
+      "data.name",
+      "data.status",
+      "data.prod_status"
+    ]
+  },
+  "size": 10000,
+  "sort": [
+    { "metadata.timestamp": "desc" }
+  ]
+}
