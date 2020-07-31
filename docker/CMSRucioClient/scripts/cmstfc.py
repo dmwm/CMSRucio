@@ -21,27 +21,28 @@ def cmstfc(scope, name, rse, rse_attrs, proto_attrs):
     """
 
     # Prevents unused argument warnings in pylint
-    del rse
     del rse_attrs
-    del scope
 
     # Getting the TFC
-    tfc = proto_attrs['extended_attributes']['tfc']
-    tfc_proto = proto_attrs['extended_attributes']['tfc_proto']
+    try:
+        tfc = proto_attrs['extended_attributes']['tfc']
+        tfc_proto = proto_attrs['extended_attributes']['tfc_proto']
 
-    # matching the lfn into a pfn
-    pfn = tfc_lfn2pfn(name, tfc, tfc_proto)
+        # matching the lfn into a pfn
+        pfn = tfc_lfn2pfn(name, tfc, tfc_proto)
 
-    # now we have to remove the protocol part of the pfn
-    proto_pfn = proto_attrs['scheme'] + '://' + proto_attrs['hostname'] + ':' + str(proto_attrs['port'])
-    if 'extended_attributes' in proto_attrs and \
-            'web_service_path' in proto_attrs['extended_attributes']:
-        proto_pfn += proto_attrs['extended_attributes']['web_service_path']
-    proto_pfn += proto_attrs['prefix']
+        # now we have to remove the protocol part of the pfn
+        proto_pfn = proto_attrs['scheme'] + '://' + proto_attrs['hostname'] + ':' + str(proto_attrs['port'])
+        if 'extended_attributes' in proto_attrs and \
+                'web_service_path' in proto_attrs['extended_attributes']:
+            proto_pfn += proto_attrs['extended_attributes']['web_service_path']
+        proto_pfn += proto_attrs['prefix']
 
-    proto_less = pfn.replace(proto_pfn, "")
-    return re.sub('/+', '/', proto_less)  # Remove unnecessary double slashes
-
+        proto_less = pfn.replace(proto_pfn, "")
+        return re.sub('/+', '/', proto_less)  # Remove unnecessary double slashes
+    except TypeError:
+        raise TypeError('Cannot determine PFN for LFN %s:%s at %s with proto %s' %
+                        scope, name, rse, proto_attrs)
 
 def tfc_lfn2pfn(lfn, tfc, proto, depth=0):
     """
