@@ -45,6 +45,9 @@ echo "Setting quotas"
 echo "Setting availability"
 ./setSiteAvailability
 
+echo "Creating user accounts and setting quotas"
+./user_to_site_mapping.py
+
 #echo "Creating links"
 #./cmslinks.py --phedex_link --overwrite # Remove the --disable flag for Katy's RSE
 ## ./cmslinks.py --phedex_link --overwrite --disable
