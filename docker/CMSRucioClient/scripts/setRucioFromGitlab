@@ -1,39 +1,36 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 from __future__ import print_function, division, absolute_import
 
 import base64
+import json
 import os
-import subprocess
 
 import gitlab
+from CMSRSE import CMSRSE
 
-SKIP_SITES = ['T2_FI_HIP','T2_ES_IFCA', 'T2_CH_CERN', 'T1_US_FNAL_Disk', 'T1_US_FNAL', 'T1_UK_RAL']
-DO_SITES = []
+SKIP_SITES = ['T2_FI_HIP', 'T2_ES_IFCA', 'T2_CH_CERN', 'T1_US_FNAL_Disk', 'T1_US_FNAL', 'T1_UK_RAL']
+DO_SITES = ['T2_BR_UERJ']
 
 private_token = os.environ['GITLAB_TOKEN']
 
 gl = gitlab.Gitlab('https://gitlab.cern.ch', private_token=private_token)
-
 group = gl.groups.get('siteconf')
-
 projects = group.projects.list(all=True)
 
 for project in projects:
     full_project = gl.projects.get(project.id)
-    if project.name.startswith('T3'):
-        continue
-    if project.name in SKIP_SITES:
-        continue
-    if DO_SITES and project.name not in DO_SITES:
-        continue
-
     try:
-        f = full_project.files.get('PhEDEx/storage.xml', 'master')
-        storage_xml = base64.b64decode(f.content)
-        with open('/tmp/storage.xml', 'w') as xml_file:
-            xml_file.write(storage_xml)
-        subprocess.call(["./cmsrses.py", "--pnn", project.name, "--type", "real",
-                         "--fts", "https://fts3.cern.ch:8446", "--tfc", '/tmp/storage.xml'])
+        f = full_project.files.get('storage.json', 'master')
+        sites = json.loads(base64.b64decode(f.content))
+        for site in sites:
+            print('Checking %s' % site['rse'])
+            if ((DO_SITES and site['rse'] in DO_SITES) or not DO_SITES) and site['rse'] not in SKIP_SITES:
+                rse = CMSRSE(site)
+                if rse.update():
+                    print('RSE %s and type %s changed' % (rse.rse_name, rse.rucio_rse_type))
+            else:
+                print('Skipping %s. Not in DO list or in SKIP list' % site['rse'])
+
     except gitlab.exceptions.GitlabGetError:
-        print("Unable to download storage.xml for %s" % project.name)
+        print("Unable to download storage.json for %s" % project.name)
