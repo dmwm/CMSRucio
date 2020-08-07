@@ -4,7 +4,6 @@
 Class definition for a CMS RSE. And script for updating RSE
 """
 import logging
-import pdb
 import pprint
 import re
 
@@ -22,6 +21,7 @@ DOMAINS_BY_TYPE = {
 }
 RUCIO_PROTOS = ['SRMv2']
 IMPL_MAP = {'SRMv2': 'rucio.rse.protocols.gfalv2.Default'}
+DEFAULT_PORTS = {'gsiftp': 2811}
 
 
 class CMSRSE:
@@ -50,7 +50,7 @@ class CMSRSE:
         # pdb.set_trace()
 
         self._get_attributes()
-        self.attrs['fts'] = json['fts'][0]
+        self.attrs['fts'] = ','.join(json['fts'])
 
     def _get_attributes(self, tier=None, country=None, xattrs=None):
         """
@@ -128,46 +128,6 @@ class CMSRSE:
 
         return changed
 
-    # def _check_lfn2pfn(self):
-    #     """
-    #     Checks that lfn2pfn works properly
-    #     """
-    #     for lfn in SE_PROBES_BYTYPE[self.cms_type]:
-    #
-    #         # this is what rucio does
-    #         pfn = self.proto['scheme'] + '://' + self.proto['hostname'] + \
-    #               ':' + str(self.proto['port'])
-    #
-    #         if 'web_service_path' in self.proto['extended_attributes']:
-    #             pfn = pfn + self.proto['extended_attributes']['web_service_path']
-    #
-    #         pfn = pfn + '/' + cmstfc('cms', lfn, None, None, self.proto)
-    #
-    #         # this should match dataservice pfn, modulo some normalization
-    #         # (e.g.: adding the port number)
-    #         pfn_datasvc = []
-    #
-    #         wo_port = self.pcli.lfn2pfn(
-    #             pnn=self.pnn, lfn=lfn, tfc=self.tfc,
-    #             protocol=self.proto['extended_attributes']['tfc_proto'])
-    #         wo_port = re.sub('/+', '/', wo_port)
-    #         w_port = wo_port.replace(
-    #             self.proto['hostname'],
-    #             self.proto['hostname'] + ':' + str(self.proto['port'])
-    #         )
-    #
-    #         # Get rid of ALL multiple slashes, including separating protocol from host (valid for comparison only)
-    #         pfn_datasvc.append(wo_port)
-    #         pfn_datasvc.append(w_port)
-    #         pfn = re.sub('/+', '/', pfn)
-    #
-    #         if pfn not in pfn_datasvc:
-    #             raise Exception("rucio and datasvc lfn2pfn mismatch, rucio: %s ; datasvc: %s" %
-    #                             (pfn, pfn_datasvc))
-    #
-    #         logging.debug("checking lfn2pfn ok %s", pfn)
-
-    # def _get_protocol(self, seinfo, add_prefix, exclude, domains, token, proto):
     def _get_protocol(self, proto_json, protos_json):
 
         """
@@ -201,14 +161,24 @@ class CMSRSE:
             """
 
             algorithm = 'identity'
-            prefix_regex = re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+):(\d+)(\/.*\=)(.*)')
-            prefix_match = prefix_regex.match(proto_json['prefix'])
+            try:
+                prefix_regex = re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+):(\d+)(\/.*\=)(.*)')
+                prefix_match = prefix_regex.match(proto_json['prefix'])
 
-            scheme = prefix_match.group(1)
-            hostname = prefix_match.group(2)
-            port = prefix_match.group(3)
-            extended_attributes = {'web_service_path': prefix_match.group(4)}
-            prefix = prefix_match.group(5)
+                scheme = prefix_match.group(1)
+                hostname = prefix_match.group(2)
+                port = prefix_match.group(3)
+                extended_attributes = {'web_service_path': prefix_match.group(4)}
+                prefix = prefix_match.group(5)
+            except AttributeError:  # Can be missing the port number
+                prefix_regex = re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+)/(.*)')
+                prefix_match = prefix_regex.match(proto_json['prefix'])
+
+                scheme = prefix_match.group(1)
+                hostname = prefix_match.group(2)
+                extended_attributes = None
+                prefix = '/' + prefix_match.group(3)
+                port = DEFAULT_PORTS[scheme]
 
             proto = {
                 'scheme': scheme,
