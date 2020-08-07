@@ -63,6 +63,7 @@ RUN pip install rucio-clients multiprocessing-logging jsonschema PyYAML pystatsd
 RUN pip3 install --upgrade pip
 RUN pip3 install --upgrade setuptools
 RUN pip3 install rucio-clients
+RUN pip3 install python-gitlab
 
 # Install DAS client to pull info from PhEDEx/DBS
 RUN curl -k -o  /bin/dasgoclient https://www.lns.cornell.edu/~vk/Work/dasgoclient && chmod +x /bin/dasgoclient
