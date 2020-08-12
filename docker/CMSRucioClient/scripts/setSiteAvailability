@@ -1,9 +1,9 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 
 from __future__ import absolute_import, division, print_function
 
-import StringIO
+import io
 import json
 import os
 import time
@@ -21,7 +21,7 @@ with open('availability_lucene.json', 'r') as lucene_json:
 lucene["query"]["bool"]["filter"]["range"]["metadata.timestamp"]["gte"] = int(time.time() - 3 * 24 * 60 * 60)
 lucene["query"]["bool"]["filter"]["range"]["metadata.timestamp"]["lt"] = int(time.time() + 900)
 
-query = StringIO.StringIO(QUERY_HEADER + '\n' + json.dumps(lucene) + '\n')
+query = io.StringIO(QUERY_HEADER + '\n' + json.dumps(lucene) + '\n')
 
 headers = {'Authorization': 'Bearer %s' % os.environ['MONIT_TOKEN'],
            'Content-Type': 'application/json'}
