@@ -82,14 +82,19 @@ for i in args:
 # approve rules
 
 if not auto:
-    print
-    print "Rules to approve:"
-    for i in approval_list:
-        print i[0], i[1], i[2]
-    print
-    answer = raw_input("Approve these rules (Y/N)?")
-    if not answer in ('Y','y','YES','Yes','yes'):
-        print "No rule is approved"
+    if len(approval_list) > 0:
+        print
+        print "Rules to approve:"
+        for i in approval_list:
+            print i[0], i[1], i[2]
+        print
+        answer = raw_input("Approve these rules (Y/N)?")
+        if not answer in ('Y','y','YES','Yes','yes'):
+            print "No rule is approved"
+    	sys.exit(0)
+    else:
+        print
+        print "Nothing to approve"
 	sys.exit(0)
 
 for i in approval_list:
