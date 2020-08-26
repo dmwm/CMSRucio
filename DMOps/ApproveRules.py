@@ -19,8 +19,9 @@ def usage():
     print "%s [-f <file>] [-h] [-s] [-a] id ..."%(me)
     print
     print "    <file>: rules, one in each rwo, beginning with rule id as the first token"
-    print "    without argument, %s takeinput from stdin"%(me)
+    print "    without argument, %s takes input from stdin"%(me)
     print
+    print "    -h this message"
     print "    -s silent mode, no output; without -a, it still prompt for action"
     print "    -a auto mode, automatically approve one that can be approved"
     print "    -v verbose mode, overridden by -s"
@@ -34,7 +35,8 @@ for i in opt:
         f = open(i[1])
 	l = f.readline()
 	while l:
-	    args.append(l.strip().split()[0])
+	    if l.strip() != "":
+	        args.append(l.strip().split()[0])
 	    l = f.readline()
 	f.close()
     if i[0] == '-a':
@@ -44,13 +46,17 @@ for i in opt:
     if i[0] == '-v':
         verbose = True
 
+from_stdin = False
+
 # if there is nothing in args, take them from stdin
 if len(args) < 1:
     f = sys.__stdin__
     l = f.readline()
     while l:
-        args.append(l.strip().split()[0])
+        if l.strip() != "":
+            args.append(l.strip().split()[0])
 	l = f.readline()
+    from_stdin = True
 
 # silent takes higher priority than verbose
 if silent:
@@ -88,10 +94,14 @@ if not auto:
         for i in approval_list:
             print i[0], i[1], i[2]
         print
-        answer = raw_input("Approve these rules (Y/N)?")
+	if from_stdin:
+	    print "Warning: piped input requires '-a' for action. re-run the command with '-a'"
+	    answer = 'N'
+	else:
+            answer = raw_input("Approve these rules (Y/N)? ")
         if not answer in ('Y','y','YES','Yes','yes'):
             print "No rule is approved"
-    	sys.exit(0)
+    	    sys.exit(0)
     else:
         print
         print "Nothing to approve"
