@@ -16,17 +16,19 @@ def usage():
     me = os.path.basename(sys.argv[0])
     print "usage:"
     print
-    print "%s [-f <file>] [-h] [-s] [-a] id ..."%(me)
+    print "%s [-f <file>] [-h] [-s] [-a] <id> ..."%(me)
     print
     print "    <file>: rules, one in each row, beginning with rule id as the first token"
-    print "       without arguments, %s takes input from stdin"%(me)
-    print "       and gives warning if -a is not set"
+    print "      <id>: rule id"
     print
     print "    -h this message"
     print "    -s silent mode, no output; without -a, it still prompt for action"
     print "    -a auto mode, automatically approve the ones that can be approved"
-    print "       by default, %s asks for confirmation"%(me)
+    print "       by default, without '-a', %s asks for confirmation"%(me)
     print "    -v verbose mode, overridden by -s"
+    print
+    print "    ** without arguments, %s takes input from stdin"%(me)
+    print "       and gives warning if '-a' is not set"
 
 opt, args = getopt.getopt(sys.argv[1:], "f:hasv")
 for i in opt:
