@@ -18,12 +18,14 @@ def usage():
     print
     print "%s [-f <file>] [-h] [-s] [-a] id ..."%(me)
     print
-    print "    <file>: rules, one in each rwo, beginning with rule id as the first token"
-    print "    without argument, %s takes input from stdin"%(me)
+    print "    <file>: rules, one in each row, beginning with rule id as the first token"
+    print "       without arguments, %s takes input from stdin"%(me)
+    print "       and gives warning if -a is not set"
     print
     print "    -h this message"
     print "    -s silent mode, no output; without -a, it still prompt for action"
-    print "    -a auto mode, automatically approve one that can be approved"
+    print "    -a auto mode, automatically approve the ones that can be approved"
+    print "       by default, %s asks for confirmation"%(me)
     print "    -v verbose mode, overridden by -s"
 
 opt, args = getopt.getopt(sys.argv[1:], "f:hasv")
@@ -99,6 +101,7 @@ if not auto:
 	    answer = 'N'
 	else:
             answer = raw_input("Approve these rules (Y/N)? ")
+	print
         if not answer in ('Y','y','YES','Yes','yes'):
             print "No rule is approved"
     	    sys.exit(0)
