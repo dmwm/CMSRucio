@@ -18,8 +18,7 @@ from __future__ import division, print_function
 import sys
 import os
 
-from rucio.client.didclient import DIDClient
-from rucio.client.ruleclient import RuleClient
+from rucio.client import Client
 
 def usage():
     print("usage:")
@@ -80,8 +79,10 @@ def tape_family(tag, label):
 # default scop
 scope = 'cms'
 
-didclient = DIDClient()
-ruleclient = RuleClient()
+# didclient = DIDClient()
+# ruleclient = RuleClient()
+
+client = Client()
 
 # get_ff(scope, name) -- returns path, ff from scope, name
 #
@@ -93,7 +94,7 @@ def get_ff(scope, name):
     tag = name.split('/')[-1].split('#')[0]
     ff = {}
     # get files from the DID
-    res = didclient.list_files(scope, name)
+    res = client.list_files(scope, name)
     for i in res:
         # print(i['name'])
         t = i['name'].split('/')
@@ -106,7 +107,7 @@ def get_ff(scope, name):
 
 # get_rule(id) - returns scope, name from rule id
 def get_rule(id):
-    r = ruleclient.get_replication_rule(id)
+    r = client.get_replication_rule(id)
     return r['scope'], r['name']
 
 if __name__ == '__main__':
