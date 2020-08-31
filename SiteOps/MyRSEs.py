@@ -3,6 +3,7 @@
 # MyRses.py - find all rses that I have authority to approve
 #
 
+from __future__ import division, print_function
 import sys
 import os
 from rucio.client.client import Client
@@ -10,12 +11,12 @@ from rucio.client.client import Client
 c = Client()
 
 def usage():
-    print "usage:"
-    print
-    print "%s [-h] [<account>]"%(os.path.basename(sys.argv[0]))
-    print
-    print "    -h this message"
-    print "       without <account>, the current account takes place."
+    print("usage:")
+    print()
+    print("%s [-h] [<account>]"%(os.path.basename(sys.argv[0])))
+    print()
+    print("    -h this message")
+    print("       without <account>, the current account takes place.")
 
 def myrses(account=None):
     rses = []
@@ -40,5 +41,5 @@ if __name__ == '__main__':
         rses = myrses()
 
     for r in rses:
-        print "%-24s %s"%(r['rse'], r['rse_type'])
+        print("%-24s %s"%(r['rse'], r['rse_type']))
 
