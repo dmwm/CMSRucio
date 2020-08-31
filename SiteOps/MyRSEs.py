@@ -3,7 +3,7 @@
 # MyRses.py - find all rses that I have authority to approve
 #
 
-from __future__ import division, print_function
+from __future__ import absolute_import, division, print_function
 import sys
 import os
 from rucio.client.client import Client
