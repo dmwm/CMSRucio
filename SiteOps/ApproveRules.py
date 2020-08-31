@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import division, print_function
 import sys
 import os
 import getopt
@@ -14,21 +15,21 @@ verbose = False
 
 def usage():
     me = os.path.basename(sys.argv[0])
-    print "usage:"
-    print
-    print "%s [-f <file>] [-h] [-s] [-a] <id> ..."%(me)
-    print
-    print "    <file>: rules, one in each row, beginning with rule id as the first token"
-    print "      <id>: rule id"
-    print
-    print "    -h this message"
-    print "    -s silent mode, no output; without -a, it still prompt for action"
-    print "    -a auto mode, automatically approve the ones that can be approved"
-    print "       by default, without '-a', %s asks for confirmation"%(me)
-    print "    -v verbose mode, overridden by -s"
-    print
-    print "    ** without arguments, %s takes input from stdin"%(me)
-    print "       and gives warning if '-a' is not set"
+    print("usage:")
+    print()
+    print("%s [-f <file>] [-h] [-s] [-a] <id> ..."%(me))
+    print()
+    print("    <file>: rules, one in each row, beginning with rule id as the first token")
+    print("      <id>: rule id")
+    print()
+    print("    -h this message")
+    print("    -s silent mode, no output; without -a, it still prompt for action")
+    print("    -a auto mode, automatically approve the ones that can be approved")
+    print("       by default, without '-a', %s asks for confirmation"%(me))
+    print("    -v verbose mode, overridden by -s")
+    print()
+    print("    ** without arguments, %s takes input from stdin"%(me))
+    print("       and gives warning if '-a' is not set")
 
 opt, args = getopt.getopt(sys.argv[1:], "f:hasv")
 for i in opt:
@@ -77,14 +78,14 @@ def check_rule(id):
 	    approval_list.append((r['id'], r['state'], r['name']))
 	else:
 	    if not silent:
-	        print "Rule %s %s %s does not need approval"%(r['id'], r['state'], r['name'])
+	        print("Rule %s %s %s does not need approval"%(r['id'], r['state'], r['name']))
     except RuleNotFound:
         if not silent:
-	    # print "No rule with the id %s found"%(i)
-	    print sys.exc_info()[1].message
+	    # print("No rule with the id %s found"%(i))
+	    print(sys.exc_info()[1].message)
     except:
         if not silent:
-            print sys.exc_info()[1]
+            print(sys.exc_info()[1])
 
 for i in args:
     check_rule(i)
@@ -93,40 +94,40 @@ for i in args:
 
 if not auto:
     if len(approval_list) > 0:
-        print
-        print "Rules to approve:"
+        print()
+        print("Rules to approve:")
         for i in approval_list:
-            print i[0], i[1], i[2]
-        print
+            print(i[0], i[1], i[2])
+        print()
 	if from_stdin:
-	    print "Warning: piped input requires '-a' for action. re-run the command with '-a'"
+	    print("Warning: piped input requires '-a' for action. re-run the command with '-a'")
 	    answer = 'N'
 	else:
             answer = raw_input("Approve these rules (Y/N)? ")
-	print
+	print()
         if not answer in ('Y','y','YES','Yes','yes'):
-            print "No rule is approved"
+            print("No rule is approved")
     	    sys.exit(0)
     else:
-        print
-        print "Nothing to approve"
+        print()
+        print("Nothing to approve")
 	sys.exit(0)
 
 for i in approval_list:
     if verbose:
-        print "Aproving %s ..."%(i[0]),
+        print("Aproving %s ..."%(i[0]), end=' ')
     try:
         res = client.approve_replication_rule(i[0])
 	if verbose:
-	    print "Done"
+	    print("Done")
     except AccessDenied:
         if not silent:
-	    print sys.exc_info()[1].message, i[0]
+	    print(sys.exc_info()[1].message, i[0])
     except:
         if not silent:
-	    print sys.exc_info()[1]
+	    print(sys.exc_info()[1])
 
-print
+print()
 for i in approval_list:
     r = client.get_replication_rule(i[0])
-    print r['id'], r['state'], r['name']
+    print(r['id'], r['state'], r['name'])
