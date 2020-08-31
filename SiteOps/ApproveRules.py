@@ -3,69 +3,54 @@
 from __future__ import absolute_import, division, print_function
 import sys
 import os
-import getopt
+import argparse
 import pprint
 from rucio.client.client import Client
 from rucio.common.exception import (RuleNotFound, AccessDenied)
 
-# default mode
-auto = False
-silent = False
-verbose = False
 
-def usage():
-    me = os.path.basename(sys.argv[0])
-    print("usage:")
-    print()
-    print("%s [-f <file>] [-h] [-s] [-a] <id> ..."%(me))
-    print()
-    print("    <file>: rules, one in each row, beginning with rule id as the first token")
-    print("      <id>: rule id")
-    print()
-    print("    -h this message")
-    print("    -s silent mode, no output; without -a, it still prompt for action")
-    print("    -a auto mode, automatically approve the ones that can be approved")
-    print("       by default, without '-a', %s asks for confirmation"%(me))
-    print("    -v verbose mode, overridden by -s")
-    print()
-    print("    ** without arguments, %s takes input from stdin"%(me))
-    print("       and gives warning if '-a' is not set")
+# Parsing input parameters
+parser = argparse.ArgumentParser(
+    description="Arrpove rules that are wating for approval",
+    epilog="** without arguments, input is taken from stdin and warning is given if '-a' is not set")
+parser.add_argument('-a', action='store_true', default=False, dest='auto', help="auto mode, automatically approve the ones that can be approved. by default, without '-a', it asks for confirmation")
+parser.add_argument('-s', action='store_true', default=False, dest='silent', help="silent mode, no output; without '-a', it still prompts for action")
+parser.add_argument('-v', action='store_true', default=False, dest='verbose', help="verbose mode, overridden by '-s'")
+parser.add_argument('-f', action='append', dest='file', default=[], help="file of rules, one each line, beginning with rule id; could have multiple -f")
+parser.add_argument('id', nargs='*', default=[], help="rule id")
 
-opt, args = getopt.getopt(sys.argv[1:], "f:hasv")
-for i in opt:
-    if i[0] == '-h':
-        usage()
-	sys.exit(0)
-    if i[0] == '-f':
-        f = open(i[1])
+opt = parser.parse_args()
+
+# read id from files, if any
+for i in opt.file:
+    f = open(i)
+    l = f.readline()
+    while l:
+        if l.strip() != "":
+	    opt.id.append(l.strip().split()[0])
 	l = f.readline()
-	while l:
-	    if l.strip() != "":
-	        args.append(l.strip().split()[0])
-	    l = f.readline()
-	f.close()
-    if i[0] == '-a':
-        auto = True
-    if i[0] == '-s':
-        silent = True
-    if i[0] == '-v':
-        verbose = True
+    f.close()
+
+# pprint.pprint(opt)
+
+# sys.exit(0)
+
 
 from_stdin = False
 
 # if there is nothing in args, take them from stdin
-if len(args) < 1:
+if len(opt.id) < 1:
     f = sys.__stdin__
     l = f.readline()
     while l:
         if l.strip() != "":
-            args.append(l.strip().split()[0])
+            opt.id.append(l.strip().split()[0])
 	l = f.readline()
     from_stdin = True
 
 # silent takes higher priority than verbose
-if silent:
-    verbose = False
+if opt.silent:
+    opt.verbose = False
 
 client = Client()
 approval_list = []
@@ -77,22 +62,22 @@ def check_rule(id):
 	if r['state'] == 'WAITING_APPROVAL':
 	    approval_list.append((r['id'], r['state'], r['name']))
 	else:
-	    if not silent:
+	    if not opt.silent:
 	        print("Rule %s %s %s does not need approval"%(r['id'], r['state'], r['name']))
     except RuleNotFound:
-        if not silent:
+        if not opt.silent:
 	    # print("No rule with the id %s found"%(i))
 	    print(sys.exc_info()[1].message)
     except:
-        if not silent:
+        if not opt.silent:
             print(sys.exc_info()[1])
 
-for i in args:
+for i in opt.id:
     check_rule(i)
 
 # approve rules
 
-if not auto:
+if not opt.auto:
     if len(approval_list) > 0:
         print()
         print("Rules to approve:")
@@ -113,21 +98,28 @@ if not auto:
         print("Nothing to approve")
 	sys.exit(0)
 
+count = 0
 for i in approval_list:
-    if verbose:
+    if opt.verbose:
         print("Aproving %s ..."%(i[0]), end=' ')
     try:
         res = client.approve_replication_rule(i[0])
-	if verbose:
+	count += 1
+	if opt.verbose:
 	    print("Done")
     except AccessDenied:
-        if not silent:
+        if not opt.silent:
 	    print(sys.exc_info()[1].message, i[0])
     except:
-        if not silent:
+        if not opt.silent:
 	    print(sys.exc_info()[1])
 
-print()
-for i in approval_list:
-    r = client.get_replication_rule(i[0])
-    print(r['id'], r['state'], r['name'])
+if not opt.silent:
+    print()
+    print(count, "rule(s) approved")
+    print()
+
+if not opt.silent:
+    for i in approval_list:
+        r = client.get_replication_rule(i[0])
+        print(r['id'], r['state'], r['name'])
