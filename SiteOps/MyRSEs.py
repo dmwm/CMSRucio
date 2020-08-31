@@ -25,8 +25,8 @@ def myrses(account=None):
 
     for r in c.list_rses():
         attributes = c.list_rse_attributes(r['rse'])
-        if (attributes.has_key('quota_approvers') and attributes['quota_approvers'].find(account) != -1) \
-	    or (attributes.has_key('rule_approvers') and attributes['rule_approvers'].find(account) != -1):
+	if ('quota_approvers' in attributes and account in attributes['quota_approvers']) \
+	    or ('rule_approvers' in attributes and account in attributes['rule_approvers']):
 	    rses.append(r)
 
     return rses
