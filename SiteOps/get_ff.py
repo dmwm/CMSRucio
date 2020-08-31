@@ -13,6 +13,8 @@
 #    dataset name is a "/" delimited path, the last term is the type
 #    block name is a dataset name with #<block>
 #
+
+from __future__ import division, print_function
 import sys
 import os
 
@@ -20,13 +22,13 @@ from rucio.client.didclient import DIDClient
 from rucio.client.ruleclient import RuleClient
 
 def usage():
-    print "usage:"
-    print
-    print "%s [-h] <id/name> [<id/name>>] ..."%(os.path.basename(sys.argv[0]))
-    print
-    print "    <id/name> rule id or name"
-    print
-    print "    -h this message"
+    print("usage:")
+    print()
+    print("%s [-h] <id/name> [<id/name>>] ..."%(os.path.basename(sys.argv[0])))
+    print()
+    print("    <id/name> rule id or name")
+    print()
+    print("    -h this message")
 
 # Category - here is a static mapping of known categories
 
@@ -93,7 +95,7 @@ def get_ff(scope, name):
     # get files from the DID
     res = didclient.list_files(scope, name)
     for i in res:
-        # print i['name']
+        # print(i['name'])
         t = i['name'].split('/')
 	for j in range(len(t)):
 	    if t[j] == tag:
@@ -119,5 +121,5 @@ if __name__ == '__main__':
 	    name = i
     	res = get_ff(scope, name)
 	for path, ff in res.items():
-	    print path, ff
+	    print(path, ff)
 
