@@ -16,18 +16,18 @@ def send_trace(trace, trace_endpoint, user_agent, retries=5):
     :param trace_endpoint: the endpoint where the trace should be send
     :param user_agent: the user agent sending the trace
     :param retries: the number of retries if sending fails
-    :return: 0 on success, 1 on failure
+    :return: True on success, False on failure
     """
     if user_agent.startswith('pilot'):
-        return 0
+        return True
     for dummy in range(retries):
         try:
             requests.post(trace_endpoint + '/traces/', verify=False, data=json.dumps(trace))
-            return 0
+            return True
         except Exception as err:
+            #ToDO write to log instead of print
             print('Handling run-time error:', err)
-            return 1
-    return 1
+    return False
 
 def collect_traces():
     """
@@ -129,7 +129,6 @@ def collect_traces():
                         else:
                             trace.update(timestamp = int(time.time()))
                         trace.update(traceTimeentryUnix = trace['timestamp'])
-
                         traces.append(trace)
                         
     if moreQuery:
@@ -137,12 +136,12 @@ def collect_traces():
     # TODO: we need to get the rest hits here. 
     print("***total traces: "  + str(len(traces)))   
     t3 = int(time.time())
-    print("**** Time spend on making traces **** ", t3-t2)   
+    print("**** Time spend on making traces **** ", t3-t2)
 
     print ("**** Starting time for sending traces **** ", time.asctime(time.gmtime()))           
     for t in traces:
-        r = send_trace(t, "http://cmsrucio-trace-int.cern.ch", "CMS_trace_generator")
-        if r != 0:
+        r = send_trace(t, os.environ['RUCIO_TRACE_SERVER'], "CMS_trace_generator")
+        if not r :
             print("***Error when send trace ***")
             print(t)
     t4 = int(time.time())
