@@ -9,6 +9,21 @@ import time
 
 import requests
 
+QUERY_HEADER = '{"search_type":"query_then_fetch","ignore_unavailable":true}'
+WMA_URL = 'https://monit-grafana.cern.ch/api/datasources/proxy/9545/_msearch'
+SITE_MAP = {
+    'T1_US_FNAL': 'T1_US_FNAL_Disk',
+    'T1_DE_KIT': 'T1_DE_KIT_Disk',
+    'T1_ES_PIC': 'T1_ES_PIC_Disk',
+    'T1_RU_JINR': 'T1_RU_JINR_Disk',
+    'T1_FR_CCIN2P3': 'T1_FR_CCIN2P3_Disk',
+    'T1_UK_RAL': 'T1_UK_RAL_Disk',
+    'T1_IT_CNAF': 'T1_IT_CNAF_Disk',
+    'T2_CH_CERN_HLT': 'T2_CH_CERN',
+    'T2_CH_CERNBOX': 'T2_CH_CERN',
+    'T3_UK_SGrid_Oxford': 'T2_UK_London_IC',
+}
+
 
 def send_trace(trace, trace_endpoint, user_agent, retries=5):
     """
@@ -40,9 +55,6 @@ def collect_traces():
     print("**** Starting time **** ", time.asctime(time.gmtime()))
     t1 = int(time.time())
 
-    QUERY_HEADER = '{"search_type":"query_then_fetch","ignore_unavailable":true}'
-    WMA_URL = 'https://monit-grafana.cern.ch/api/datasources/proxy/9545/_msearch'
-
     with open('query_collect.json', 'r') as WMArchive_json:
         wma = json.load(WMArchive_json)
 
@@ -63,7 +75,7 @@ def collect_traces():
     headers = {'Authorization': 'Bearer %s' % os.environ['MONIT_TOKEN'],
                'Content-Type': 'application/json'}
 
-    r = requests.post(WMA_RUL, data=query, headers=headers)
+    r = requests.post(WMA_URL, data=query, headers=headers)
     if not (200 <= r.status_code <= 229):
         print("Error for query ES. Http error code: ", r.status_code)
         print(r.text)
@@ -80,11 +92,11 @@ def collect_traces():
         # print(json.dumps(value[0]))
         for v in value:
             # there are two ways to get the total hits and they shoube the same
-            l = len(v['hits']['hits'])
+            length = len(v['hits']['hits'])
             total = v['hits']['total']
-            if (l != total):
+            if length != total:
                 # TODO raise exception?
-                print("Error: result array size ", l, "is not eaual to total hits ", total)
+                print("Error: result array size ", length, "is not equal to total hits ", total)
                 exit(1)
             print("*** total number of hits: ", total)
             if total > 10000:
@@ -117,6 +129,8 @@ def collect_traces():
                         site = step['site']
 
                 if goodlfn and site:
+                    if site in SITE_MAP:
+                        site = SITE_MAP[site]
                     for g in goodlfn:
                         trace.update(
                             {'eventVersion': 'API_1.21.6', 'clientState': 'DONE', 'scope': 'cms', 'eventType': 'get',
@@ -144,7 +158,8 @@ def collect_traces():
 
     print("**** Starting time for sending traces **** ", time.asctime(time.gmtime()))
     for t in traces:
-        r = send_trace(t, os.environ['RUCIO_TRACE_SERVER'], "CMS_trace_generator")
+        trace_server = 'http://' + os.environ['RUCIO_TRACE_SERVER']
+        r = send_trace(t, trace_server, "CMS_trace_generator")
         if not r:
             print("***Error when send trace ***")
             print(t)
