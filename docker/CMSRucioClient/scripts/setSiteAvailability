@@ -41,6 +41,8 @@ for site in sites:
     rse = site['name']
     if rse in SKIP_SITES:
         continue
+    if rse.startswith('T3_'):
+        continue  # Until we get good metrics for Tier3s
     if rse in available_map:
         continue
     ssb_status = site.get('status', None)
