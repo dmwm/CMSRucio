@@ -1,0 +1,63 @@
+#!/usr/bin/env python
+# Copyright European Organization for Nuclear Research (CERN) 2013
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# You may not use this file except in compliance with the License.
+# You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+#
+# Authors:
+# - Donata Mielaikaite, <donata.mielaikaite@cern.ch>, 2020
+# - Jhonatan Amado, <j.amado@cern.ch>, 2020
+# - Fernando Garzon, <oscar.fernando.garzon.miguez@cern.ch>, 2020
+
+'''
+Probe to check the total amount of space locked uniquely by rucio
+'''
+from __future__ import print_function
+
+import sys
+from datetime import datetime
+from rucio.db.sqla.constants import RuleState
+from rucio.db.sqla.constants import RequestType
+from rucio.core import monitor
+from rucio.db.sqla import models
+from rucio.db.sqla.session import BASE, get_session
+from sqlalchemy import func
+import datetime
+import sys
+import traceback
+from rucio.core import monitor
+from rucio.core.rse import list_rses, get_rse_usage
+# Exit statuses
+OK, WARNING, CRITICAL, UNKNOWN = 0, 1, 2, 3
+
+if BASE.metadata.schema:
+    schema = BASE.metadata.schema + '.'
+else:
+    schema = ''
+
+if __name__ == "__main__":
+    try:
+        status = OK
+        session = get_session()
+        query = (session.query(models.RSE.rse, func.sum(models.ReplicaLock.bytes))
+            .join(models.RSE, (models.ReplicaLock.rse_id == models.RSE.id))
+            .filter(models.ReplicaLock.account.like('%sync%')).group_by(models.RSE.rse))
+        result = query.all()
+        print('Space uniquely in Rucio')
+        for rse in list_rses():
+            limits = get_rse_usage(rse['id'])
+            for usage in limits:
+                if usage['source'] == 'rucio':
+                    used_by_rucio = usage['used']
+                    for node, used in result:
+                        if rse['rse'] == node:
+                            used_by_rucio = used_by_rucio - used
+                            break
+                    print(rse['rse'], used_by_rucio)
+                    monitor.record_gauge(stat='judge.used_space_uniquely_by_rucio.%s' %rse['rse'], value=used_by_rucio)
+    except Exception as error:
+        print(error)
+        status = UNKNOWN
+        sys.exit(status)
+    sys.exit(OK)
