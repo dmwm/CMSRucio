@@ -1,8 +1,14 @@
+#! /usr/bin/env python
+
+# Should also be fine in python3
+
+from __future__ import print_function
+
+
 from rucio.client.client import Client
 from rucio.common.exception import RucioException
 from requests.exceptions import ChunkedEncodingError
 import pdb
-from __future__ import print_function
 
 TARGET_RSE = 'T2_US_MIT'
 
