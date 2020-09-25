@@ -18,6 +18,6 @@ client = Client()
 unapproved_rules = client.list_replication_rules(filters={'state': 'W'})
 
 for rule in unapproved_rules:
-    matching_rses = list(client.list_rses(rule['rse_expression']))
+    matching_rses = [rse['rse'] for rse in client.list_rses(rule['rse_expression'])]
     if TARGET_RSE in matching_rses:
         print('Rule %s on %s:%s for %s needs to be approved' % (rule['id'], rule['scope'], rule['name'], rule['account']))
