@@ -5,22 +5,19 @@ And script for updating the distances.
 """
 
 import argparse
+import json
 import logging
 import os
-
 import re
-import json
 
-from phedex import PhEDEx, DEFAULT_PHEDEX_INST, DEFAULT_DATASVC_URL
 from rucio.client.client import Client
-
-#    {'dest': {'rse': r'.*(?<!_TMP)(?<!_TEST)$'}, 'dest': r'\S+_(TEST|TMP)'},
 
 DEFAULT_EXCLUDE_LINKS = (
     {'dest': {'type': 'temp'}, 'src': {}},
 )
 
-DEFAULT_DISTANCE_RULES = {'site': 13, 'region&country': 10, 'country': 7, 'region': 4, 'other': 1}
+DEFAULT_DISTANCE_RULES = {'site': 1, 'region&country': 4, 'country': 7, 'region': 10, 'other': 13}
+
 
 class LinksMatrix(object):
     """
@@ -28,13 +25,12 @@ class LinksMatrix(object):
     """
 
     def __init__(self, account, auth_type=None, exclude=DEFAULT_EXCLUDE_LINKS,
-                 distance=None, phedex_links=False, rselist=None,
-                 instance=DEFAULT_PHEDEX_INST, datasvc=DEFAULT_DATASVC_URL):
+                 distance=None, phedex_links=False, rselist=None):
 
         if distance is None:
             distance = DEFAULT_DISTANCE_RULES
 
-        self.pcli = PhEDEx(instance=instance, datasvc=datasvc)
+        self.pcli = None
         self.rcli = Client(account=account, auth_type=auth_type)
 
         self._get_rselist(rselist)
@@ -53,7 +49,7 @@ class LinksMatrix(object):
 
             try:
                 self.rselist.append({
-                    'rse':  rse,
+                    'rse': rse,
                     'pnn': attrs['pnn'],
                     'type': attrs['cms_type'],
                     'country': attrs['country'],
@@ -105,7 +101,6 @@ class LinksMatrix(object):
                 self.links[src_rse][dest_rse] = link
 
         self._filter_matrix(exclude)
-
 
     def _filter_matrix(self, exclude):
 
@@ -197,15 +192,11 @@ class LinksMatrix(object):
 if __name__ == '__main__':
     PARSER = argparse.ArgumentParser(
         description='''CLI for updating a CMS RSE's links.''',
-        )
+    )
     PARSER.add_argument('-v', '--verbose', dest='debug', action='store_true',
                         help='increase output verbosity')
     PARSER.add_argument('-t', '--dry', dest='dry', action='store_true',
                         help='only printout what would have been done')
-    PARSER.add_argument('--inst', dest='instance', default=DEFAULT_PHEDEX_INST,
-                        help='PhEDEx instance, default %s.' % DEFAULT_PHEDEX_INST)
-    PARSER.add_argument('--datasvc', dest='datasvc', default=DEFAULT_DATASVC_URL,
-                        help='Data service URL. default %s.' % DEFAULT_DATASVC_URL)
     PARSER.add_argument('--rse', dest='rselist', help='RSE. Can be multiple, default all.',
                         action='append', default=None)
     PARSER.add_argument('--srcselect', dest='srcselect',
@@ -216,10 +207,10 @@ if __name__ == '__main__':
                         default=r'\S+')
     PARSER.add_argument('--distance', dest='distance', default=None,
                         help='rules for different RSE distances, default %s' %
-                        json.dumps(DEFAULT_DISTANCE_RULES))
+                             json.dumps(DEFAULT_DISTANCE_RULES))
     PARSER.add_argument('--exclude', dest='exclude', default=None,
                         help='exclde rules for links, default %s' %
-                        json.dumps(DEFAULT_EXCLUDE_LINKS))
+                             json.dumps(DEFAULT_EXCLUDE_LINKS))
     PARSER.add_argument('--account', dest='account',
                         default=os.environ['RUCIO_ACCOUNT'],
                         help='Rucio account. default RUCIO_ACCOUNT')
@@ -229,7 +220,6 @@ if __name__ == '__main__':
                         help='Overwrite distances that have changed.')
     PARSER.add_argument('--disable', dest='disable', action='store_true',
                         help='Disable links that should not be there.')
-
 
     OPTIONS = PARSER.parse_args()
 
@@ -249,8 +239,6 @@ if __name__ == '__main__':
         distance=OPTIONS.distance,
         phedex_links=OPTIONS.phedex_links,
         rselist=OPTIONS.rselist,
-        instance=OPTIONS.instance,
-        datasvc=OPTIONS.datasvc
     ).update(
         overwrite=OPTIONS.overwrite,
         disable=OPTIONS.disable,
@@ -260,11 +248,8 @@ if __name__ == '__main__':
     )
 
     logging.debug(str(COUNT['checked']))
-
     logging.debug(str(COUNT['updated']))
-
     logging.debug(str(COUNT['disabled']))
-
     logging.debug(str(COUNT['created']))
 
     logging.info("Link summary: updated %d, disabled %d, created %d;",
