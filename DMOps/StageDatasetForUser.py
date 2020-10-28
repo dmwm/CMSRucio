@@ -3,16 +3,15 @@
 from __future__ import print_function
 
 import argparse
-import sys
 
 from rucio.client import Client
+from rucio.common.exception import DuplicateRule
 
 # Fix Python 2.x.
 try:
     input = raw_input
 except NameError:
     pass
-
 
 RSE_EXPRESSION = 'ddm_quota>0&tier=2&rse_type=DISK'
 WEIGHT = 'ddm_quota'
@@ -21,51 +20,60 @@ rucio = Client()
 
 parser = argparse.ArgumentParser(description='Stage a dataset for CRAB user')
 parser.add_argument('container', action='store',
-                    help='the container (CMS dataset) to stage')
+                    help='the containers (CMS datasets) to stage - comma separated')
 parser.add_argument('user', action='store',
                     help='the user name or email (used in the comment)')
 
 args = parser.parse_args()
 
-blocks = rucio.list_content(scope='cms', name=args.container)
+containers = args.container.split(',')
 
-bytes = 0
-on_disk_bytes = 0
-for block in blocks:
+for container in containers:
 
-    block_replicas = rucio.list_dataset_replicas(scope=block['scope'], name=block['name'], deep=True)
-    block_bytes = 0
-    disk_block_bytes = 0
-    for replica in block_replicas:
-        block_bytes = replica['bytes']
-        if replica['state'] == 'AVAILABLE' and '_Tape' not in replica['rse']:
-            disk_block_bytes = replica['available_bytes']
+    blocks = rucio.list_content(scope='cms', name=container)
 
-    bytes += block_bytes
-    on_disk_bytes += disk_block_bytes
+    bytes = 0
+    on_disk_bytes = 0
+    for block in blocks:
 
-print('Dataset is %9.3f TB with %9.3f TB not on disk.' % (bytes / 1e12, (bytes - on_disk_bytes) / 1e12))
+        block_replicas = rucio.list_dataset_replicas(scope=block['scope'], name=block['name'], deep=True)
+        block_bytes = 0
+        disk_block_bytes = 0
+        for replica in block_replicas:
+            block_bytes = replica['bytes']
+            if replica['state'] == 'AVAILABLE' and '_Tape' not in replica['rse']:
+                disk_block_bytes = replica['available_bytes']
 
-yes_no = input('Would you like to make the rule? ')
+        bytes += block_bytes
+        on_disk_bytes += disk_block_bytes
 
-if yes_no not in ['y', 'Y']:
-    sys.exit()
+    print('Dataset is %9.3f TB with %9.3f TB not on disk.' % (bytes / 1e12, (bytes - on_disk_bytes) / 1e12))
 
-dids = [{'scope': 'cms', 'name': args.container}]
+    yes_no = input('Would you like to make the rule? ')
 
-days = 14 * 24 * 3600
+    if yes_no not in ['y', 'Y']:
+        continue
 
-rules = rucio.add_replication_rule(dids=dids, copies=1, rse_expression=RSE_EXPRESSION, weight=WEIGHT, lifetime=days,
-                                   account='crab_tape_recall', activity='Analysis Input',
-                                   comment='Staged from tape for %s' % args.user, ask_approval=False, asynchronous=True,
-                                   )
+    dids = [{'scope': 'cms', 'name': container}]
 
-rule = rules[0]
+    days = 14 * 24 * 3600
 
-print("Rule %s has been created for %s" % (rule, args.user))
-print("This rule can be monitored through DAS by checking the dataset or directly through Rucio")
-print("with 'rucio rule-info %s' " % rule)
+    try:
+        rules = rucio.add_replication_rule(dids=dids, copies=1, rse_expression=RSE_EXPRESSION, weight=WEIGHT,
+                                           lifetime=days, account='crab_tape_recall', activity='Analysis Input',
+                                           comment='Staged from tape for %s' % args.user, ask_approval=False,
+                                           asynchronous=True,
+                                           )
 
-rule_info = rucio.get_replication_rule(rule)
+        rule = rules[0]
 
-print('This rule expires at %s after which the data may be removed if not used occassionally' % rule_info['expires_at'])
+        print("Rule %s has been created for %s" % (rule, args.user))
+        print("This rule can be monitored through DAS by checking the dataset or directly through Rucio")
+        print("with 'rucio rule-info %s' " % rule)
+
+        rule_info = rucio.get_replication_rule(rule)
+
+        print('This rule expires at %s after which the data may be removed if not used occassionally'
+              % rule_info['expires_at'])
+    except DuplicateRule:
+        print('An exact match for the rule on %s already exists. No new rule made.' % container)
