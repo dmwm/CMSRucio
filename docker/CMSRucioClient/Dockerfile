@@ -58,11 +58,11 @@ RUN yum install -y which krb5-devel gridsite \
 RUN pip install statsd python-gitlab
 
 # Install Rucio and other stuff
-RUN pip install rucio-clients multiprocessing-logging jsonschema PyYAML pystatsd
+RUN pip install rucio-clients==1.22.7 multiprocessing-logging jsonschema PyYAML pystatsd
 
 RUN pip3 install --upgrade pip
 RUN pip3 install --upgrade setuptools
-RUN pip3 install rucio-clients
+RUN pip3 install rucio-clients==1.22.7
 RUN pip3 install python-gitlab
 
 # Install DAS client to pull info from PhEDEx/DBS
@@ -78,7 +78,6 @@ COPY rucio-testbed.cfg /opt/rucio-testbed/etc/rucio.cfg
 COPY rucio-dev.cfg /opt/rucio-dev/etc/rucio.cfg
 COPY rucio-int.cfg /opt/rucio-int/etc/rucio.cfg
 COPY rucio-prod.cfg /opt/rucio-prod/etc/rucio.cfg
-COPY rucio-futureprod.cfg /opt/rucio-futureprod/etc/rucio.cfg
 
 # Pull some useful stuff out of git
 WORKDIR /root
@@ -89,7 +88,7 @@ RUN git clone https://github.com/dmwm/CMSRucio.git
 #ADD adapters.py /usr/lib/python2.7/site-packages/requests/adapters.py
 
 # Our schema
-ADD https://raw.githubusercontent.com/ericvaandering/rucio/cms_nano2/lib/rucio/common/schema/cms.py /usr/lib/python2.7/site-packages/rucio/common/schema/cms.py
+ADD https://raw.githubusercontent.com/ericvaandering/rucio/cms_nano8/lib/rucio/common/schema/cms.py /usr/lib/python2.7/site-packages/rucio/common/schema/cms.py
 RUN python -m compileall /usr/lib/python2.7/site-packages/rucio/common/schema
 
 
