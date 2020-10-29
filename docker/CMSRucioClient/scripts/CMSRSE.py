@@ -160,7 +160,7 @@ class CMSRSE:
             with some simple settings
             """
 
-            algorithm = 'identity'
+            algorithm = 'cmstfc'
             try:
                 prefix_regex = re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+):(\d+)(\/.*\=)(.*)')
                 prefix_match = prefix_regex.match(proto_json['prefix'])
