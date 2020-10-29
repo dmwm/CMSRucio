@@ -25,21 +25,26 @@ def cmstfc(scope, name, rse, rse_attrs, proto_attrs):
 
     # Getting the TFC
     try:
-        tfc = proto_attrs['extended_attributes']['tfc']
-        tfc_proto = proto_attrs['extended_attributes']['tfc_proto']
+        if proto_attrs.get('extended_attributes', None):
+            tfc = proto_attrs['extended_attributes']['tfc']
+            tfc_proto = proto_attrs['extended_attributes']['tfc_proto']
 
-        # matching the lfn into a pfn
-        pfn = tfc_lfn2pfn(name, tfc, tfc_proto)
+            # matching the lfn into a pfn
+            pfn = tfc_lfn2pfn(name, tfc, tfc_proto)
 
-        # now we have to remove the protocol part of the pfn
-        proto_pfn = proto_attrs['scheme'] + '://' + proto_attrs['hostname'] + ':' + str(proto_attrs['port'])
-        if 'extended_attributes' in proto_attrs and \
-                'web_service_path' in proto_attrs['extended_attributes']:
-            proto_pfn += proto_attrs['extended_attributes']['web_service_path']
-        proto_pfn += proto_attrs['prefix']
+            # now we have to remove the protocol part of the pfn
+            proto_pfn = proto_attrs['scheme'] + '://' + proto_attrs['hostname'] + ':' + str(proto_attrs['port'])
+            if 'extended_attributes' in proto_attrs and \
+                    'web_service_path' in proto_attrs['extended_attributes']:
+                proto_pfn += proto_attrs['extended_attributes']['web_service_path']
+            proto_pfn += proto_attrs['prefix']
 
-        proto_less = pfn.replace(proto_pfn, "")
-        return re.sub('/+', '/', proto_less)  # Remove unnecessary double slashes
+            proto_less = pfn.replace(proto_pfn, "")
+            return re.sub('/+', '/', proto_less)  # Remove unnecessary double slashes
+        else:
+            path = '/' + name
+            path = re.sub('/+', '/', path)
+            return path
     except TypeError:
         raise TypeError('Cannot determine PFN for LFN %s:%s at %s with proto %s' %
                         scope, name, rse, proto_attrs)
@@ -113,6 +118,13 @@ if __name__ == '__main__':
         'scheme': 'gsiftp',
         'port': '2811'
     }
+    PROTO_ATTRS4 = {
+        'extended_attributes': None,
+        'hostname': 'se01.cmsaf.mit.edu',
+        'prefix': '/mnt/hadoop/cms/',
+        'scheme': 'gsiftp',
+        'port': '2811'
+    }
 
 
     def test_tfc_mapping(name, proto_attrs, pfn, scope="cms"):
@@ -155,4 +167,14 @@ if __name__ == '__main__':
         "/store/data/some/path/file.root",
         PROTO_ATTRS3,
         "cms/store/data/some/path/file.root"
+    )
+    test_tfc_mapping(
+        "//store/data/some/path/file.root",
+        PROTO_ATTRS4,
+        "/store/data/some/path/file.root"
+    )
+    test_tfc_mapping(
+        "//store/user/rucio//ewv/some/path/file.root",
+        PROTO_ATTRS4,
+        "/store/user/rucio/ewv/some/path/file.root"
     )
