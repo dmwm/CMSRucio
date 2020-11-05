@@ -43,12 +43,6 @@ rules = [
         "grouping": "ALL",
         "weight": "ddm_quota",
     },
-    {
-        "copies": 1,
-        "rse_expression": "T1_FR_CCIN2P3_Tape|T1_UK_RAL_Tape|T1_RU_JINR_Tape|T1_IT_CNAF_Tape",
-        "activity": "Production Output",
-        "grouping": "ALL",
-    },
 ]
 
 res = client.update_subscription(
@@ -74,14 +68,7 @@ filter = {
     'project': ['RelVal'],
 }
 
-rules = [
-    {
-        "copies": 1,
-        "rse_expression": "T2_CH_CERN",
-        "activity": "Production Output",
-        "grouping": "ALL",
-    },
-]
+rules = None
 
 res = client.update_subscription(
     name='RelValNanoAOD',
@@ -89,7 +76,7 @@ res = client.update_subscription(
     filter=filter,
     replication_rules=rules,
     comments='Controls the distribution of RelVal output NanoAOD',
-    lifetime=False,
+    lifetime=0,
     retroactive=False,  # Not a supported feature
     dry_run=False,  # BUG: this is ignored
 )
