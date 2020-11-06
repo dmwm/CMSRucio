@@ -29,9 +29,9 @@ echo "Syncing account roles for managers and group accounts"
 #echo "Syncing RSEs"
 #./cmsrses.py --pnn all --select 'T2_\S+' --exclude 'T2_MY_\S+' --exclude '\S+CERN\S+' --type real --type temp --type test --fts https://fts3.cern.ch:8446
 #./cmsrses.py --pnn all --select 'T1_\S+' --exclude '.*MSS' --exclude '\S+_Tape_Test' --type real --type test --fts https://fts3.cern.ch:8446
-./cmsrses.py --pnn all --select 'T3_CH_PSI' --select 'T3_TW_NTU_HEP' --select  'T3_US_Brown' \
-                       --select 'T3_US_TAMU'  --type real --fts https://fts3.cern.ch:8446
-
+#./cmsrses.py --pnn all --select 'T3_CH_PSI' --select 'T3_TW_NTU_HEP' --select  'T3_US_Brown' \
+#                       --select 'T3_US_TAMU'  --type real --fts https://fts3.cern.ch:8446
+#
 
 #./cmsrses.py --pnn all --select 'T3_TW_NCU'  --type real --type temp  --fts https://fts3.cern.ch:8446
 
