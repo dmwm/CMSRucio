@@ -3,6 +3,9 @@
 """
 LFN-to-path algorithms for TFC
 """
+
+from __future__ import print_function
+
 import re
 
 REGISTER = True
@@ -25,7 +28,9 @@ def cmstfc(scope, name, rse, rse_attrs, proto_attrs):
 
     # Getting the TFC
     try:
-        if proto_attrs.get('extended_attributes', None):
+        if (proto_attrs.get('extended_attributes', None)
+                and 'tfc' in proto_attrs['extended_attributes']
+                and 'tfc' in proto_attrs['extended_attributes']):
             tfc = proto_attrs['extended_attributes']['tfc']
             tfc_proto = proto_attrs['extended_attributes']['tfc_proto']
 
@@ -34,8 +39,7 @@ def cmstfc(scope, name, rse, rse_attrs, proto_attrs):
 
             # now we have to remove the protocol part of the pfn
             proto_pfn = proto_attrs['scheme'] + '://' + proto_attrs['hostname'] + ':' + str(proto_attrs['port'])
-            if 'extended_attributes' in proto_attrs and \
-                    'web_service_path' in proto_attrs['extended_attributes']:
+            if 'web_service_path' in proto_attrs['extended_attributes']:
                 proto_pfn += proto_attrs['extended_attributes']['web_service_path']
             proto_pfn += proto_attrs['prefix']
 
@@ -46,8 +50,9 @@ def cmstfc(scope, name, rse, rse_attrs, proto_attrs):
             path = re.sub('/+', '/', path)
             return path
     except TypeError:
-        raise TypeError('Cannot determine PFN for LFN %s:%s at %s with proto %s' %
-                        scope, name, rse, proto_attrs)
+        raise TypeError('Cannot determine PFN for LFN %s:%s at %s with proto %s'
+                        % scope, name, rse, proto_attrs)
+
 
 def tfc_lfn2pfn(lfn, tfc, proto, depth=0):
     """
@@ -134,9 +139,9 @@ if __name__ == '__main__':
 
         mapped_pfn = cmstfc(scope, name, None, None, proto_attrs)
         if mapped_pfn == pfn:
-            print "%s:%s -> %s" % (scope, name, pfn)
+            print("%s:%s -> %s" % (scope, name, pfn))
         else:
-            print "FAILURE: %s:%s -> %s (expected %s)" % (scope, name, mapped_pfn, pfn)
+            print("FAILURE: %s:%s -> %s (expected %s)" % (scope, name, mapped_pfn, pfn))
 
 
     test_tfc_mapping(
