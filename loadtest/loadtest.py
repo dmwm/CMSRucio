@@ -1,5 +1,9 @@
+import time
+import math
+import random
 import logging
 import datetime
+import threading
 from rucio.client import Client
 from rucio.client.uploadclient import UploadClient
 from rucio.common.exception import (
@@ -17,6 +21,8 @@ ALLOWED_FILESIZES = {
 LOADTEST_DATASET_FMT = "/LoadTestSource/{rse}/TEST#{filesize}"
 LOADTEST_LFNDIR_FMT = "/store/test/loadtest/source/{rse}/"
 LOADTEST_LFNBASE_FMT = "urandom.{filesize}.file{filenumber:04d}"
+DEFAULT_RULE_COMMENT = "rate:100kbps"
+ACTIVE = True
 
 
 def generate_file(basename, nbytes):
@@ -106,17 +112,107 @@ def upload_source_data(client, uploader, rse, filesize, filenumber):
     return False
 
 
-if __name__ == "__main__":
-    logging.basicConfig(
-        format="%(asctime)s %(name)s:%(levelname)s:%(message)s",
-        level=logging.INFO,
+def parse_rate(comment):
+    si_prefix = {"k": 1e3, "M": 1e6, "G": 1e9}
+    if comment is None:
+        comment = DEFAULT_RULE_COMMENT
+    if comment.startswith("rate:") and comment.endswith("bps"):
+        number = comment[5:-3]
+        if number[-1] in si_prefix:
+            return float(number[:-1]) * si_prefix[number[-1]]
+        else:
+            return float(number)
+    raise ValueError("Rule comment {comment} not parseable".format(comment=comment))
+
+
+def update_loadtest(
+    client, source_rse, dest_rse, source_files, rule, dataset, account, activity
+):
+    links = client.get_distance(source_rse, dest_rse)
+    if len(links) == 0 and rule is not None:
+        logger.info(
+            "No link between {source_rse} and {dest_rse}, removing rule {rule_id}".format(
+                source_rse=source_rse, dest_rse=dest_rse, rule_id=rule["id"]
+            )
+        )
+        client.delete_replication_rule(rule["id"])
+        return None
+    elif len(links) == 0:
+        logger.info(
+            "No link between {source_rse} and {dest_rse}, skipping load test".format(
+                source_rse=source_rse, dest_rse=dest_rse
+            )
+        )
+        return None
+    elif len(links) > 1:
+        logger.error(
+            "I have no idea what it means to have multiple links, carrying on..."
+        )
+        return None
+    if rule is None:
+        logger.info(
+            "New link between {source_rse} and {dest_rse}, creating a load test rule this cycle".format(
+                source_rse=source_rse, dest_rse=dest_rse
+            )
+        )
+        rule = {
+            "dids": [{"scope": "cms", "name": dataset}],
+            "copies": 1,
+            "rse_expression": dest_rse,
+            "source_replica_expression": source_rse,
+            "account": account,
+            "activity": activity,
+            "purge_replicas": True,
+            "ignore_availability": True,
+            "grouping": "DATASET",
+            "comment": DEFAULT_RULE_COMMENT,
+        }
+        logger.debug("Creating rule: %r" % rule)
+        client.add_replication_rule(**rule)
+        return False
+    if rule["state"] != "OK":
+        logger.info(
+            "Existing link between {source_rse} and {dest_rse} with load test rule {rule_id} is in state {rule_state}, will skip load test replica update".format(
+                source_rse=source_rse,
+                dest_rse=dest_rse,
+                rule_id=rule["id"],
+                rule_state=rule["state"],
+            )
+        )
+        return False
+    update_dt = (datetime.datetime.utcnow() - rule["updated_at"]).total_seconds()
+    # judge-repairer will re-transfer after 2h
+    # so max rate would be filesize * nfiles / (2*3600) = 300 kbps for defaults
+    # we eventually want to calibrate this to resubmit targeting the desired avg. rate
+    target_rate = parse_rate(rule["comments"])
+    data_volume = 8 * sum(file["bytes"] for file in source_files)
+    time_constant = data_volume / target_rate
+    if random.random() < math.exp(-update_dt / time_constant):
+        return False
+    logger.info(
+        "Link between {source_rse} and {dest_rse} with load test rule {rule_id} last updated {update_dt}s ago (tau={time_constant}), marking destination replicas unavailable".format(
+            source_rse=source_rse,
+            dest_rse=dest_rse,
+            rule_id=rule["id"],
+            update_dt=update_dt,
+            time_constant=time_constant,
+        )
     )
+    replicas = [
+        {"scope": file["scope"], "name": file["name"], "state": "U"}
+        for file in source_files
+    ]
+    logger.debug("Updating status for replicas: %r at RSE %s" % (replicas, dest_rse))
+    client.update_replicas_states(dest_rse, replicas)
+    return True
+
+
+def run():
     account = "transfer_ops"
     activity = "Functional Test"
     filesize = "270MB"
-    default_comment = "load:100kbps"
-    source_rse_expression = "T2_US_Wisconsin_Test"
-    dest_rse_expression = "T2_US_MIT_Test|T2_US_UCSD_Test"
+    source_rse_expression = "T2_US_Wisconsin_Test|T2_US_MIT_Test|T2_US_UCSD_Test"
+    dest_rse_expression = "T2_US_Wisconsin_Test|T2_US_MIT_Test|T2_US_UCSD_Test"
 
     if filesize not in ALLOWED_FILESIZES:
         raise ValueError("File size {filesize} not allowed".format(filesize=filesize))
@@ -129,101 +225,72 @@ if __name__ == "__main__":
     for rse in set(source_rses) | set(dest_rses):
         ensure_rse_self_expression(client, rse)
 
-    for source_rse in source_rses:
-        dataset = LOADTEST_DATASET_FMT.format(rse=source_rse, filesize=filesize)
-        try:
-            source_files = list(client.list_files("cms", dataset))
-        except DataIdentifierNotFound:
-            logger.info(
-                "RSE {source_rse} has no source files, creating one".format(
-                    source_rse=source_rse
-                )
-            )
-            upload_source_data(client, uploader, source_rse, filesize, 0)
-            source_files = list(client.list_files("cms", dataset))
-
-        dest_rules = client.list_replication_rules(
-            {
-                "scope": "cms",
-                "name": dataset,
-                "account": account,
-                "activity": activity,
-            }
-        )
-        dest_rules = {
-            rule["rse_expression"]: rule
-            for rule in dest_rules
-            if rule["source_replica_expression"] == source_rse
-        }
-
-        for dest_rse in dest_rses:
-            if dest_rse == source_rse:
-                continue
-            links = client.get_distance(source_rse, dest_rse)
-            if len(links) == 0 and dest_rse in dest_rules:
-                rule = dest_rules[dest_rse]
+    while ACTIVE:
+        cycle_start = datetime.datetime.utcnow()
+        for source_rse in source_rses:
+            dataset = LOADTEST_DATASET_FMT.format(rse=source_rse, filesize=filesize)
+            try:
+                source_files = list(client.list_files("cms", dataset))
+            except DataIdentifierNotFound:
                 logger.info(
-                    "No link between {source_rse} and {dest_rse}, removing rule {rule_id}".format(
-                        source_rse=source_rse, dest_rse=dest_rse, rule_id=rule["id"]
+                    "RSE {source_rse} has no source files, creating one".format(
+                        source_rse=source_rse
                     )
                 )
-                client.delete_replication_rule(rule["id"])
-            elif len(links) == 0:
-                continue
-            elif len(links) > 1:
-                logger.error(
-                    "I have no idea what it means to have multiple links, carrying on..."
-                )
-            if dest_rse not in dest_rules:
-                logger.info(
-                    "New link between {source_rse} and {dest_rse}, creating a load test rule this cycle".format(
-                        source_rse=source_rse, dest_rse=dest_rse
-                    )
-                )
-                rule = {
-                    "dids": [{"scope": "cms", "name": dataset}],
-                    "copies": 1,
-                    "rse_expression": dest_rse,
-                    "source_replica_expression": source_rse,
+                upload_source_data(client, uploader, source_rse, filesize, 0)
+                source_files = list(client.list_files("cms", dataset))
+
+            dest_rules = client.list_replication_rules(
+                {
+                    "scope": "cms",
+                    "name": dataset,
                     "account": account,
                     "activity": activity,
-                    "purge_replicas": True,
-                    "ignore_availability": True,
-                    "grouping": "DATASET",
                 }
-                logger.debug("Creating rule: %r" % rule)
-                client.add_replication_rule(**rule)
-                continue
-            rule = dest_rules[dest_rse]
-            if rule["state"] != "OK":
-                logger.info(
-                    "Existing link between {source_rse} and {dest_rse} with load test rule {rule_id} is in state {rule_state}, will skip load test replica update".format(
-                        source_rse=source_rse,
-                        dest_rse=dest_rse,
-                        rule_id=rule["id"],
-                        rule_state=rule["state"],
-                    )
-                )
-                continue
-            update_dt = (
-                datetime.datetime.utcnow() - rule["updated_at"]
-            ).total_seconds()
-            logger.info(
-                "Link between {source_rse} and {dest_rse} with load test rule {rule_id} last updated {update_dt}s ago, marking destination replicas unavailable".format(
-                    source_rse=source_rse,
-                    dest_rse=dest_rse,
-                    rule_id=rule["id"],
-                    update_dt=update_dt,
-                )
             )
-            replicas = [
-                {"scope": file["scope"], "name": file["name"], "state": "U"}
-                for file in source_files
-            ]
-            logger.debug(
-                "Updating status for replicas: %r at RSE %s" % (replicas, dest_rse)
-            )
-            client.update_replicas_states(dest_rse, replicas)
-            # judge-repairer will re-transfer after 2h
-            # so max rate would be filesize * nfiles / (2*3600)
-            # = 300 kbps for defaults
+            dest_rules = {
+                rule["rse_expression"]: rule
+                for rule in dest_rules
+                if rule["source_replica_expression"] == source_rse
+            }
+
+            for dest_rse in dest_rses:
+                if dest_rse == source_rse:
+                    continue
+                dest_rule = dest_rules.get(dest_rse, None)
+                update_loadtest(
+                    client,
+                    source_rse,
+                    dest_rse,
+                    source_files,
+                    dest_rule,
+                    dataset,
+                    account,
+                    activity,
+                )
+
+        cycle_time = (datetime.datetime.utcnow() - cycle_start).total_seconds()
+        logger.info(
+            "Completed loadtest cycle in {cycle_time}s".format(cycle_time=cycle_time)
+        )
+        while cycle_time < 60:
+            time.sleep(1)
+            cycle_time += 1
+
+
+if __name__ == "__main__":
+    logging.basicConfig(
+        format="%(asctime)s %(name)s:%(levelname)s:%(message)s",
+        level=logging.INFO,
+    )
+    thread = threading.Thread(target=run)
+    thread.start()
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        pass
+
+    ACTIVE = False
+    thread.join()
+    exit(0)
