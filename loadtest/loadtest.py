@@ -1,5 +1,4 @@
 import time
-import math
 import random
 import logging
 import datetime
@@ -22,6 +21,7 @@ LOADTEST_DATASET_FMT = "/LoadTestSource/{rse}/TEST#{filesize}"
 LOADTEST_LFNDIR_FMT = "/store/test/loadtest/source/{rse}/"
 LOADTEST_LFNBASE_FMT = "urandom.{filesize}.file{filenumber:04d}"
 DEFAULT_RULE_COMMENT = "rate:100kbps"
+TARGET_CYCLE_TIME = 60
 ACTIVE = True
 
 
@@ -186,16 +186,18 @@ def update_loadtest(
     # we eventually want to calibrate this to resubmit targeting the desired avg. rate
     target_rate = parse_rate(rule["comments"])
     data_volume = 8 * sum(file["bytes"] for file in source_files)
-    time_constant = data_volume / target_rate
-    if random.random() < math.exp(-update_dt / time_constant):
+    delay_time = data_volume / target_rate
+    delay_jitter = min(0.2 * delay_time, TARGET_CYCLE_TIME / 2)
+    min_time = delay_time - delay_jitter
+    if update_dt < min_time or random.random() > delay_jitter / TARGET_CYCLE_TIME:
         return False
     logger.info(
-        "Link between {source_rse} and {dest_rse} with load test rule {rule_id} last updated {update_dt}s ago (tau={time_constant}), marking destination replicas unavailable".format(
+        "Link between {source_rse} and {dest_rse} with load test rule {rule_id} last updated {update_dt}s ago (target={delay_time}), marking destination replicas unavailable".format(
             source_rse=source_rse,
             dest_rse=dest_rse,
             rule_id=rule["id"],
             update_dt=update_dt,
-            time_constant=time_constant,
+            delay_time=delay_time,
         )
     )
     replicas = [
@@ -211,8 +213,8 @@ def run():
     account = "transfer_ops"
     activity = "Functional Test"
     filesize = "270MB"
-    source_rse_expression = "T2_US_Wisconsin_Test|T2_US_MIT_Test|T2_US_UCSD_Test"
-    dest_rse_expression = "T2_US_Wisconsin_Test|T2_US_MIT_Test|T2_US_UCSD_Test"
+    source_rse_expression = "T2_US_Wisconsin_Test|T2_US_MIT_Test|T2_US_UCSD_Test|T1_ES_PIC_Disk_Test|T2_IN_TIFR_Test"
+    dest_rse_expression = "T2_US_Wisconsin_Test|T2_US_MIT_Test|T2_US_UCSD_Test|T1_ES_PIC_Disk_Test|T2_IN_TIFR_Test"
 
     if filesize not in ALLOWED_FILESIZES:
         raise ValueError("File size {filesize} not allowed".format(filesize=filesize))
@@ -273,7 +275,7 @@ def run():
         logger.info(
             "Completed loadtest cycle in {cycle_time}s".format(cycle_time=cycle_time)
         )
-        while cycle_time < 60:
+        while cycle_time < TARGET_CYCLE_TIME:
             time.sleep(1)
             cycle_time += 1
 
