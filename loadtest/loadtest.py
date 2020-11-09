@@ -184,12 +184,16 @@ def update_loadtest(
     # judge-repairer will re-transfer after 2h
     # so max rate would be filesize * nfiles / (2*3600) = 300 kbps for defaults
     # we eventually want to calibrate this to resubmit targeting the desired avg. rate
-    target_rate = parse_rate(rule["comments"])
+    try:
+        target_rate = parse_rate(rule["comments"])
+    except ValueError as ex:
+        logger.error("Error parsing loadtest rule {rule_id}: {message}".format(rule_id=rule["id"], message=ex.message))
+        return False
     data_volume = 8 * sum(file["bytes"] for file in source_files)
     delay_time = data_volume / target_rate
-    delay_jitter = min(0.2 * delay_time, TARGET_CYCLE_TIME / 2)
+    delay_jitter = max(0.2 * delay_time, 2 * TARGET_CYCLE_TIME)
     min_time = delay_time - delay_jitter
-    if update_dt < min_time or random.random() > delay_jitter / TARGET_CYCLE_TIME:
+    if update_dt < min_time or random.random() > TARGET_CYCLE_TIME / delay_jitter:
         return False
     logger.info(
         "Link between {source_rse} and {dest_rse} with load test rule {rule_id} last updated {update_dt}s ago (target={delay_time}), marking destination replicas unavailable".format(
@@ -276,8 +280,9 @@ def run():
             "Completed loadtest cycle in {cycle_time}s".format(cycle_time=cycle_time)
         )
         while cycle_time < TARGET_CYCLE_TIME:
-            time.sleep(1)
-            cycle_time += 1
+            dt = min(1, TARGET_CYCLE_TIME - cycle_time + 1e-3)
+            time.sleep(dt)
+            cycle_time += dt
 
 
 if __name__ == "__main__":
