@@ -12,8 +12,10 @@ from rucio.common.exception import RSEProtocolNotSupported, RSENotFound
 
 APPROVAL_REQUIRED = ['T1_DE_KIT_Tape', 'T1_ES_PIC_Tape', 'T1_RU_JINR_Tape', 'T1_UK_RAL_Tape', 'T1_US_FNAL_Tape']
 DOMAINS_BY_TYPE = {
-    'real': {'wan': {'read': 1, 'write': 0, 'third_party_copy': 1, 'delete': 0},
-             'lan': {'read': 0, 'write': 0, 'delete': 0}},
+    'prod-real': {'wan': {'read': 1, 'write': 1, 'third_party_copy': 1, 'delete': 1},
+                  'lan': {'read': 0, 'write': 0, 'delete': 0}},
+    'int-real': {'wan': {'read': 1, 'write': 0, 'third_party_copy': 1, 'delete': 0},
+                 'lan': {'read': 0, 'write': 0, 'delete': 0}},
     'test': {'wan': {'read': 1, 'write': 1, 'third_party_copy': 1, 'delete': 1},
              'lan': {'read': 0, 'write': 0, 'delete': 0}},
     'temp': {'wan': {'read': 1, 'write': 1, 'third_party_copy': 1, 'delete': 1},
@@ -31,19 +33,18 @@ class CMSRSE:
     for the different expected types: real, test, temp.
     """
 
-    def __init__(self, json,
-                 dry=False, ):
+    def __init__(self, json, dry=False, cms_type='real', deterministic=True):
+
+        self.json = json
+        self.dry = dry
+        self.cms_type = cms_type
 
         self.rcli = Client()
-        self.dry = dry
-        self.json = json
-
-        self.cms_type = 'real'
 
         self.protocols = []
         self.attrs = {}
         self.settings = {}
-
+        self.settings['deterministic'] = deterministic
         self.rucio_rse_type = json['type'].upper()
         self.rse_name = json['rse']
 
@@ -75,13 +76,6 @@ class CMSRSE:
         attrs[self.rse_name] = 'True'
         attrs['cms_type'] = self.cms_type
 
-        # attrs['lfn2pfn_algorithm'] = lfn2pfn_algorithm or LFN2PFN_BYTYPE[self.rsetype]
-        # Get from JSON with an algorithm
-
-        # If this is even needed
-        self.settings['deterministic'] = True
-
-        # self._get_protocol(seinfo, add_prefix, tfc_exclude, domains, space_token, proto)
         self.protocols = []
         protos_json = self.json['protocols']
         for proto_json in protos_json:
@@ -162,6 +156,7 @@ class CMSRSE:
 
             algorithm = 'cmstfc'
             try:
+                print("Looking for prefix with web service path")
                 prefix_regex = re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+):(\d+)(\/.*\=)(.*)')
                 prefix_match = prefix_regex.match(proto_json['prefix'])
 
@@ -170,15 +165,29 @@ class CMSRSE:
                 port = prefix_match.group(3)
                 extended_attributes = {'web_service_path': prefix_match.group(4)}
                 prefix = prefix_match.group(5)
-            except AttributeError:  # Can be missing the port number
-                prefix_regex = re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+)/(.*)')
-                prefix_match = prefix_regex.match(proto_json['prefix'])
+            except AttributeError:  # Missing web service path?
+                try:
+                    print("Looking for prefix with port")
 
-                scheme = prefix_match.group(1)
-                hostname = prefix_match.group(2)
-                extended_attributes = None
-                prefix = '/' + prefix_match.group(3)
-                port = DEFAULT_PORTS[scheme]
+                    prefix_regex = re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+):(\d+)/(.*)')
+                    prefix_match = prefix_regex.match(proto_json['prefix'])
+
+                    scheme = prefix_match.group(1)
+                    hostname = prefix_match.group(2)
+                    port = prefix_match.group(3)
+                    prefix = '/' + prefix_match.group(4)
+                    extended_attributes = None
+                except AttributeError:
+                    print("Looking for minimal")
+
+                    prefix_regex = re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+)/(.*)')
+                    prefix_match = prefix_regex.match(proto_json['prefix'])
+
+                    scheme = prefix_match.group(1)
+                    hostname = prefix_match.group(2)
+                    extended_attributes = None
+                    prefix = '/' + prefix_match.group(3)
+                    port = DEFAULT_PORTS[scheme]
 
             proto = {
                 'scheme': scheme,
@@ -215,7 +224,16 @@ class CMSRSE:
                     proto['prefix'] = '/'
                     proto['domains'] = domains
                     proto['impl'] = IMPL_MAP[protocol_name]
-                except NotImplementedError:
+                except AttributeError:
+                    prefix_regex = re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+)(.*)')
+                    proto['scheme'] = prefix_match.group(1)
+                    proto['hostname'] = prefix_match.group(2)
+                    proto['port'] = DEFAULT_PORTS[proto['scheme']]
+                    proto['extended_attributes'] = {'tfc_proto': protocol_name.lower()}
+                    proto['prefix'] = '/'
+                    proto['domains'] = domains
+                    proto['impl'] = IMPL_MAP[protocol_name]
+
                     print('Replace with actual no match error')
                     raise
 
