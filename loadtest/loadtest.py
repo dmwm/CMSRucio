@@ -1,3 +1,4 @@
+import argparse
 import time
 import random
 import logging
@@ -9,6 +10,9 @@ from rucio.common.exception import (
     InvalidRSEExpression,
     NoFilesUploaded,
     DataIdentifierNotFound,
+    RSEBlacklisted,
+    DestinationNotAccessible,
+    ServiceUnavailable,
 )
 
 
@@ -21,7 +25,7 @@ LOADTEST_DATASET_FMT = "/LoadTestSource/{rse}/TEST#{filesize}"
 LOADTEST_LFNDIR_FMT = "/store/test/loadtest/source/{rse}/"
 LOADTEST_LFNBASE_FMT = "urandom.{filesize}.file{filenumber:04d}"
 DEFAULT_RULE_COMMENT = "rate:100kbps"
-TARGET_CYCLE_TIME = 60
+TARGET_CYCLE_TIME = 60 * 5
 ACTIVE = True
 
 
@@ -105,10 +109,16 @@ def upload_source_data(client, uploader, rse, filesize, filenumber):
         logger.error("RSE {rse} is missing self-expression".format(rse=rse))
     except NoFilesUploaded:
         logger.error(
-            "RSE {rse} already has a loadtest file matching {item}".format(
+            "RSE {rse} was unable to upload loadtest file {item}".format(
                 rse=rse, item=item
             )
         )
+    except RSEBlacklisted:
+        logger.error("RSE {rse} is disabled for writes".format(rse=rse))
+    except DestinationNotAccessible:
+        logger.error("RSE {rse} has permission issues".format(rse=rse))
+    except ServiceUnavailable:
+        logger.error("RSE {rse} host appears down".format(rse=rse))
     return False
 
 
@@ -123,6 +133,19 @@ def parse_rate(comment):
         else:
             return float(number)
     raise ValueError("Rule comment {comment} not parseable".format(comment=comment))
+
+
+def judge_repair_latency(creation_time):
+    """Logic of rucio.core.rule_grouping.__is_retry_required"""
+    # assume lock creation ~= rule creation
+    created_at_diff = (datetime.datetime.utcnow() - creation_time).total_seconds()
+    if created_at_diff < 24 * 3600:
+        return 3600 * 2
+    elif created_at_diff < 2 * 24 * 3600:
+        return 3600 * 4
+    elif created_at_diff < 3 * 24 * 3600:
+        return 3600 * 6
+    return 3600 * 8
 
 
 def update_loadtest(
@@ -171,7 +194,7 @@ def update_loadtest(
         client.add_replication_rule(**rule)
         return False
     if rule["state"] != "OK":
-        logger.info(
+        logger.debug(
             "Existing link between {source_rse} and {dest_rse} with load test rule {rule_id} is in state {rule_state}, will skip load test replica update".format(
                 source_rse=source_rse,
                 dest_rse=dest_rse,
@@ -181,17 +204,22 @@ def update_loadtest(
         )
         return False
     update_dt = (datetime.datetime.utcnow() - rule["updated_at"]).total_seconds()
-    # judge-repairer will re-transfer after 2h
-    # so max rate would be filesize * nfiles / (2*3600) = 300 kbps for defaults
+    # judge-repairer will re-transfer after 2h-8h depending on rule creation time
+    # so max rate would eventually be filesize * nfiles / (8*3600) = 75 kbps for defaults
     # we eventually want to calibrate this to resubmit targeting the desired avg. rate
     try:
         target_rate = parse_rate(rule["comments"])
     except ValueError as ex:
-        logger.error("Error parsing loadtest rule {rule_id}: {message}".format(rule_id=rule["id"], message=ex.message))
+        logger.error(
+            "Error parsing loadtest rule {rule_id}: {message}".format(
+                rule_id=rule["id"], message=ex.message
+            )
+        )
         return False
     data_volume = 8 * sum(file["bytes"] for file in source_files)
-    delay_time = data_volume / target_rate
-    delay_jitter = max(0.2 * delay_time, 2 * TARGET_CYCLE_TIME)
+    repair_latency = judge_repair_latency(rule["created_at"])
+    delay_time = max(data_volume / target_rate - repair_latency, 0)
+    delay_jitter = max(0.2 * delay_time, 3600)
     min_time = delay_time - delay_jitter
     if update_dt < min_time or random.random() > TARGET_CYCLE_TIME / delay_jitter:
         return False
@@ -209,30 +237,24 @@ def update_loadtest(
         for file in source_files
     ]
     logger.debug("Updating status for replicas: %r at RSE %s" % (replicas, dest_rse))
+    # TODO: if we ever want to test tape sites we need to physically remove the replica
+    # because the FTS job will not overwrite the previous file, unlike for disk
     client.update_replicas_states(dest_rse, replicas)
     return True
 
 
-def run():
-    account = "transfer_ops"
-    activity = "Functional Test"
-    filesize = "270MB"
-    source_rse_expression = "T2_US_Wisconsin_Test|T2_US_MIT_Test|T2_US_UCSD_Test|T1_ES_PIC_Disk_Test|T2_IN_TIFR_Test"
-    dest_rse_expression = "T2_US_Wisconsin_Test|T2_US_MIT_Test|T2_US_UCSD_Test|T1_ES_PIC_Disk_Test|T2_IN_TIFR_Test"
-
+def run(source_rse_expression, dest_rse_expression, account, activity, filesize):
     if filesize not in ALLOWED_FILESIZES:
         raise ValueError("File size {filesize} not allowed".format(filesize=filesize))
+
     client = Client(account=account)
     uploader = UploadClient(_client=client, logger=logger)
 
-    source_rses = [item["rse"] for item in client.list_rses(source_rse_expression)]
-    dest_rses = [item["rse"] for item in client.list_rses(dest_rse_expression)]
-
-    for rse in set(source_rses) | set(dest_rses):
-        ensure_rse_self_expression(client, rse)
-
     while ACTIVE:
         cycle_start = datetime.datetime.utcnow()
+        source_rses = [item["rse"] for item in client.list_rses(source_rse_expression)]
+        dest_rses = [item["rse"] for item in client.list_rses(dest_rse_expression)]
+
         for source_rse in source_rses:
             dataset = LOADTEST_DATASET_FMT.format(rse=source_rse, filesize=filesize)
             try:
@@ -243,7 +265,14 @@ def run():
                         source_rse=source_rse
                     )
                 )
-                upload_source_data(client, uploader, source_rse, filesize, 0)
+                success = upload_source_data(client, uploader, source_rse, filesize, 0)
+                if not success:
+                    logger.error(
+                        "RSE {source_rse} has no source files and could not upload, skipping".format(
+                            source_rse=source_rse
+                        )
+                    )
+                    continue
                 source_files = list(client.list_files("cms", dataset))
 
             dest_rules = client.list_replication_rules(
@@ -279,21 +308,69 @@ def run():
         logger.info(
             "Completed loadtest cycle in {cycle_time}s".format(cycle_time=cycle_time)
         )
-        while cycle_time < TARGET_CYCLE_TIME:
+        while cycle_time < TARGET_CYCLE_TIME and ACTIVE:
             dt = min(1, TARGET_CYCLE_TIME - cycle_time + 1e-3)
             time.sleep(dt)
             cycle_time += dt
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Create periodic transfers between RSEs to test links"
+    )
+    parser.add_argument(
+        "--source_rse_expression", type=str, help="Source RSEs to test links from"
+    )
+    parser.add_argument(
+        "--dest_rse_expression", type=str, help="Destination RSEs to test links to"
+    )
+    parser.add_argument(
+        "--account",
+        type=str,
+        default="transfer_ops",
+        help="Account to run tests under (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--activity",
+        type=str,
+        default="Functional Test",
+        help="Activity to submit transfers (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--filesize",
+        type=str,
+        default="270MB",
+        help="Size of load test files (default: %(default)s)",
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="count",
+        default=0,
+        help="Verbosity",
+    )
+
+    args = parser.parse_args()
+
+    loglevel = {0: logging.WARNING, 1: logging.INFO, 2: logging.DEBUG}
     logging.basicConfig(
         format="%(asctime)s %(name)s:%(levelname)s:%(message)s",
-        level=logging.INFO,
+        level=loglevel[min(2, args.verbose)],
     )
-    thread = threading.Thread(target=run)
+
+    thread = threading.Thread(
+        target=run,
+        args=(
+            args.source_rse_expression,
+            args.dest_rse_expression,
+            args.account,
+            args.activity,
+            args.filesize,
+        ),
+    )
     thread.start()
     try:
-        while True:
+        while thread.is_alive():
             time.sleep(1)
     except KeyboardInterrupt:
         pass
