@@ -219,7 +219,7 @@ def update_loadtest(
     data_volume = 8 * sum(file["bytes"] for file in source_files)
     repair_latency = judge_repair_latency(rule["created_at"])
     delay_time = max(data_volume / target_rate - repair_latency, 0)
-    delay_jitter = max(0.2 * delay_time, 3600)
+    delay_jitter = max(0.2 * delay_time, 3600.)
     min_time = delay_time - delay_jitter
     if update_dt < min_time or random.random() > TARGET_CYCLE_TIME / delay_jitter:
         return False
