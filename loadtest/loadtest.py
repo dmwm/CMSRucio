@@ -101,6 +101,9 @@ def ensure_rse_self_expression(client, rse):
 
 
 def upload_source_data(client, uploader, rse, filesize, filenumber):
+    if not client.get_rse(rse)["availability_write"]:
+        # this is *sometimes* ignored in uploader.upload (?!) so we check it here explicitly
+        return False
     item = prepare_upload_item(rse, filesize, filenumber)
     try:
         uploader.upload([item])
@@ -203,9 +206,9 @@ def update_loadtest(
             )
         )
         return False
-    data_volume = 8. * sum(file["bytes"] for file in source_files)
+    data_volume = 8.0 * sum(file["bytes"] for file in source_files)
     delay_time = max(data_volume / target_rate, 0)
-    delay_jitter = max(0.2 * delay_time, 3600.)
+    delay_jitter = max(0.2 * delay_time, 3600.0)
     min_time = delay_time - delay_jitter
     if update_dt < min_time or random.random() > TARGET_CYCLE_TIME / delay_jitter:
         return False
@@ -247,10 +250,13 @@ def run(source_rse_expression, dest_rse_expression, account, activity, filesize)
                 source_files = list(client.list_files("cms", dataset))
             except DataIdentifierNotFound:
                 logger.info(
-                    "RSE {source_rse} has no source files, creating one".format(
+                    "RSE {source_rse} has no source files, will create one".format(
                         source_rse=source_rse
                     )
                 )
+                source_files = []
+
+            if len(source_files) < 1:
                 success = upload_source_data(client, uploader, source_rse, filesize, 0)
                 if not success:
                     logger.error(

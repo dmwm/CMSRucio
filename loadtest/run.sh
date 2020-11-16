@@ -7,4 +7,4 @@ docker run -it --rm \
   --entrypoint /usr/bin/python \
   cmssw/rucio_client loadtest.py -v \
   --source_rse_expression "rse_type=disk&cms_type=real&tier<3" \
-  --dest_rse_expression "rse_type=disk&cms_type=real&tier=1"
+  --dest_rse_expression "rse_type=disk&cms_type=real&tier<3"
