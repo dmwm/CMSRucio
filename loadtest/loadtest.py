@@ -135,19 +135,6 @@ def parse_rate(comment):
     raise ValueError("Rule comment {comment} not parseable".format(comment=comment))
 
 
-def judge_repair_latency(creation_time):
-    """Logic of rucio.core.rule_grouping.__is_retry_required"""
-    # assume lock creation ~= rule creation
-    created_at_diff = (datetime.datetime.utcnow() - creation_time).total_seconds()
-    if created_at_diff < 24 * 3600:
-        return 3600 * 2
-    elif created_at_diff < 2 * 24 * 3600:
-        return 3600 * 4
-    elif created_at_diff < 3 * 24 * 3600:
-        return 3600 * 6
-    return 3600 * 8
-
-
 def update_loadtest(
     client, source_rse, dest_rse, source_files, rule, dataset, account, activity
 ):
@@ -216,9 +203,8 @@ def update_loadtest(
             )
         )
         return False
-    data_volume = 8 * sum(file["bytes"] for file in source_files)
-    repair_latency = judge_repair_latency(rule["created_at"])
-    delay_time = max(data_volume / target_rate - repair_latency, 0)
+    data_volume = 8. * sum(file["bytes"] for file in source_files)
+    delay_time = max(data_volume / target_rate, 0)
     delay_jitter = max(0.2 * delay_time, 3600.)
     min_time = delay_time - delay_jitter
     if update_dt < min_time or random.random() > TARGET_CYCLE_TIME / delay_jitter:
