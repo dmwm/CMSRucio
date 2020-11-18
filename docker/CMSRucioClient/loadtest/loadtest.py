@@ -1,9 +1,11 @@
+#!/usr/bin/env python
 import argparse
 import time
 import random
 import logging
 import datetime
 import threading
+import os
 from rucio.client import Client
 from rucio.client.uploadclient import UploadClient
 from rucio.common.exception import (
@@ -349,6 +351,9 @@ if __name__ == "__main__":
         format="%(asctime)s %(name)s:%(levelname)s:%(message)s",
         level=loglevel[min(2, args.verbose)],
     )
+
+    # UploadClient doesn't seem to pay attention to the client's account setting
+    os.environ["RUCIO_ACCOUNT"] = args.account
 
     thread = threading.Thread(
         target=run,
