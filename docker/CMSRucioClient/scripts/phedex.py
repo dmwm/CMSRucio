@@ -266,6 +266,30 @@ class PhEDEx(object):
 
         return exists
 
+    def block_known(self, block=None):
+        """
+        Use the PhEDEx data service to verify that a block exists
+
+        :param block: Block name (CMS) or dataset name (Rucio)
+        :return: boolean
+        """
+
+        if not block:
+            raise RuntimeError('You must supply a block and node name')
+
+        params = {'block': block}
+
+        result = self.datasvc('data', options=params)
+
+        try:
+            exists = bool('phedex' in result and
+                          'dbs' in result['phedex'] and
+                          result['phedex']['dbs'])
+        except IndexError:
+            return False
+
+        return exists
+
     def fileblock_files_phedex(self, pfb, pnn=None):
         """
         Get the phedex files in a fileblock at a node using the PhEDEx data service
