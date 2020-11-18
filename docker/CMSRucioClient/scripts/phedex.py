@@ -207,7 +207,7 @@ class PhEDEx(object):
             params['update_since'] = str(since)
 
         result = self.datasvc('blockreplicasummary', options=params)
-        retval = {i['name']: True for i in result['phedex']['block'] if i['replica'][0]['complete'] == 'y'}
+        retval = {i['name']: True for i in result['phedex']['block']}
         return retval
 
     def block_at_pnn_phedex(self, block=None, pnn=None):
