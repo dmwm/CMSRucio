@@ -229,8 +229,7 @@ class PhEDEx(object):
         try:
             at_pnn = bool('phedex' in result and
                           'block' in result['phedex'] and
-                          'replica' in result['phedex']['block'][0] and
-                          result['phedex']['block'][0]['replica'][0]['complete'] == 'y')
+                          'replica' in result['phedex']['block'][0])
         except IndexError:
             return None, False, False
 
@@ -406,7 +405,7 @@ class PhEDEx(object):
             params = {'node': pnn, 'dataset': '/*/*/*'}
 
         result = self.datasvc('blockreplicas', options=params)
-        retval = {i['name']: i['files'] for i in result['phedex']['block'] if i['replica'][0]['complete'] == 'y'}
+        retval = {i['name']: i['files'] for i in result['phedex']['block']}
         return retval
 
     def subscriptions(self, pnn, pditem=None, since=None):
