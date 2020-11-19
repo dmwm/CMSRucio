@@ -199,7 +199,10 @@ class PhEDEx(object):
 
     def summary_blocks_at_site(self, pnn, prefix=None, since=None):
         if prefix:
-            params = {'node': pnn, 'dataset': '/%s*/*/*' % prefix}
+            if '/' in prefix:  # Our prefix contains an entire primary dataset
+                params = {'node': pnn, 'dataset': '/%s*/*' % prefix}
+            else:
+                params = {'node': pnn, 'dataset': '/%s*/*/*' % prefix}
         else:
             params = {'node': pnn, 'dataset': '/*/*/*'}
 
@@ -400,7 +403,10 @@ class PhEDEx(object):
     def blocks_at_site(self, pnn, prefix=None, since=None):
 
         if prefix:
-            params = {'node': pnn, 'dataset': '/%s*/*/*' % prefix}
+            if '/' in prefix:  # Our prefix contains an entire primary dataset
+                params = {'node': pnn, 'dataset': '/%s*/*' % prefix}
+            else:
+                params = {'node': pnn, 'dataset': '/%s*/*/*' % prefix}
         else:
             params = {'node': pnn, 'dataset': '/*/*/*'}
 
