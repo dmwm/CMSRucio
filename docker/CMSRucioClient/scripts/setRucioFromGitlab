@@ -5,6 +5,8 @@ from __future__ import print_function, division, absolute_import
 import base64
 import json
 import os
+from argparse import ArgumentParser
+from rucio.client import Client
 
 import gitlab
 from CMSRSE import CMSRSE
@@ -12,11 +14,21 @@ from CMSRSE import CMSRSE
 SKIP_SITES = ['T2_FI_HIP', 'T2_ES_IFCA', 'T2_CH_CERN', 'T1_US_FNAL_Disk', 'T1_US_FNAL', 'T1_UK_RAL']
 DO_SITES = ['T2_BR_UERJ']
 
-private_token = os.environ['GITLAB_TOKEN']
+parser = ArgumentParser(description="Update a site definition from GitLab")
+parser.add_argument('--type', dest='cms_type', help='type of RSE (prod-real, int-real, test, temp).',
+                    default=None, required=True)
+parser.add_argument('--dryrun', dest='dry_run', action='store_true',
+                    help='do not change anything in rucio, checking only')
 
+options = parser.parse_args()
+
+# Get all the projects from GitLab
+private_token = os.environ['GITLAB_TOKEN']
 gl = gitlab.Gitlab('https://gitlab.cern.ch', private_token=private_token)
 group = gl.groups.get('siteconf')
 projects = group.projects.list(all=True)
+
+client = Client()
 
 for project in projects:
     full_project = gl.projects.get(project.id)
@@ -26,9 +38,40 @@ for project in projects:
         for site in sites:
             print('Checking %s' % site['rse'])
             if ((DO_SITES and site['rse'] in DO_SITES) or not DO_SITES) and site['rse'] not in SKIP_SITES:
-                rse = CMSRSE(site)
-                if rse.update():
-                    print('RSE %s and type %s changed' % (rse.rse_name, rse.rucio_rse_type))
+                if options.cms_type in ['test', 'temp']:
+                    # For these, query the actual site and construct a JSON
+                    if options.cms_type == 'test':
+                        lfn = '/store/test/rucio'
+                        rse_name = site['rse'] + '_Test'
+                        deterministic = True
+                    elif options.cms_type == 'temp':
+                        lfn = '/store/temp'
+                        rse_name = site['rse'] + '_Temp'
+                        deterministic = False
+
+                    # Do LFN to PFN conversion for the site
+                    pfns = client.lfns2pfns(site['rse'], ['cms:%s' % lfn], operation='read')
+                    pfn = pfns['cms:%s' % lfn]
+
+                    # Make dictionary based on previous dictionary
+                    new_site = {
+                        'site': site['rse'],
+                        'protocols': [{'protocol': 'SRMv2', 'access': 'global-rw', 'prefix': pfn}],
+                        'type': site['type'],
+                        'rse': rse_name,
+                        'fts': site['fts']
+                    }
+                    rse = CMSRSE(new_site, dry=options.dry_run, cms_type=options.cms_type, deterministic=deterministic)
+                    if rse.update():
+                        print('RSE %s and type %s changed' % (rse.rse_name, rse.rucio_rse_type))
+                    else:
+                        print('RSE %s and type %s unchanged' % (rse.rse_name, rse.rucio_rse_type))
+                else:
+                    rse = CMSRSE(site, dry=options.dry_run, cms_type=options.cms_type)
+                    if rse.update():
+                        print('RSE %s and type %s changed' % (rse.rse_name, rse.rucio_rse_type))
+                    else:
+                        print('RSE %s and type %s unchanged' % (rse.rse_name, rse.rucio_rse_type))
             else:
                 print('Skipping %s. Not in DO list or in SKIP list' % site['rse'])
 
