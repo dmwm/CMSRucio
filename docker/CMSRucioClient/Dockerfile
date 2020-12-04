@@ -73,6 +73,7 @@ WORKDIR /root
 RUN git clone https://github.com/rucio/rucio.git
 
 COPY scripts /scripts
+COPY loadtest /loadtest
 
 COPY rucio-testbed.cfg /opt/rucio-testbed/etc/rucio.cfg
 COPY rucio-dev.cfg /opt/rucio-dev/etc/rucio.cfg
