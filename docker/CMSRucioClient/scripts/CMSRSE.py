@@ -270,11 +270,15 @@ class CMSRSE:
         except (RSEProtocolNotSupported, RSENotFound):
             current_protocols = []
 
+        protocol_unchanged = False
+
         for new_proto in self.protocols:
 
             for existing_proto in current_protocols:
                 if existing_proto['scheme'] == new_proto['scheme']:
-                    if new_proto != existing_proto:
+                    if new_proto == existing_proto:
+                        protocol_unchanged = True
+                    else:
                         logging.info("Deleting definition which is not as expected: \nrucio=%s  \nexpected=%s",
                                      str(existing_proto), str(new_proto))
                         try:
@@ -282,7 +286,7 @@ class CMSRSE:
                         except RSEProtocolNotSupported:
                             logging.debug("Cannot remove protocol %s from %s", new_proto['scheme'], self.rse_name)
 
-            if new_proto['scheme'] in ['srm', 'srmv2', 'gsiftp']:
+            if new_proto['scheme'] in ['srm', 'srmv2', 'gsiftp'] and not protocol_unchanged:
                 logging.info('Adding %s to %s', new_proto['scheme'], self.rse_name)
                 self.rcli.add_protocol(rse=self.rse_name, params=new_proto)
 
