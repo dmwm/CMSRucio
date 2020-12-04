@@ -12,7 +12,6 @@ import gitlab
 from CMSRSE import CMSRSE
 
 SKIP_SITES = ['T2_FI_HIP', 'T2_ES_IFCA', 'T2_CH_CERN', 'T1_US_FNAL_Disk', 'T1_US_FNAL', 'T1_UK_RAL']
-DO_SITES = ['T2_BR_UERJ']
 
 parser = ArgumentParser(description="Update a site definition from GitLab")
 parser.add_argument('--type', dest='cms_type', help='type of RSE (prod-real, int-real, test, temp).',
@@ -30,50 +29,55 @@ projects = group.projects.list(all=True)
 
 client = Client()
 
+rses = client.list_rses('update_from_json=True')
+DO_SITES = [rse['rse'] for rse in rses]
+
 for project in projects:
     full_project = gl.projects.get(project.id)
     try:
         f = full_project.files.get('storage.json', 'master')
         sites = json.loads(base64.b64decode(f.content))
         for site in sites:
-            print('Checking %s' % site['rse'])
-            if ((DO_SITES and site['rse'] in DO_SITES) or not DO_SITES) and site['rse'] not in SKIP_SITES:
-                if options.cms_type in ['test', 'temp']:
-                    # For these, query the actual site and construct a JSON
-                    if options.cms_type == 'test':
-                        lfn = '/store/test/rucio'
-                        rse_name = site['rse'] + '_Test'
-                        deterministic = True
-                    elif options.cms_type == 'temp':
-                        lfn = '/store/temp'
-                        rse_name = site['rse'] + '_Temp'
-                        deterministic = False
+            print('Checking %s and type %s' % (site['rse'], options.cms_type))
+            if site['rse'] and options.cms_type in ['test', 'temp']:
+                # For these, query the actual site and construct a JSON
+                if options.cms_type == 'test':
+                    lfn = '/store/test/rucio'
+                    rse_name = site['rse'] + '_Test'
+                    deterministic = True
+                elif options.cms_type == 'temp':
+                    lfn = '/store/temp'
+                    rse_name = site['rse'] + '_Temp'
+                    deterministic = False
+                if rse_name in SKIP_SITES or not DO_SITES or rse_name not in DO_SITES:
+                    continue
+                # Do LFN to PFN conversion for the site
+                pfns = client.lfns2pfns(site['rse'], ['cms:%s' % lfn], operation='read')
+                pfn = pfns['cms:%s' % lfn]
 
-                    # Do LFN to PFN conversion for the site
-                    pfns = client.lfns2pfns(site['rse'], ['cms:%s' % lfn], operation='read')
-                    pfn = pfns['cms:%s' % lfn]
-
-                    # Make dictionary based on previous dictionary
-                    new_site = {
-                        'site': site['rse'],
-                        'protocols': [{'protocol': 'SRMv2', 'access': 'global-rw', 'prefix': pfn}],
-                        'type': site['type'],
-                        'rse': rse_name,
-                        'fts': site['fts']
-                    }
-                    rse = CMSRSE(new_site, dry=options.dry_run, cms_type=options.cms_type, deterministic=deterministic)
-                    if rse.update():
-                        print('RSE %s and type %s changed' % (rse.rse_name, rse.rucio_rse_type))
-                    else:
-                        print('RSE %s and type %s unchanged' % (rse.rse_name, rse.rucio_rse_type))
+                # Make dictionary based on previous dictionary
+                new_site = {
+                    'site': site['rse'],
+                    'protocols': [{'protocol': 'SRMv2', 'access': 'global-rw', 'prefix': pfn}],
+                    'type': site['type'],
+                    'rse': rse_name,
+                    'fts': site['fts']
+                }
+                rse = CMSRSE(new_site, dry=options.dry_run, cms_type=options.cms_type, deterministic=deterministic)
+                if rse.update():
+                    print('RSE %s and type %s changed' % (rse.rse_name, rse.rucio_rse_type))
                 else:
-                    rse = CMSRSE(site, dry=options.dry_run, cms_type=options.cms_type)
-                    if rse.update():
-                        print('RSE %s and type %s changed' % (rse.rse_name, rse.rucio_rse_type))
-                    else:
-                        print('RSE %s and type %s unchanged' % (rse.rse_name, rse.rucio_rse_type))
-            else:
-                print('Skipping %s. Not in DO list or in SKIP list' % site['rse'])
+                    print('RSE %s and type %s unchanged' % (rse.rse_name, rse.rucio_rse_type))
+            elif options.cms_type in ['prod-real', 'int-real']:
+                if site['rse'] in SKIP_SITES or not DO_SITES or site['rse'] not in DO_SITES:
+                    continue
 
+                rse = CMSRSE(site, dry=options.dry_run, cms_type=options.cms_type)
+                if rse.update():
+                    print('RSE %s and type %s changed' % (rse.rse_name, rse.rucio_rse_type))
+                else:
+                    print('RSE %s and type %s unchanged' % (rse.rse_name, rse.rucio_rse_type))
+            elif not site['rse']:
+                print('No RSE defined in JSON %s' % site)
     except gitlab.exceptions.GitlabGetError:
         print("Unable to download storage.json for %s" % project.name)

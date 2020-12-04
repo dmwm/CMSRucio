@@ -26,18 +26,18 @@ echo "Syncing account roles for managers and group accounts"
 ./syncRolesToAttributes.py
 ./syncRolesToGroupAccounts.py
 
-#echo "Syncing RSEs"
-#./cmsrses.py --pnn all --select 'T2_\S+' --exclude 'T2_MY_\S+' --exclude '\S+CERN\S+' --type real --type temp --type test --fts https://fts3.cern.ch:8446
-#./cmsrses.py --pnn all --select 'T1_\S+' --exclude '.*MSS' --exclude '\S+_Tape_Test' --type real --type test --fts https://fts3.cern.ch:8446
-#./cmsrses.py --pnn all --select 'T3_CH_PSI' --select 'T3_TW_NTU_HEP' --select  'T3_US_Brown' \
-#                       --select 'T3_US_TAMU'  --type real --fts https://fts3.cern.ch:8446
-#
+if [ "$RUCIO_HOME" = "/opt/rucio-int" ]
+  then
+  ./setRucioFromGitlab --type int-real
+fi
+if [ "$RUCIO_HOME" = "/opt/rucio-prod" ]
+  then
+  ./setRucioFromGitlab --type prod-real
+fi
 
-#./cmsrses.py --pnn all --select 'T3_TW_NCU'  --type real --type temp  --fts https://fts3.cern.ch:8446
+./setRucioFromGitlab --type test
+./setRucioFromGitlab --type temp
 
-# OR ./setRucioFromGitlab with some new parameters
-
-#echo "Creating sync accounts"
 #./syncaccounts.py --identity "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=cmsrucio/CN=430796/CN=Robot: CMS Rucio Data Transfer" --type x509
 
 echo "Setting quotas"
@@ -45,8 +45,12 @@ echo "Setting quotas"
 echo "Setting availability"
 ./setSiteAvailability
 
-echo "Creating user accounts and setting quotas"
-./user_to_site_mapping.py
+if [ "$RUCIO_HOME" = "/opt/rucio-prod" ]
+  then
+  echo "Creating user accounts and setting quotas"
+  ./user_to_site_mapping.py
+fi
+
 
 #echo "Creating links"
 #./cmslinks.py --phedex_link --overwrite # Remove the --disable flag for Katy's RSE
