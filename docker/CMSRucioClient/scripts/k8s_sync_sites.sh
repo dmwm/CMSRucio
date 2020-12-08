@@ -25,6 +25,7 @@ cd docker/CMSRucioClient/scripts/
 echo "Syncing account roles for managers and group accounts"
 ./syncRolesToAttributes.py
 ./syncRolesToGroupAccounts.py
+./syncEgroupsToGroupAccounts.py
 
 if [ "$RUCIO_HOME" = "/opt/rucio-int" ]
   then
