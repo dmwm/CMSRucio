@@ -10,7 +10,7 @@ import time
 import requests
 
 QUERY_HEADER = '{"search_type":"query_then_fetch","ignore_unavailable":true}'
-WMA_URL = 'https://monit-grafana.cern.ch/api/datasources/proxy/9545/_msearch'
+WMA_URL = 'https://monit-grafana.cern.ch/api/datasources/proxy/7572/_msearch'
 SITE_MAP = {
     'T1_US_FNAL': 'T1_US_FNAL_Disk',
     'T1_DE_KIT': 'T1_DE_KIT_Disk',
@@ -89,65 +89,66 @@ def collect_traces():
     moreQuery = False
     hits = 0
     for key, value in result.items():
-        # print(json.dumps(value[0]))
-        for v in value:
-            # there are two ways to get the total hits and they shoube the same
-            length = len(v['hits']['hits'])
-            total = v['hits']['total']
-            if length != total:
-                # TODO raise exception?
-                print("Error: result array size ", length, "is not equal to total hits ", total)
-                exit(1)
-            print("*** total number of hits: ", total)
-            if total > 10000:
-                moreQuery = True
-                hits += 1
+        if key == "responses":
+            # print(json.dumps(value[0]))
+            for v in value:
+                # there are two ways to get the total hits and they shoube the same
+                length = len(v['hits']['hits'])
+                total = v['hits']['total']['value']
+                if length != total:
+                    # TODO raise exception?
+                    print("Error: result array size ", length, "is not equal to total hits ", total)
+                    exit(1)
+                print("*** total number of hits: ", total)
+                if total > 10000:
+                    moreQuery = True
+                    hits += 1
 
-            for h in v['hits']['hits']:
-                data = h['_source']['data']
-                LFNArrayRef = data['LFNArrayRef']
-                fallbackFiles = data['fallbackFiles']
-                LFNArray = data['LFNArray']
+                for h in v['hits']['hits']:
+                    data = h['_source']['data']
+                    LFNArrayRef = data['LFNArrayRef']
+                    fallbackFiles = data['fallbackFiles']
+                    LFNArray = data['LFNArray']
 
-                trace = {}
-                goodlfn = []
-                site = ''
-                ts = data['meta_data'].get('ts', int(time.time()))
-                jobtype = data['meta_data'].get('jobtype', 'unknown')
-                wn_name = data['meta_data'].get('wn_name', 'unknown')
+                    trace = {}
+                    goodlfn = []
+                    site = ''
+                    ts = data['meta_data'].get('ts', int(time.time()))
+                    jobtype = data['meta_data'].get('jobtype', 'unknown')
+                    wn_name = data['meta_data'].get('wn_name', 'unknown')
 
-                for step in data['steps']:
-                    if 'input' in step:
-                        for lfndict in step['input']:
-                            if 'lfn' in lfndict:
-                                if lfndict['lfn'] in fallbackFiles:
-                                    pass
-                                else:
-                                    if 'lfn' in LFNArrayRef:
-                                        goodlfn.append(LFNArray[lfndict['lfn']])
-                    if 'site' in step:
-                        site = step['site']
+                    for step in data['steps']:
+                        if 'input' in step:
+                            for lfndict in step['input']:
+                                if 'lfn' in lfndict:
+                                    if lfndict['lfn'] in fallbackFiles:
+                                        pass
+                                    else:
+                                        if 'lfn' in LFNArrayRef:
+                                            goodlfn.append(LFNArray[lfndict['lfn']])
+                        if 'site' in step:
+                            site = step['site']
 
-                if goodlfn and site:
-                    if site in SITE_MAP:
-                        site = SITE_MAP[site]
-                    for g in goodlfn:
-                        trace.update(
-                            {'eventVersion': 'API_1.21.6', 'clientState': 'DONE', 'scope': 'cms', 'eventType': 'get',
-                             'usrdn': '/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=yuyi/CN=639751/CN=Yuyi Guo/CN=706639693',
-                             'account': 'yuyi'})
-                        trace.update(filename=g)
-                        trace.update(remoteSite=site)
-                        trace.update(DID='cms:' + trace['filename'])
-                        trace.update(file_read_ts=ts)
-                        trace.update(jobtype=jobtype)
-                        trace.update(wn_name=wn_name)
-                        if ts:
-                            trace.update(timestamp=ts)
-                        else:
-                            trace.update(timestamp=int(time.time()))
-                        trace.update(traceTimeentryUnix=trace['timestamp'])
-                        traces.append(trace)
+                    if goodlfn and site:
+                        if site in SITE_MAP:
+                            site = SITE_MAP[site]
+                        for g in goodlfn:
+                            trace.update(
+                                {'eventVersion': 'API_1.21.6', 'clientState': 'DONE', 'scope': 'cms', 'eventType': 'get',
+                                'usrdn': '/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=yuyi/CN=639751/CN=Yuyi Guo/CN=706639693',
+                                'account': 'yuyi'})
+                            trace.update(filename=g)
+                            trace.update(remoteSite=site)
+                            trace.update(DID='cms:' + trace['filename'])
+                            trace.update(file_read_ts=ts)
+                            trace.update(jobtype=jobtype)
+                            trace.update(wn_name=wn_name)
+                            if ts:
+                                trace.update(timestamp=ts)
+                            else:
+                                trace.update(timestamp=int(time.time()))
+                            trace.update(traceTimeentryUnix=trace['timestamp'])
+                            traces.append(trace)
 
     if moreQuery:
         print("There are more than 10k hits. ")
