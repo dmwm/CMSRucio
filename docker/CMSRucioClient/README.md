@@ -2,6 +2,10 @@ Build and run like so where /tmp/x509up is a proxy generated with the DN that ma
 
     docker build -t cmssw/rucio_client .
     docker push cmssw/rucio_client
+
+    docker build . -f Dockerfile.trace -t ericvaandering/rucio-trace
+    docker push ericvaandering/rucio-trace
+
     
 To run (no need to build, Eric does this occassionally):
 
