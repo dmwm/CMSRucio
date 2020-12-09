@@ -68,8 +68,9 @@ def map_cric_users(country, option, dry_run):
         try:
             username = user['profiles'][0]['login'].encode("utf-8")
             if not institute or not institute_country:
-                policy = test_policy
-                raise Exception
+                pass
+                # policy = test_policy
+                # raise Exception
             elif country != "" and country in institute_country:
                 if username == 'perichmo':
                     continue
