@@ -54,12 +54,18 @@ for container in containers:
     if yes_no not in ['y', 'Y']:
         continue
 
+    if bytes / 1.e12 > 30.: # switch from dataset level to block level
+        grouping = 'DATASET'
+    else:
+        grouping = 'ALL'
+
+        
     dids = [{'scope': 'cms', 'name': container}]
 
     days = 14 * 24 * 3600
 
     try:
-        rules = rucio.add_replication_rule(dids=dids, copies=1, rse_expression=RSE_EXPRESSION, weight=WEIGHT,
+        rules = rucio.add_replication_rule(dids=dids, copies=1, rse_expression=RSE_EXPRESSION, weight=WEIGHT, grouping=grouping,
                                            lifetime=days, account='crab_tape_recall', activity='Analysis Input',
                                            comment='Staged from tape for %s' % args.user, ask_approval=False,
                                            asynchronous=True,
