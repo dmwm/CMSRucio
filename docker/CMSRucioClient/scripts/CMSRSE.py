@@ -74,7 +74,10 @@ class CMSRSE:
         attrs['tier'] = tier or pnn_match.group(1)
         attrs['country'] = country or pnn_match.group(2)
         attrs[self.rse_name] = 'True'
-        attrs['cms_type'] = self.cms_type
+        if self.cms_type in ['int-real', 'prod-real']:
+            attrs['cms_type'] = 'real'
+        else:
+            attrs['cms_type'] = self.cms_type
 
         self.protocols = []
         protos_json = self.json['protocols']
