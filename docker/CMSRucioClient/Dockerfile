@@ -84,16 +84,12 @@ COPY rucio-prod.cfg /opt/rucio-prod/etc/rucio.cfg
 WORKDIR /root
 RUN git clone https://github.com/dmwm/CMSRucio.git
 
-#ADD baseclient.py /usr/lib/python2.7/site-packages/rucio/client/baseclient.py
-#ADD sessions.py /usr/lib/python2.7/site-packages/requests/sessions.py
-#ADD adapters.py /usr/lib/python2.7/site-packages/requests/adapters.py
+# Overwrite what's there for testing
+# COPY scripts /root/CMSRucio/docker/CMSRucioClient/scripts
 
 # Our schema
 ADD https://raw.githubusercontent.com/ericvaandering/rucio/cms_nano8/lib/rucio/common/schema/cms.py /usr/lib/python2.7/site-packages/rucio/common/schema/cms.py
 RUN python -m compileall /usr/lib/python2.7/site-packages/rucio/common/schema
-
-
-
 
 ENV X509_USER_PROXY=/tmp/x509up
 ENTRYPOINT ["/bin/bash", "-c", "sleep infinity"]

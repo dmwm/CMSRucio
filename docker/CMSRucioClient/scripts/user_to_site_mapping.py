@@ -1,12 +1,11 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 import getopt
 import json
 import pprint
-import ssl
 import sys
-import urllib2
 
+import requests
 from rucio.client import Client
 from rucio.common.exception import AccountNotFound, Duplicate, InvalidObject
 
@@ -28,12 +27,8 @@ This function loads the JSON file by CRIC API or by local file depending on the 
 
 def load_cric_users(policy, dry_run):
     if not dry_run:
-        # Ignore the certificate on CRIC
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-
-        worldwide_cric_users = json.load(urllib2.urlopen(policy.CRIC_USERS_API, context=ctx))
+        result = requests.get(policy.CRIC_USERS_API, verify=False)  # Pods don't like the CRIC certificate
+        worldwide_cric_users = json.loads(result.text)
     else:
         sys.stdout.write('\t- dry_run version with the new fake user loaded\n')
         with open('fake_cric_users.json') as json_file:
@@ -53,21 +48,21 @@ def map_cric_users(country, option, dry_run):
     for key, user in worldwide_cric_users.items():
         if option == 'delete-all':
             try:
-                username = user['profiles'][0]['login'].encode("utf-8")
+                username = user['profiles'][0]['login']
             except (Exception, KeyError):
                 continue
             for rse, val in client.get_account_limits(username).items():
                 client.delete_account_limit(username, rse)
 
-        institute_country = user['institute_country'].encode("utf-8")
-        institute = user['institute'].encode("utf-8")
-        dns = set([user['dn'].encode("utf-8")])
-        email = user['email'].encode("utf-8")
+        institute_country = user['institute_country']
+        institute = user['institute']
+        dns = {user['dn']}
+        email = user['email']
         account_type = "USER"
         policy = ''
 
         try:
-            username = user['profiles'][0]['login'].encode("utf-8")
+            username = user['profiles'][0]['login']
             if not institute or not institute_country:
                 pass
                 # policy = test_policy
@@ -136,6 +131,7 @@ def set_rucio_limits(cric_user):
     except InvalidObject:
         print("Warning: could not add account or quota to account described by %s" % pprint.pformat(cric_user))
 
+
 def get_cric_user(username):
     for user in cric_user_list:
         if user.username == username:
@@ -172,7 +168,7 @@ def main():
         opts, args = getopt.getopt(sys.argv[1:], "ho:o:d:", ["help", "option=", "dry_run="])
     except getopt.GetoptError as err:
         # print help information and exit:
-        print(str(err)) # will print something like "option -a not recognized"
+        print(str(err))  # will print something like "option -a not recognized"
         usage()
         sys.exit(2)
 
