@@ -39,8 +39,6 @@ fi
 ./setRucioFromGitlab --type test
 ./setRucioFromGitlab --type temp
 
-#./syncaccounts.py --identity "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=cmsrucio/CN=430796/CN=Robot: CMS Rucio Data Transfer" --type x509
-
 echo "Setting quotas"
 ./setSiteQuotas
 echo "Setting availability"
