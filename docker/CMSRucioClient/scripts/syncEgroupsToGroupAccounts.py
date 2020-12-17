@@ -1,23 +1,18 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 from __future__ import print_function
 
 import json
-import ssl
-import urllib2
 
+import requests
 from rucio.client.client import Client
 from rucio.common.exception import AccountNotFound
-
-# Pods don't like the CRIC certificate
-SSL_CONTEXT = ssl.create_default_context()
-SSL_CONTEXT.check_hostname = False
-SSL_CONTEXT.verify_mode = ssl.CERT_NONE
 
 CRIC_EGROUP_API = 'https://cms-cric-dev.cern.ch/api/accounts/group/query/?json&role=rucio-group'
 
 
 def sync_egroups_to_group_accounts():
-    all_cric_groups = json.load(urllib2.urlopen(CRIC_EGROUP_API, context=SSL_CONTEXT))
+    result = requests.get(CRIC_EGROUP_API, verify=False)  # Pods don't like the CRIC certificate
+    all_cric_groups = json.loads(result.text)
 
     client = Client()
 

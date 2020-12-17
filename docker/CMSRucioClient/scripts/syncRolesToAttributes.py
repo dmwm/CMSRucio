@@ -1,18 +1,12 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 from __future__ import print_function
 
 import json
-import ssl
-import urllib2
 from collections import defaultdict
 
+import requests
 from rucio.client.client import Client
 from rucio.common.exception import RSEAttributeNotFound
-
-# Pods don't like the CRIC certificate
-SSL_CONTEXT = ssl.create_default_context()
-SSL_CONTEXT.check_hostname = False
-SSL_CONTEXT.verify_mode = ssl.CERT_NONE
 
 TO_STRIP = ['_Disk', '_Tape', '_Temp', '_Test', '_Disk_Test', '_Tape_Test']
 
@@ -38,7 +32,8 @@ def set_rse_manager(client, rse_name, site_managers, alt_rse=None):
 
 
 def sync_roles_to_rses():
-    all_cric_users = json.load(urllib2.urlopen(CRIC_USERS_API, context=SSL_CONTEXT))
+    result = requests.get(CRIC_USERS_API, verify=False)  # Pods don't like the CRIC certificate
+    all_cric_users = json.loads(result.text)
 
     site_managers = defaultdict(set)
     for user in all_cric_users:
@@ -73,6 +68,6 @@ def sync_roles_to_rses():
 
 if __name__ == '__main__':
     """
-    Run the sync
+    Sync site data manager roles to RSE attributes
     """
     sync_roles_to_rses()

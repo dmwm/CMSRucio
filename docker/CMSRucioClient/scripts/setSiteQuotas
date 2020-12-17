@@ -30,7 +30,7 @@ r = requests.post('https://monit-grafana.cern.ch/api/datasources/proxy/9475/_mse
 
 j = json.loads(r.text)
 
-sites = [record['_source']['data'] for record in j['responses'][0]['hits']['hits']]
+sites = sorted(list(set([record['_source']['data'] for record in j['responses'][0]['hits']['hits']])))
 
 rucio = Client()
 for site in sites:
