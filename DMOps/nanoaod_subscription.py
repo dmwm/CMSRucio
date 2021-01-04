@@ -45,7 +45,7 @@ rules = [
     },
 ]
 
-res = client.add_subscription(
+res = client.update_subscription(
     name='ProductionNanoAOD',
     account='transfer_ops',
     filter=filter,
@@ -68,22 +68,15 @@ filter = {
     'project': ['RelVal'],
 }
 
-rules = [
-    {
-        "copies": 1,
-        "rse_expression": "T2_CH_CERN",
-        "activity": "Production Output",
-        "grouping": "ALL",
-    },
-]
+rules = None
 
-res = client.add_subscription(
+res = client.update_subscription(
     name='RelValNanoAOD',
     account='transfer_ops',
     filter=filter,
     replication_rules=rules,
     comments='Controls the distribution of RelVal output NanoAOD',
-    lifetime=False,
+    lifetime=0,
     retroactive=False,  # Not a supported feature
     dry_run=False,  # BUG: this is ignored
 )
