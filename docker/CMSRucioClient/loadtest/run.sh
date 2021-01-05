@@ -10,4 +10,5 @@ docker run -it --rm \
   -v $(voms-proxy-info --path):/tmp/x509up \
   -e RUCIO_HOME=/opt/rucio-prod/ \
   loadtest_client \
-  -v --source_rse_expression "T2_US_MIT_Test" --dest_rse_expression "T2_US_UCSD_Test"
+  -vv --source_rse_expression "T2_US_Wisconsin" --dest_rse_expression "T1_US_FNAL_Tape|T1_ES_PIC_Tape"
+

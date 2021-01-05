@@ -8,6 +8,7 @@ import threading
 import os
 from rucio.client import Client
 from rucio.client.uploadclient import UploadClient
+from rucio.rse import rsemanager
 from rucio.common.exception import (
     InvalidRSEExpression,
     NoFilesUploaded,
@@ -140,6 +141,24 @@ def parse_rate(comment):
     raise ValueError("Rule comment {comment} not parseable".format(comment=comment))
 
 
+def delete_replicas(client, dest_rse, replicas):
+    rse_settings = rsemanager.get_rse_info(dest_rse)
+    # we would expect "delete" operation but tape sites have that disabled for safety
+    protocol_delete = rsemanager.create_protocol(
+        rse_settings, operation="read", domain="wan", logger=logger
+    )
+    lfns = [lfn["scope"] + ":" + lfn["name"] for lfn in replicas]
+    pfns = client.lfns2pfns(dest_rse, lfns, operation="read")
+    protocol_delete.connect()
+    for pfn in pfns.values():
+        logger.debug(
+            "Deleting PFN {pfn} from destination RSE {dest_rse}".format(
+                pfn=pfn, dest_rse=dest_rse
+            )
+        )
+        protocol_delete.delete(pfn)
+
+
 def update_loadtest(
     client, source_rse, dest_rse, source_files, rule, dataset, account, activity
 ):
@@ -228,8 +247,11 @@ def update_loadtest(
         for file in source_files
     ]
     logger.debug("Updating status for replicas: %r at RSE %s" % (replicas, dest_rse))
-    # TODO: if we ever want to test tape sites we need to physically remove the replica
-    # because the FTS job will not overwrite the previous file, unlike for disk
+    # rules made to tape RSEs are locked by default, so this is a way to check if it is tape
+    # if so, we need to physically remove the replica because the FTS job will not overwrite
+    # the previous file, unlike for disk
+    if rule["locked"]:
+        delete_replicas(client, dest_rse, replicas)
     client.update_replicas_states(dest_rse, replicas)
     return True
 
