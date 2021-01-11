@@ -7,7 +7,7 @@ import requests
 from rucio.client.client import Client
 from rucio.common.exception import AccountNotFound
 
-CRIC_EGROUP_API = 'https://cms-cric-dev.cern.ch/api/accounts/group/query/?json&role=rucio-group'
+CRIC_EGROUP_API = 'https://cms-cric.cern.ch/api/accounts/group/query/?json&role=rucio-group'
 
 
 def sync_egroups_to_group_accounts():
