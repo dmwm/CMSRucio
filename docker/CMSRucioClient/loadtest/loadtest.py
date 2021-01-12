@@ -247,11 +247,14 @@ def update_loadtest(
         for file in source_files
     ]
     logger.debug("Updating status for replicas: %r at RSE %s" % (replicas, dest_rse))
-    # rules made to tape RSEs are locked by default, so this is a way to check if it is tape
+    # Rules made to tape RSEs are locked by default, so this is a way to check if it is tape
     # if so, we need to physically remove the replica because the FTS job will not overwrite
-    # the previous file, unlike for disk
-    if rule["locked"]:
-        delete_replicas(client, dest_rse, replicas)
+    # the previous file, unlike for disk. If the deletion fails, try again later
+    try:
+        if rule["locked"]:
+            delete_replicas(client, dest_rse, replicas)
+    except ServiceUnavailable:
+        return False
     client.update_replicas_states(dest_rse, replicas)
     return True
 
