@@ -8,7 +8,7 @@ import requests
 from rucio.client.client import Client
 from rucio.common.exception import RSEAttributeNotFound
 
-TO_STRIP = ['_Disk', '_Tape', '_Temp', '_Test', '_Disk_Test', '_Tape_Test']
+TO_STRIP = ['_Disk', '_Tape', '_Temp', '_Test', '_Disk_Test', '_Tape_Test', '_Ceph']
 
 CRIC_USERS_API = 'https://cms-cric.cern.ch/api/accounts/user/query/list/?json&preset=roles'
 
