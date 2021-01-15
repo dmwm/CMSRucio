@@ -51,6 +51,6 @@ if [ "$RUCIO_HOME" = "/opt/rucio-prod" ]
 fi
 
 
-#echo "Creating links"
-#./cmslinks.py --phedex_link --overwrite # Remove the --disable flag for Katy's RSE
+echo "Creating links"
+./cmslinks.py --phedex_link --overwrite # Remove the --disable flag for Katy's RSE
 ## ./cmslinks.py --phedex_link --overwrite --disable
