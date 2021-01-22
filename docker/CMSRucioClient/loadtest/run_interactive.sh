@@ -10,5 +10,5 @@ docker run -it --rm \
   -v $(voms-proxy-info --path):/tmp/x509up \
   -e RUCIO_HOME=/opt/rucio-prod/ \
   loadtest_client \
-  -v --source_rse_expression "tier=1&rse_type=DISK&cms_type=real" --dest_rse_expression "tier=1&rse_type=TAPE&cms_type=real"
+  -v --source_rse_expression "tier=1&cms_type=real" --dest_rse_expression "tier=1&rse_type=TAPE&cms_type=real"
 
