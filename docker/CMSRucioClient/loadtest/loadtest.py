@@ -20,6 +20,7 @@ import logging
 import datetime
 import threading
 import os
+import re
 from rucio.client import Client
 from rucio.client.uploadclient import UploadClient
 from rucio.rse import rsemanager
@@ -30,6 +31,7 @@ from rucio.common.exception import (
     RSEBlacklisted,
     DestinationNotAccessible,
     ServiceUnavailable,
+    ReplicaNotFound,
 )
 
 
@@ -41,6 +43,8 @@ ALLOWED_FILESIZES = {
 LOADTEST_DATASET_FMT = "/LoadTestSource/{rse}/TEST#{filesize}"
 LOADTEST_LFNDIR_FMT = "/store/test/loadtest/source/{rse}/"
 LOADTEST_LFNBASE_FMT = "urandom.{filesize}.file{filenumber:04d}"
+FILENUMBER_SEARCH = "/store/test/loadtest/source/{rse}/urandom.{filesize}.file*"
+FILENUMBER_RE = re.compile(r".*\.file(\d+)$")
 DEFAULT_RULE_COMMENT = "rate:100kbps"
 TARGET_CYCLE_TIME = 60 * 5
 ACTIVE = True
@@ -117,6 +121,21 @@ def ensure_rse_self_expression(client, rse):
             raise ex
 
 
+def next_available_filenumber(client, rse, filesize):
+    did_search = FILENUMBER_SEARCH.format(rse=rse, filesize=filesize)
+    max_fn = -1
+    for did in client.list_dids("cms", {"name": did_search}, type="file"):
+        m = FILENUMBER_RE.match(did)
+        if m:
+            max_fn = max(max_fn, int(m.groups()[0]))
+        else:
+            logger.error(
+                "Failed to match filenumber regex to DID {did}".format(did=did)
+            )
+            # we'll return what we have anyway, since the upload will fail later
+    return max_fn + 1
+
+
 def upload_source_data(client, uploader, rse, filesize, filenumber):
     if not client.get_rse(rse)["availability_write"]:
         # this is *sometimes* ignored in uploader.upload (?!) so we check it here explicitly
@@ -139,8 +158,6 @@ def upload_source_data(client, uploader, rse, filesize, filenumber):
         logger.error("RSE {rse} has permission issues".format(rse=rse))
     except ServiceUnavailable:
         logger.error("RSE {rse} host appears down".format(rse=rse))
-    # TODO: DID exists but was invalidated (e.g. all copies corrupt)
-    # if this occurs, call this function again with incremented filenumber
     return False
 
 
@@ -278,7 +295,11 @@ def update_loadtest(
             delete_replicas(client, dest_rse, replicas)
     except ServiceUnavailable:
         return False
-    client.update_replicas_states(dest_rse, replicas)
+    try:
+        client.update_replicas_states(dest_rse, replicas)
+    except ReplicaNotFound:
+        # Race condition between adding new DID to the dataset and judge-evaluator updating the rule
+        return False
     return True
 
 
@@ -306,8 +327,14 @@ def run(source_rse_expression, dest_rse_expression, account, activity, filesize)
                 )
                 source_files = []
 
+            # here we might consider requiring a minimum number of source files to achieve a target rate
             if len(source_files) < 1:
-                success = upload_source_data(client, uploader, source_rse, filesize, 0)
+                next_filenumber = next_available_filenumber(
+                    client, source_rse, filesize
+                )
+                success = upload_source_data(
+                    client, uploader, source_rse, filesize, next_filenumber
+                )
                 if not success:
                     logger.error(
                         "RSE {source_rse} has no source files and could not upload, skipping".format(
