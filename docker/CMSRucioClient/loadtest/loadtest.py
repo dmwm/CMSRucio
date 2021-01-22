@@ -1,4 +1,18 @@
 #!/usr/bin/env python
+"""Load test daemon for rucio
+
+This daemon creates a rule for each link between a configurable set of
+source and destination RSEs, and periodically resets replica states for
+the replicas corresponding to those rules to force transfers to happen.
+The rate is configured by the number of files in the loadtest dataset and
+the rate parameter embedded in the rule comments. All state information
+is embedded in rucio, so this daemon can act statelessly each cycle.
+
+Each RSE gets its own loadtest dataset DID, which is autmatically created
+by this script with a configurable file size.
+
+Nick Smith <nick.smith@cern.ch>
+"""
 import argparse
 import time
 import random
@@ -125,6 +139,8 @@ def upload_source_data(client, uploader, rse, filesize, filenumber):
         logger.error("RSE {rse} has permission issues".format(rse=rse))
     except ServiceUnavailable:
         logger.error("RSE {rse} host appears down".format(rse=rse))
+    # TODO: DID exists but was invalidated (e.g. all copies corrupt)
+    # if this occurs, call this function again with incremented filenumber
     return False
 
 
@@ -204,7 +220,14 @@ def update_loadtest(
         logger.debug("Creating rule: %r" % rule)
         client.add_replication_rule(**rule)
         return False
-    if rule["state"] != "OK":
+    if rule["state"] == "SUSPENDED":
+        logger.debug(
+            "Existing link between {source_rse} and {dest_rse} with load test rule {rule_id} is suspended, resetting to stuck".format(
+                source_rse=source_rse, dest_rse=dest_rse, rule_id=rule["id"]
+            )
+        )
+        client.update_replication_rule(rule["id"], {"state": "STUCK"})
+    elif rule["state"] != "OK":
         logger.debug(
             "Existing link between {source_rse} and {dest_rse} with load test rule {rule_id} is in state {rule_state}, will skip load test replica update".format(
                 source_rse=source_rse,
