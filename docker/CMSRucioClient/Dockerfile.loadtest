@@ -1,0 +1,5 @@
+FROM cmssw/rucio_client
+
+COPY loadtest /loadtest
+
+ENTRYPOINT ["/loadtest/loadtest.py"]

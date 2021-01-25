@@ -1,4 +1,18 @@
 #!/usr/bin/env python
+"""Load test daemon for rucio
+
+This daemon creates a rule for each link between a configurable set of
+source and destination RSEs, and periodically resets replica states for
+the replicas corresponding to those rules to force transfers to happen.
+The rate is configured by the number of files in the loadtest dataset and
+the rate parameter embedded in the rule comments. All state information
+is embedded in rucio, so this daemon can act statelessly each cycle.
+
+Each RSE gets its own loadtest dataset DID, which is autmatically created
+by this script with a configurable file size.
+
+Nick Smith <nick.smith@cern.ch>
+"""
 import argparse
 import time
 import random
@@ -6,8 +20,10 @@ import logging
 import datetime
 import threading
 import os
+import re
 from rucio.client import Client
 from rucio.client.uploadclient import UploadClient
+from rucio.rse import rsemanager
 from rucio.common.exception import (
     InvalidRSEExpression,
     NoFilesUploaded,
@@ -15,6 +31,7 @@ from rucio.common.exception import (
     RSEBlacklisted,
     DestinationNotAccessible,
     ServiceUnavailable,
+    ReplicaNotFound,
 )
 
 
@@ -26,6 +43,8 @@ ALLOWED_FILESIZES = {
 LOADTEST_DATASET_FMT = "/LoadTestSource/{rse}/TEST#{filesize}"
 LOADTEST_LFNDIR_FMT = "/store/test/loadtest/source/{rse}/"
 LOADTEST_LFNBASE_FMT = "urandom.{filesize}.file{filenumber:04d}"
+FILENUMBER_SEARCH = "/store/test/loadtest/source/{rse}/urandom.{filesize}.file*"
+FILENUMBER_RE = re.compile(r".*\.file(\d+)$")
 DEFAULT_RULE_COMMENT = "rate:100kbps"
 TARGET_CYCLE_TIME = 60 * 5
 ACTIVE = True
@@ -102,6 +121,21 @@ def ensure_rse_self_expression(client, rse):
             raise ex
 
 
+def next_available_filenumber(client, rse, filesize):
+    did_search = FILENUMBER_SEARCH.format(rse=rse, filesize=filesize)
+    max_fn = -1
+    for did in client.list_dids("cms", {"name": did_search}, type="file"):
+        m = FILENUMBER_RE.match(did)
+        if m:
+            max_fn = max(max_fn, int(m.groups()[0]))
+        else:
+            logger.error(
+                "Failed to match filenumber regex to DID {did}".format(did=did)
+            )
+            # we'll return what we have anyway, since the upload will fail later
+    return max_fn + 1
+
+
 def upload_source_data(client, uploader, rse, filesize, filenumber):
     if not client.get_rse(rse)["availability_write"]:
         # this is *sometimes* ignored in uploader.upload (?!) so we check it here explicitly
@@ -138,6 +172,24 @@ def parse_rate(comment):
         else:
             return float(number)
     raise ValueError("Rule comment {comment} not parseable".format(comment=comment))
+
+
+def delete_replicas(client, dest_rse, replicas):
+    rse_settings = rsemanager.get_rse_info(dest_rse)
+    # we would expect "delete" operation but tape sites have that disabled for safety
+    protocol_delete = rsemanager.create_protocol(
+        rse_settings, operation="read", domain="wan", logger=logger
+    )
+    lfns = [lfn["scope"] + ":" + lfn["name"] for lfn in replicas]
+    pfns = client.lfns2pfns(dest_rse, lfns, operation="read")
+    protocol_delete.connect()
+    for pfn in pfns.values():
+        logger.debug(
+            "Deleting PFN {pfn} from destination RSE {dest_rse}".format(
+                pfn=pfn, dest_rse=dest_rse
+            )
+        )
+        protocol_delete.delete(pfn)
 
 
 def update_loadtest(
@@ -185,7 +237,14 @@ def update_loadtest(
         logger.debug("Creating rule: %r" % rule)
         client.add_replication_rule(**rule)
         return False
-    if rule["state"] != "OK":
+    if rule["state"] == "SUSPENDED":
+        logger.debug(
+            "Existing link between {source_rse} and {dest_rse} with load test rule {rule_id} is suspended, resetting to stuck".format(
+                source_rse=source_rse, dest_rse=dest_rse, rule_id=rule["id"]
+            )
+        )
+        client.update_replication_rule(rule["id"], {"state": "STUCK"})
+    elif rule["state"] != "OK":
         logger.debug(
             "Existing link between {source_rse} and {dest_rse} with load test rule {rule_id} is in state {rule_state}, will skip load test replica update".format(
                 source_rse=source_rse,
@@ -228,9 +287,19 @@ def update_loadtest(
         for file in source_files
     ]
     logger.debug("Updating status for replicas: %r at RSE %s" % (replicas, dest_rse))
-    # TODO: if we ever want to test tape sites we need to physically remove the replica
-    # because the FTS job will not overwrite the previous file, unlike for disk
-    client.update_replicas_states(dest_rse, replicas)
+    # Rules made to tape RSEs are locked by default, so this is a way to check if it is tape
+    # if so, we need to physically remove the replica because the FTS job will not overwrite
+    # the previous file, unlike for disk. If the deletion fails, try again later
+    try:
+        if rule["locked"]:
+            delete_replicas(client, dest_rse, replicas)
+    except ServiceUnavailable:
+        return False
+    try:
+        client.update_replicas_states(dest_rse, replicas)
+    except ReplicaNotFound:
+        # Race condition between adding new DID to the dataset and judge-evaluator updating the rule
+        return False
     return True
 
 
@@ -258,8 +327,14 @@ def run(source_rse_expression, dest_rse_expression, account, activity, filesize)
                 )
                 source_files = []
 
+            # here we might consider requiring a minimum number of source files to achieve a target rate
             if len(source_files) < 1:
-                success = upload_source_data(client, uploader, source_rse, filesize, 0)
+                next_filenumber = next_available_filenumber(
+                    client, source_rse, filesize
+                )
+                success = upload_source_data(
+                    client, uploader, source_rse, filesize, next_filenumber
+                )
                 if not success:
                     logger.error(
                         "RSE {source_rse} has no source files and could not upload, skipping".format(
