@@ -25,17 +25,16 @@ class LinksMatrix(object):
     """
 
     def __init__(self, account, auth_type=None, exclude=DEFAULT_EXCLUDE_LINKS,
-                 distance=None, phedex_links=False, rselist=None):
+                 distance=None, rselist=None):
 
         if distance is None:
             distance = DEFAULT_DISTANCE_RULES
 
-        self.pcli = None
         self.rcli = Client(account=account, auth_type=auth_type)
 
         self._get_rselist(rselist)
 
-        self._get_matrix(distance, phedex_links, exclude)
+        self._get_matrix(distance, exclude)
 
     def _get_rselist(self, rselist=None):
 
@@ -59,12 +58,9 @@ class LinksMatrix(object):
                 logging.warning('No expected attributes for RSE %s. Skipping',
                                 rse)
 
-    def _get_matrix(self, distance, phedex_links, exclude):
+    def _get_matrix(self, distance, exclude):
 
-        if phedex_links:
-            matrix = self.pcli.links()
-        else:
-            matrix = {}
+        matrix = {}
 
         self.links = {}
 
@@ -76,9 +72,6 @@ class LinksMatrix(object):
                 src_pnn = src['pnn']
                 dest_pnn = dest['pnn']
 
-                link = -1
-
-                # Within site or in defined region, don't consult PhEDEx
                 if dest_pnn == src_pnn:
                     link = distance['site']
                 elif src['region'] and dest['region'] and src['region'] == dest['region']:
@@ -87,7 +80,6 @@ class LinksMatrix(object):
                     else:
                         link = distance['region']
                 elif src_pnn in matrix and dest_pnn in matrix[src_pnn]:
-                    # If no information, use PhEDEx info if it exists
                     link = distance['site'] - matrix[src_pnn][dest_pnn]
                 else:
                     if src['country'] == dest['country']:
@@ -214,8 +206,6 @@ if __name__ == '__main__':
     PARSER.add_argument('--account', dest='account',
                         default=os.environ['RUCIO_ACCOUNT'],
                         help='Rucio account. default RUCIO_ACCOUNT')
-    PARSER.add_argument('--phedex_links', dest='phedex_links', action='store_true',
-                        help='Gets links information from PhEDEx.')
     PARSER.add_argument('--overwrite', dest='overwrite', action='store_true',
                         help='Overwrite distances that have changed.')
     PARSER.add_argument('--disable', dest='disable', action='store_true',
@@ -237,7 +227,6 @@ if __name__ == '__main__':
         account=OPTIONS.account,
         exclude=OPTIONS.exclude,
         distance=OPTIONS.distance,
-        phedex_links=OPTIONS.phedex_links,
         rselist=OPTIONS.rselist,
     ).update(
         overwrite=OPTIONS.overwrite,
