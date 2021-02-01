@@ -6,7 +6,7 @@ from collections import defaultdict
 
 import requests
 from rucio.client.client import Client
-from rucio.common.exception import RSEAttributeNotFound
+from rucio.common.exception import RSEAttributeNotFound, Duplicate
 
 TO_STRIP = ['_Disk', '_Tape', '_Temp', '_Test', '_Disk_Test', '_Tape_Test', '_Ceph']
 
@@ -30,6 +30,12 @@ def set_rse_manager(client, rse_name, site_managers, alt_rse=None):
     # For now, quota approvers are also rule approvers
     client.add_rse_attribute(rse=rse_name, key='quota_approvers', value=rule_approvers)
 
+    # This is perhaps temporary
+    for account in site_managers[alt_rse]:
+        try:
+            client.add_account_attribue(account=account, key='country-XX', value='admin')
+        except Duplicate:
+            pass
 
 def sync_roles_to_rses():
     result = requests.get(CRIC_USERS_API, verify=False)  # Pods don't like the CRIC certificate
