@@ -84,7 +84,10 @@ class CricUser:
                     client.add_identity(account=account, identity=dn, authtype='X509', email=self.email, default=True)
                     print(' added %s for account %s' % (dn, account))
                 except Duplicate:  # Sometimes idmissing doesn't seem to work
-                    print(' identity %s for account %s existed' % (dn, account))
+                    try:
+                        print(' identity %s for account %s existed' % (dn, account))
+                    except UnicodeEncodeError:
+                        print(' Unicode problem with account or DN')
                 except:
                     print(' Unknown problem with identity for %s' % account)
             elif redo_identity:
