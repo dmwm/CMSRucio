@@ -30,8 +30,8 @@ RUN yum install -y httpd mod_wsgi libaio gcc python-devel.x86_64 \
     rm -rf /var/cache/yum
 
 # Upgrade pip & setuptools
-RUN pip install --upgrade pip
-RUN pip install --upgrade setuptools
+#RUN pip install --upgrade pip
+#RUN pip install --upgrade setuptools
 
 
 #RUN pip install --upgrade pip
@@ -55,10 +55,10 @@ RUN yum install -y which krb5-devel gridsite \
     yum clean all && \
     rm -rf /var/cache/yum
 
-RUN pip install statsd python-gitlab
+#RUN pip install statsd python-gitlab
 
 # Install Rucio and other stuff
-RUN pip install rucio-clients==1.22.7 multiprocessing-logging jsonschema PyYAML pystatsd
+#RUN pip install rucio-clients==1.22.7 multiprocessing-logging jsonschema PyYAML pystatsd
 
 RUN pip3 install --upgrade pip
 RUN pip3 install --upgrade setuptools

@@ -1,4 +1,4 @@
-#! /bin/env python
+#! /bin/env python3
 """
 Class definition for the distances (links) among CMS RSEs.
 And script for updating the distances.
@@ -10,7 +10,7 @@ import logging
 import os
 import re
 
-from rucio.client.client import Client
+from rucio.client import Client
 
 DEFAULT_EXCLUDE_LINKS = (
     {'dest': {'type': 'temp'}, 'src': {}},
