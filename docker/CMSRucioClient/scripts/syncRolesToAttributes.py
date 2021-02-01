@@ -33,7 +33,7 @@ def set_rse_manager(client, rse_name, site_managers, alt_rse=None):
     # This is perhaps temporary
     for account in site_managers[alt_rse]:
         try:
-            client.add_account_attribue(account=account, key='country-XX', value='admin')
+            client.add_account_attribute(account=account, key='country-XX', value='admin')
         except Duplicate:
             pass
 
