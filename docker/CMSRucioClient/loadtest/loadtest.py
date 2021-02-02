@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Load test daemon for rucio
 
 This daemon creates a rule for each link between a configurable set of
