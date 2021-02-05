@@ -82,7 +82,7 @@ class PhEDEx(object):
         """
 
         if options:
-            options = '&'.join([opt + '=' + urllib.quote(val) for opt, val in options.items()])
+            options = '&'.join([opt + '=' + urllib.parse.quote(val) for opt, val in options.items()])
         else:
             options = ''
 
