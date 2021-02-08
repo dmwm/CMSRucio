@@ -3,6 +3,7 @@
 """
 Class definition for a CMS RSE. And script for updating RSE
 """
+import copy
 import logging
 import pprint
 import re
@@ -21,9 +22,13 @@ DOMAINS_BY_TYPE = {
     'temp': {'wan': {'read': 1, 'write': 1, 'third_party_copy': 1, 'delete': 1},
              'lan': {'read': 0, 'write': 0, 'delete': 0}},
 }
-RUCIO_PROTOS = ['SRMv2']
-IMPL_MAP = {'SRMv2': 'rucio.rse.protocols.gfalv2.Default'}
-DEFAULT_PORTS = {'gsiftp': 2811}
+RUCIO_PROTOS = ['SRMv2', 'WebDAV']
+
+# This needs to cahnge for the webDAV validation
+PROTO_WEIGHT = {'WebDAV': 2, 'SRMv2': 1}
+IMPL_MAP = {'SRMv2': 'rucio.rse.protocols.gfalv2.Default',
+            'WebDAV': 'rucio.rse.protocols.gfalv2.Default'}
+DEFAULT_PORTS = {'gsiftp': 2811, 'davs': 1094}
 
 
 class CMSRSE:
@@ -152,7 +157,14 @@ class CMSRSE:
         if protocol_name not in RUCIO_PROTOS:
             return algorithm, proto
 
-        domains = DOMAINS_BY_TYPE[self.cms_type]
+        domains = copy.deepcopy(DOMAINS_BY_TYPE[self.cms_type])
+
+        try:
+            for method, weight in domains['wan'].items():
+                if weight and protocol_name in PROTO_WEIGHT:
+                    domains['wan'][method] = PROTO_WEIGHT[protocol_name]
+        except KeyError:
+            pass  # We're trying to modify an unknown protocol somehow
 
         if proto_json.get('prefix', None):
             """
@@ -276,23 +288,31 @@ class CMSRSE:
         except (RSEProtocolNotSupported, RSENotFound):
             current_protocols = []
 
-        protocol_unchanged = False
 
         for new_proto in self.protocols:
 
+            protocol_unchanged = False
             for existing_proto in current_protocols:
                 if existing_proto['scheme'] == new_proto['scheme']:
                     if new_proto == existing_proto:
                         protocol_unchanged = True
                     else:
-                        logging.info("Deleting definition which is not as expected: \nrucio=%s  \nexpected=%s",
-                                     str(existing_proto), str(new_proto))
-                        try:
-                            self.rcli.delete_protocols(rse=self.rse_name, scheme=new_proto['scheme'])
-                        except RSEProtocolNotSupported:
-                            logging.debug("Cannot remove protocol %s from %s", new_proto['scheme'], self.rse_name)
+                        if self.dry:
+                                         y
+                            logging.info("Deleting definition which is not as expected: \nrucio=%s  \nexpected=%s. Dry run, skipping",
+                                         str(existing_proto), str(new_proto))
+                        else:
+                            logging.info("Deleting definition which is not as expected: \nrucio=%s  \nexpected=%s",
+                                         str(existing_proto), str(new_proto))
+                            try:
+                                self.rcli.delete_protocols(rse=self.rse_name, scheme=new_proto['scheme'])
+                            except RSEProtocolNotSupported:
+                                logging.debug("Cannot remove protocol %s from %s", new_proto['scheme'], self.rse_name)
 
-            if new_proto['scheme'] in ['srm', 'srmv2', 'gsiftp'] and not protocol_unchanged:
+            if new_proto['scheme'] in ['srm', 'srmv2', 'gsiftp', 'davs'] and not protocol_unchanged:
+            if self.dry:
+                logging.info('Adding %s to %s. Dry run, skipping', new_proto['scheme'], self.rse_name)
+            else:
                 logging.info('Adding %s to %s', new_proto['scheme'], self.rse_name)
                 self.rcli.add_protocol(rse=self.rse_name, params=new_proto)
 
