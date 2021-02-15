@@ -9,36 +9,17 @@ RUN yum install -y epel-release.noarch && \
     yum clean all && \
     rm -rf /var/cache/yum
 
-RUN yum install -y python-pip  voms-clients-java gfal2-all gfal2-util \
-                   nordugrid-arc-client nordugrid-arc-plugins-gfal \
-                   nordugrid-arc-plugins-globus nordugrid-arc-plugins-s3 \
-                   nordugrid-arc-plugins-xrootd && \
-    yum clean all && \
-    rm -rf /var/cache/yum
-
-RUN yum install -y python3 python3-pip && \
-    yum clean all && \
-    rm -rf /var/cache/yum
-
-WORKDIR /tmp
-
-
-RUN yum install -y httpd mod_wsgi libaio gcc python-devel.x86_64 \
+# FIXME: What is all this? We can't need it all
+RUN yum install -y python3 python3-pip pylint \
+                   httpd mod_wsgi libaio gcc python-devel.x86_64 \
                    install wget unzip \
                    mod_ssl openssl-devel.x86_64 bind-utils nano git && \
     yum clean all && \
     rm -rf /var/cache/yum
 
-# Upgrade pip & setuptools
-#RUN pip install --upgrade pip
-#RUN pip install --upgrade setuptools
-
-
-#RUN pip install --upgrade pip
-RUN rm -rf /usr/lib/python2.7/site-packages/ipaddress*
+WORKDIR /tmp
 
 # Get various repos for yum setup
-
 RUN curl -o /etc/yum.repos.d/ca.repo https://raw.githubusercontent.com/rucio/rucio/1.20.3/etc/docker/dev/ca.repo
 
 # Install WLCG repo for CMS VOMS
@@ -48,21 +29,23 @@ RUN yum -y install http://linuxsoft.cern.ch/wlcg/centos7/x86_64/wlcg-repo-1.0.0-
     rm -rf /var/cache/yum
 
 # Install sets of RPM
+# FIXME: This overlaps with above
 RUN yum install -y which krb5-devel gridsite \
                    lcg-CA globus-proxy-utils voms-clients-java voms-clients-cpp wlcg-voms-cms \
-                   gfal2-python gfal2-all gfal2-util \
-                   xrootd-client pylint && \
+                   gfal2-python gfal2-all gfal2-util gfal2-python3 \
+                   nordugrid-arc-client nordugrid-arc-plugins-gfal \
+                   nordugrid-arc-plugins-globus nordugrid-arc-plugins-s3 \
+                   nordugrid-arc-plugins-xrootd \
+                   xrootd-client && \
     yum clean all && \
     rm -rf /var/cache/yum
 
-#RUN pip install statsd python-gitlab
 
 # Install Rucio and other stuff
-#RUN pip install rucio-clients==1.22.7 multiprocessing-logging jsonschema PyYAML pystatsd
 
 RUN pip3 install --upgrade pip
 RUN pip3 install --upgrade setuptools
-RUN pip3 install rucio-clients==1.22.7
+RUN pip3 install rucio-clients
 RUN pip3 install python-gitlab
 
 # Install DAS client to pull info from PhEDEx/DBS
@@ -88,7 +71,7 @@ RUN git clone https://github.com/dmwm/CMSRucio.git
 # COPY scripts /root/CMSRucio/docker/CMSRucioClient/scripts
 
 # Our schema
-ADD https://raw.githubusercontent.com/ericvaandering/rucio/cms_nano8/lib/rucio/common/schema/cms.py /usr/lib/python2.7/site-packages/rucio/common/schema/cms.py
+ADD https://raw.githubusercontent.com/ericvaandering/rucio/cms_nano12/lib/rucio/common/schema/cms.py /usr/lib/python2.7/site-packages/rucio/common/schema/cms.py
 RUN python -m compileall /usr/lib/python2.7/site-packages/rucio/common/schema
 
 ENV X509_USER_PROXY=/tmp/x509up
