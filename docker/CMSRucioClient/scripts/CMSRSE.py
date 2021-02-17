@@ -309,11 +309,11 @@ class CMSRSE:
                                 logging.debug("Cannot remove protocol %s from %s", new_proto['scheme'], self.rse_name)
 
             if new_proto['scheme'] in ['srm', 'srmv2', 'gsiftp', 'davs'] and not protocol_unchanged:
-            if self.dry:
-                logging.info('Adding %s to %s. Dry run, skipping', new_proto['scheme'], self.rse_name)
-            else:
-                logging.info('Adding %s to %s', new_proto['scheme'], self.rse_name)
-                self.rcli.add_protocol(rse=self.rse_name, params=new_proto)
+                if self.dry:
+                    logging.info('Adding %s to %s. Dry run, skipping', new_proto['scheme'], self.rse_name)
+                else:
+                    logging.info('Adding %s to %s', new_proto['scheme'], self.rse_name)
+                    self.rcli.add_protocol(rse=self.rse_name, params=new_proto)
 
         return
 
