@@ -298,7 +298,6 @@ class CMSRSE:
                         protocol_unchanged = True
                     else:
                         if self.dry:
-                                         y
                             logging.info("Deleting definition which is not as expected: \nrucio=%s  \nexpected=%s. Dry run, skipping",
                                          str(existing_proto), str(new_proto))
                         else:
