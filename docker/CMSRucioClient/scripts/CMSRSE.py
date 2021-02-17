@@ -7,9 +7,11 @@ import copy
 import logging
 import pprint
 import re
+import json
 
 from rucio.client.client import Client
 from rucio.common.exception import RSEProtocolNotSupported, RSENotFound
+import pdb
 
 APPROVAL_REQUIRED = ['T1_DE_KIT_Tape', 'T1_ES_PIC_Tape', 'T1_RU_JINR_Tape', 'T1_UK_RAL_Tape', 'T1_US_FNAL_Tape']
 DOMAINS_BY_TYPE = {
@@ -22,7 +24,8 @@ DOMAINS_BY_TYPE = {
     'temp': {'wan': {'read': 1, 'write': 1, 'third_party_copy': 1, 'delete': 1},
              'lan': {'read': 0, 'write': 0, 'delete': 0}},
 }
-RUCIO_PROTOS = ['SRMv2', 'WebDAV']
+#RUCIO_PROTOS = ['SRMv2', 'WebDAV']
+RUCIO_PROTOS = ['SRMv2']
 
 # This needs to cahnge for the webDAV validation
 PROTO_WEIGHT = {'WebDAV': 2, 'SRMv2': 1}
@@ -52,8 +55,6 @@ class CMSRSE:
         self.settings['deterministic'] = deterministic
         self.rucio_rse_type = json['type'].upper()
         self.rse_name = json['rse']
-
-        # pdb.set_trace()
 
         self._get_attributes()
         self.attrs['fts'] = ','.join(json['fts'])
@@ -171,7 +172,6 @@ class CMSRSE:
             The simple case where all we have is a prefix. This just triggers the identity algorithm 
             with some simple settings
             """
-
             algorithm = 'cmstfc'
             try:
                 print("Looking for prefix with web service path")
@@ -225,15 +225,16 @@ class CMSRSE:
             tfc = []
 
             algorithm = 'cmstfc'
-            prefix_regex = re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+):(\d+)(\/.*\=)(.*)')
+            prefix_regex_1 = re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+):(\d+)(\/.*\=)(.*)')
+            prefix_regex_2 = re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+)(.*)')
             rules = proto_json['rules']
             for rule in rules:
                 # On first pass, fill in the basic information we need before pulling out the rules
                 # including any first level chain names
                 if rule.get('chain', None):
                     chains.add(rule['chain'])
-                try:
-                    prefix_match = prefix_regex.match(rule['pfn'])
+                prefix_match = prefix_regex_1.match(rule['pfn'])
+                if prefix_match:
                     proto['scheme'] = prefix_match.group(1)
                     proto['hostname'] = prefix_match.group(2)
                     proto['port'] = prefix_match.group(3)
@@ -242,18 +243,19 @@ class CMSRSE:
                     proto['prefix'] = '/'
                     proto['domains'] = domains
                     proto['impl'] = IMPL_MAP[protocol_name]
-                except AttributeError:
-                    prefix_regex = re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+)(.*)')
-                    proto['scheme'] = prefix_match.group(1)
-                    proto['hostname'] = prefix_match.group(2)
-                    proto['port'] = DEFAULT_PORTS[proto['scheme']]
-                    proto['extended_attributes'] = {'tfc_proto': protocol_name.lower()}
-                    proto['prefix'] = '/'
-                    proto['domains'] = domains
-                    proto['impl'] = IMPL_MAP[protocol_name]
-
-                    print('Replace with actual no match error')
-                    raise
+                else:
+                    prefix_match = prefix_regex_2.match(rule['pfn'])
+                    if prefix_match:
+                        proto['scheme'] = prefix_match.group(1)
+                        proto['hostname'] = prefix_match.group(2)
+                        proto['port'] = DEFAULT_PORTS[proto['scheme']]
+                        proto['extended_attributes'] = {'tfc_proto': protocol_name.lower()}
+                        proto['prefix'] = '/'
+                        proto['domains'] = domains
+                        proto['impl'] = IMPL_MAP[protocol_name]
+                    else:
+                        print("Error: can't match regexp to rule %s. Exiting ...", rule)
+                        sys.exit(1)
 
             # Now go through all the protocols including ones we were not interested in at first and get rules
             # Turn {"protocol": "SRMv2",
@@ -261,7 +263,6 @@ class CMSRSE:
             #         "rules": [ {"lfn": "/+(.*)", "pfn": "srm://SRM_URL=/$1", "chain": "pnfs"} ]
             #      },
             # into {u'path': u'(.*)', u'out': u'/pnfs/gridka.de/cms$1', u'proto': u'srmv2', 'chain': 'pnfs'}
-
             while chains - done_chains:
                 for test_proto in protos_json:  # Keep looking for what we need in all the protos
                     proto_name = test_proto['protocol'].lower()
@@ -298,8 +299,10 @@ class CMSRSE:
                         protocol_unchanged = True
                     else:
                         if self.dry:
-                            logging.info("Deleting definition which is not as expected: \nrucio=%s  \nexpected=%s. Dry run, skipping",
-                                         str(existing_proto), str(new_proto))
+                            logging.info("Deleting definition which is not as expected (Dry run, skipping)")
+                            print(json.dumps(existing_proto, sort_keys=False, indent=4))
+                            logging.info("expected (Dry run, skipping)")
+                            print(json.dumps(new_proto, sort_keys=False, indent=4))
                         else:
                             logging.info("Deleting definition which is not as expected: \nrucio=%s  \nexpected=%s",
                                          str(existing_proto), str(new_proto))
@@ -346,7 +349,6 @@ class CMSRSE:
         Creates, if needed, and updates the RSE according
         to CMS rules and PhEDEx data.
         """
-
         create_res = self._create_rse()
 
         attrs_res = self._set_attributes()
