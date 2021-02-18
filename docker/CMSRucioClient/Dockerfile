@@ -1,5 +1,4 @@
 FROM centos:7
-RUN yum install -y epel-release.noarch 
 
 RUN yum upgrade -y && \
     yum clean all && \
