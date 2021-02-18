@@ -19,7 +19,7 @@ def sync_egroups_to_group_accounts():
     for group, data in all_cric_groups.items():
 
         if 'egroups' in data and data['egroups'] and 'users' in data and data['users']:
-            group_name = group.replace('-', '_')
+            group_name = data['egroups'][0].replace('-', '_').lower()
             group_email = data['egroups'][0] + '@cern.ch'
 
             try:
