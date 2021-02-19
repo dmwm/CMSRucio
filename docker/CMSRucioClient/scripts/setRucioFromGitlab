@@ -9,6 +9,8 @@ from argparse import ArgumentParser
 from rucio.client import Client
 
 import gitlab
+import logging
+
 from CMSRSE import CMSRSE
 
 SKIP_SITES = ['T2_FI_HIP', 'T2_ES_IFCA', 'T2_CH_CERN', 'T1_US_FNAL_Disk', 'T1_US_FNAL', 'T1_UK_RAL']
@@ -19,6 +21,8 @@ parser.add_argument('--type', dest='cms_type', help='type of RSE (prod-real, int
 parser.add_argument('--dryrun', dest='dry_run', action='store_true',
                     help='do not change anything in rucio, checking only')
 
+parser.add_argument('--debug', action='store_true',help="be more verbose=")
+
 options = parser.parse_args()
 
 # Get all the projects from GitLab
@@ -27,11 +31,25 @@ gl = gitlab.Gitlab('https://gitlab.cern.ch', private_token=private_token)
 group = gl.groups.get('siteconf')
 projects = group.projects.list(all=True)
 
+logger = logging.getLogger("setRucioFromGitlab")
+logger = logging.getLogger()
+fh = logging.StreamHandler()
+fh_formatter = logging.Formatter('%(asctime)s  %(levelname)s - %(message)s', datefmt='%Y%m%d %H:%M:%S')
+fh.setFormatter(fh_formatter)
+logger.addHandler(fh)
+
+if options.debug:
+    logger.setLevel(level=logging.DEBUG)
+else:
+    logger.setLevel(level=logging.INFO)
+
+
+
 client = Client()
+
 
 rses = client.list_rses('update_from_json=True')
 DO_SITES = [rse['rse'] for rse in rses]
-
 for project in projects:
     full_project = gl.projects.get(project.id)
     try:
@@ -42,28 +60,15 @@ for project in projects:
             if site['rse'] and options.cms_type in ['test', 'temp']:
                 # For these, query the actual site and construct a JSON
                 if options.cms_type == 'test':
-                    lfn = '/store/test/rucio'
                     rse_name = site['rse'] + '_Test'
                     deterministic = True
                 elif options.cms_type == 'temp':
-                    lfn = '/store/temp'
                     rse_name = site['rse'] + '_Temp'
                     deterministic = False
                 if rse_name in SKIP_SITES or not DO_SITES or rse_name not in DO_SITES:
                     continue
-                # Do LFN to PFN conversion for the site
-                pfns = client.lfns2pfns(site['rse'], ['cms:%s' % lfn], operation='read')
-                pfn = pfns['cms:%s' % lfn]
 
-                # Make dictionary based on previous dictionary
-                new_site = {
-                    'site': site['rse'],
-                    'protocols': [{'protocol': 'SRMv2', 'access': 'global-rw', 'prefix': pfn}],
-                    'type': site['type'],
-                    'rse': rse_name,
-                    'fts': site['fts']
-                }
-                rse = CMSRSE(new_site, dry=options.dry_run, cms_type=options.cms_type, deterministic=deterministic)
+                rse = CMSRSE(site, dry=options.dry_run, cms_type=options.cms_type, deterministic=deterministic)
                 if rse.update():
                     print('RSE %s and type %s changed' % (rse.rse_name, rse.rucio_rse_type))
                 else:
