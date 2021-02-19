@@ -178,7 +178,7 @@ def delete_replicas(client, dest_rse, replicas):
     rse_settings = rsemanager.get_rse_info(dest_rse)
     # we would expect "delete" operation but tape sites have that disabled for safety
     protocol_delete = rsemanager.create_protocol(
-        rse_settings, operation="read", domain="wan", logger=logger
+        rse_settings, operation="read", domain="wan", logger=logger.log
     )
     lfns = [lfn["scope"] + ":" + lfn["name"] for lfn in replicas]
     pfns = client.lfns2pfns(dest_rse, lfns, operation="read")
@@ -308,7 +308,7 @@ def run(source_rse_expression, dest_rse_expression, account, activity, filesize)
         raise ValueError("File size {filesize} not allowed".format(filesize=filesize))
 
     client = Client(account=account)
-    uploader = UploadClient(_client=client, logger=logger)
+    uploader = UploadClient(_client=client, logger=logger.log)
 
     while ACTIVE:
         cycle_start = datetime.datetime.utcnow()
