@@ -32,6 +32,7 @@ from rucio.common.exception import (
     DestinationNotAccessible,
     ServiceUnavailable,
     ReplicaNotFound,
+    SourceNotFound,
 )
 
 
@@ -189,7 +190,10 @@ def delete_replicas(client, dest_rse, replicas):
                 pfn=pfn, dest_rse=dest_rse
             )
         )
-        protocol_delete.delete(pfn)
+        try:
+            protocol_delete.delete(pfn)
+        except SourceNotFound:
+            pass
 
 
 def update_loadtest(
