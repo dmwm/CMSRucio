@@ -106,17 +106,15 @@ def ensure_rse_self_expression(client, rse):
                 found = True
             else:
                 logger.warning(
-                    "Found extraneous RSE {item_rse} when checking RSE self-expression on {rse}".format(
-                        item_rse=item["rse"], rse=rse
-                    )
+                    f"Found extraneous RSE {item['rse']} when checking RSE self-expression on {rse}"
                 )
                 client.delete_rse_attribute(item["rse"], rse)
         if not found:
-            logger.info("Repairing RSE self-expression for {rse}".format(rse=rse))
+            logger.info(f"Repairing RSE self-expression for {rse}")
             client.add_rse_attribute(rse, rse, True)
     except InvalidRSEExpression as ex:
-        if ex.message == u"RSE Expression resulted in an empty set.":
-            logger.info("Repairing RSE self-expression for {rse}".format(rse=rse))
+        if ex.message == "RSE Expression resulted in an empty set.":
+            logger.info(f"Repairing RSE self-expression for {rse}")
             client.add_rse_attribute(rse, rse, True)
         else:
             raise ex
@@ -130,9 +128,7 @@ def next_available_filenumber(client, rse, filesize):
         if m:
             max_fn = max(max_fn, int(m.groups()[0]))
         else:
-            logger.error(
-                "Failed to match filenumber regex to DID {did}".format(did=did)
-            )
+            logger.error(f"Failed to match filenumber regex to DID {did}")
             # we'll return what we have anyway, since the upload will fail later
     return max_fn + 1
 
@@ -146,19 +142,15 @@ def upload_source_data(client, uploader, rse, filesize, filenumber):
         uploader.upload([item])
         return True
     except InvalidRSEExpression:
-        logger.error("RSE {rse} is missing self-expression".format(rse=rse))
+        logger.error(f"RSE {rse} is missing self-expression")
     except NoFilesUploaded:
-        logger.error(
-            "RSE {rse} was unable to upload loadtest file {item}".format(
-                rse=rse, item=item
-            )
-        )
+        logger.error(f"RSE {rse} was unable to upload loadtest file {item}")
     except RSEBlacklisted:
-        logger.error("RSE {rse} is disabled for writes".format(rse=rse))
+        logger.error(f"RSE {rse} is disabled for writes")
     except DestinationNotAccessible:
-        logger.error("RSE {rse} has permission issues".format(rse=rse))
+        logger.error(f"RSE {rse} has permission issues")
     except ServiceUnavailable:
-        logger.error("RSE {rse} host appears down".format(rse=rse))
+        logger.error(f"RSE {rse} host appears down")
     return False
 
 
@@ -172,7 +164,7 @@ def parse_rate(comment):
             return float(number[:-1]) * si_prefix[number[-1]]
         else:
             return float(number)
-    raise ValueError("Rule comment {comment} not parseable".format(comment=comment))
+    raise ValueError(f"Rule comment {comment} not parseable")
 
 
 def delete_replicas(client, dest_rse, replicas):
@@ -185,11 +177,7 @@ def delete_replicas(client, dest_rse, replicas):
     pfns = client.lfns2pfns(dest_rse, lfns, operation="read")
     protocol_delete.connect()
     for pfn in pfns.values():
-        logger.debug(
-            "Deleting PFN {pfn} from destination RSE {dest_rse}".format(
-                pfn=pfn, dest_rse=dest_rse
-            )
-        )
+        logger.debug(f"Deleting PFN {pfn} from destination RSE {dest_rse}")
         try:
             protocol_delete.delete(pfn)
         except SourceNotFound:
@@ -202,18 +190,12 @@ def update_loadtest(
     links = client.get_distance(source_rse, dest_rse)
     if len(links) == 0 and rule is not None:
         logger.info(
-            "No link between {source_rse} and {dest_rse}, removing rule {rule_id}".format(
-                source_rse=source_rse, dest_rse=dest_rse, rule_id=rule["id"]
-            )
+            f"No link between {source_rse} and {dest_rse}, removing rule {rule['id']}"
         )
         client.delete_replication_rule(rule["id"])
         return None
     elif len(links) == 0:
-        logger.info(
-            "No link between {source_rse} and {dest_rse}, skipping load test".format(
-                source_rse=source_rse, dest_rse=dest_rse
-            )
-        )
+        logger.info(f"No link between {source_rse} and {dest_rse}, skipping load test")
         return None
     elif len(links) > 1:
         logger.error(
@@ -222,9 +204,7 @@ def update_loadtest(
         return None
     if rule is None:
         logger.info(
-            "New link between {source_rse} and {dest_rse}, creating a load test rule this cycle".format(
-                source_rse=source_rse, dest_rse=dest_rse
-            )
+            f"New link between {source_rse} and {dest_rse}, creating a load test rule this cycle"
         )
         rule = {
             "dids": [{"scope": "cms", "name": dataset}],
@@ -243,19 +223,12 @@ def update_loadtest(
         return False
     if rule["state"] == "SUSPENDED":
         logger.debug(
-            "Existing link between {source_rse} and {dest_rse} with load test rule {rule_id} is suspended, resetting to stuck".format(
-                source_rse=source_rse, dest_rse=dest_rse, rule_id=rule["id"]
-            )
+            f"Existing link between {source_rse} and {dest_rse} with load test rule {rule['id']} is suspended, resetting to stuck"
         )
         client.update_replication_rule(rule["id"], {"state": "STUCK"})
     elif rule["state"] != "OK":
         logger.debug(
-            "Existing link between {source_rse} and {dest_rse} with load test rule {rule_id} is in state {rule_state}, will skip load test replica update".format(
-                source_rse=source_rse,
-                dest_rse=dest_rse,
-                rule_id=rule["id"],
-                rule_state=rule["state"],
-            )
+            f"Existing link between {source_rse} and {dest_rse} with load test rule {rule['id']} is in state {rule['state']}, will skip load test replica update"
         )
         return False
     update_dt = (datetime.datetime.utcnow() - rule["updated_at"]).total_seconds()
@@ -265,11 +238,7 @@ def update_loadtest(
     try:
         target_rate = parse_rate(rule["comments"])
     except ValueError as ex:
-        logger.error(
-            "Error parsing loadtest rule {rule_id}: {message}".format(
-                rule_id=rule["id"], message=ex.message
-            )
-        )
+        logger.error(f"Error parsing loadtest rule {rule['id']}: {ex.message}")
         return False
     data_volume = 8.0 * sum(file["bytes"] for file in source_files)
     delay_time = max(data_volume / target_rate, 0)
@@ -278,13 +247,7 @@ def update_loadtest(
     if update_dt < min_time or random.random() > TARGET_CYCLE_TIME / delay_jitter:
         return False
     logger.info(
-        "Link between {source_rse} and {dest_rse} with load test rule {rule_id} last updated {update_dt}s ago (target={delay_time}), marking destination replicas unavailable".format(
-            source_rse=source_rse,
-            dest_rse=dest_rse,
-            rule_id=rule["id"],
-            update_dt=update_dt,
-            delay_time=delay_time,
-        )
+        f"Link between {source_rse} and {dest_rse} with load test rule {rule['id']} last updated {update_dt}s ago (target={delay_time}), marking destination replicas unavailable"
     )
     replicas = [
         {"scope": file["scope"], "name": file["name"], "state": "U"}
@@ -309,7 +272,7 @@ def update_loadtest(
 
 def run(source_rse_expression, dest_rse_expression, account, activity, filesize):
     if filesize not in ALLOWED_FILESIZES:
-        raise ValueError("File size {filesize} not allowed".format(filesize=filesize))
+        raise ValueError(f"File size {filesize} not allowed")
 
     client = Client(account=account)
     uploader = UploadClient(_client=client, logger=logger.log)
@@ -324,11 +287,7 @@ def run(source_rse_expression, dest_rse_expression, account, activity, filesize)
             try:
                 source_files = list(client.list_files("cms", dataset))
             except DataIdentifierNotFound:
-                logger.info(
-                    "RSE {source_rse} has no source files, will create one".format(
-                        source_rse=source_rse
-                    )
-                )
+                logger.info(f"RSE {source_rse} has no source files, will create one")
                 source_files = []
 
             # here we might consider requiring a minimum number of source files to achieve a target rate
@@ -341,9 +300,7 @@ def run(source_rse_expression, dest_rse_expression, account, activity, filesize)
                 )
                 if not success:
                     logger.error(
-                        "RSE {source_rse} has no source files and could not upload, skipping".format(
-                            source_rse=source_rse
-                        )
+                        f"RSE {source_rse} has no source files and could not upload, skipping"
                     )
                     continue
                 source_files = list(client.list_files("cms", dataset))
@@ -378,9 +335,7 @@ def run(source_rse_expression, dest_rse_expression, account, activity, filesize)
                 )
 
         cycle_time = (datetime.datetime.utcnow() - cycle_start).total_seconds()
-        logger.info(
-            "Completed loadtest cycle in {cycle_time}s".format(cycle_time=cycle_time)
-        )
+        logger.info(f"Completed loadtest cycle in {cycle_time}s")
         while cycle_time < TARGET_CYCLE_TIME and ACTIVE:
             dt = min(1, TARGET_CYCLE_TIME - cycle_time + 1e-3)
             time.sleep(dt)
