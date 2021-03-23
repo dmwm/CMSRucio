@@ -1,0 +1,27 @@
+#!/usr/bin/env python
+import argparse
+from rucio.client import Client
+
+
+def list_requests_for_rule(client, rule_id):
+    for lock in client.list_replica_locks(rule_id):
+        if lock["state"] == "REPLICATING":
+            yield client.list_request_by_did(lock["name"], lock["rse"], scope=lock["scope"])
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(prog="rule_requests")
+    parser.add_argument("-n", help="Maximum requests to show", type=int, default=10)
+    parser.add_argument("rule", help="The rule ID to look up", type=str, nargs=1)
+    args = parser.parse_args()
+    client = Client()
+
+    for i, request in enumerate(list_requests_for_rule(client, args.rule[0])):
+        if i > args.n:
+            break
+        print(f"Request {request['id']} submitted to {request['external_host']} at {request['submitted_at']} from {request['source_rse']} to {request['dest_rse']}")
+        print(f"\tDestination: {request['dest_url']}")
+        if request["staging_started_at"] is not None:
+            print(f"\tFile has tape source, staging started at {request['staging_started_at']}, finished at {request['staging_finished_at']}")
+        link = request["external_host"].replace("8446", "8449") + "/fts3/ftsmon/#/job/" + request["external_id"]
+        print(f"\tFTS link: {link}")
