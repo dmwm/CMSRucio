@@ -14,32 +14,34 @@ by this script with a configurable file size.
 Nick Smith <nick.smith@cern.ch>
 """
 import argparse
-import time
-import random
-import logging
 import datetime
-import threading
+import logging
 import os
+import random
 import re
+import threading
+import time
+
 from rucio.client import Client
 from rucio.client.uploadclient import UploadClient
-from rucio.rse import rsemanager
 from rucio.common.exception import (
+    DataIdentifierNotFound,
+    DestinationNotAccessible,
+    DuplicateRule,
     InvalidRSEExpression,
     NoFilesUploaded,
-    DataIdentifierNotFound,
-    RSEBlacklisted,
-    DestinationNotAccessible,
-    ServiceUnavailable,
     ReplicaNotFound,
+    RSEBlacklisted,
+    ServiceUnavailable,
     SourceNotFound,
 )
-
+from rucio.rse import rsemanager
 
 logger = logging.getLogger(__name__)
 ALLOWED_FILESIZES = {
     # motivation: one file every 6h = 100kbps avg. rate
     "270MB": 270000000,
+    "2700MB": 2700000000,
 }
 LOADTEST_DATASET_FMT = "/LoadTestSource/{rse}/TEST#{filesize}"
 LOADTEST_LFNDIR_FMT = "/store/test/loadtest/source/{rse}/"
@@ -192,7 +194,7 @@ def update_loadtest(
         logger.info(
             f"No link between {source_rse} and {dest_rse}, removing rule {rule['id']}"
         )
-        client.delete_replication_rule(rule["id"])
+        client.update_replication_rule(rule["id"], {"lifetime": 0})
         return None
     elif len(links) == 0:
         logger.info(f"No link between {source_rse} and {dest_rse}, skipping load test")
@@ -219,7 +221,19 @@ def update_loadtest(
             "comment": DEFAULT_RULE_COMMENT,
         }
         logger.debug("Creating rule: %r" % rule)
-        client.add_replication_rule(**rule)
+        try:
+            client.add_replication_rule(**rule)
+        except DuplicateRule:
+            logger.error(f"Found a duplicate rule while making {rule}, removing")
+            for other_rule in client.list_replication_rules(
+                {
+                    "scope": "cms",
+                    "name": dataset,
+                    "rse_expression": dest_rse,
+                    "copies": 1,
+                }
+            ):
+                client.update_replication_rule(other_rule["id"], {"lifetime": 0})
         return False
     if rule["state"] == "SUSPENDED":
         logger.debug(
@@ -275,7 +289,7 @@ def run(source_rse_expression, dest_rse_expression, account, activity, filesize)
         raise ValueError(f"File size {filesize} not allowed")
 
     client = Client(account=account)
-    uploader = UploadClient(_client=client, logger=logger.log)
+    uploader = UploadClient(_client=client, logger=logger)
 
     while ACTIVE:
         cycle_start = datetime.datetime.utcnow()
@@ -347,10 +361,16 @@ if __name__ == "__main__":
         description="Create periodic transfers between RSEs to test links"
     )
     parser.add_argument(
-        "--source_rse_expression", type=str, help="Source RSEs to test links from"
+        "--source_rse_expression",
+        type=str,
+        help="Source RSEs to test links from",
+        required=True,
     )
     parser.add_argument(
-        "--dest_rse_expression", type=str, help="Destination RSEs to test links to"
+        "--dest_rse_expression",
+        type=str,
+        help="Destination RSEs to test links to",
+        required=True,
     )
     parser.add_argument(
         "--account",
