@@ -14,28 +14,28 @@ by this script with a configurable file size.
 Nick Smith <nick.smith@cern.ch>
 """
 import argparse
-import time
-import random
-import logging
 import datetime
-import threading
+import logging
 import os
+import random
 import re
+import threading
+import time
+
 from rucio.client import Client
 from rucio.client.uploadclient import UploadClient
-from rucio.rse import rsemanager
 from rucio.common.exception import (
+    DataIdentifierNotFound,
+    DestinationNotAccessible,
+    DuplicateRule,
     InvalidRSEExpression,
     NoFilesUploaded,
-    DataIdentifierNotFound,
-    RSEBlacklisted,
-    DestinationNotAccessible,
-    ServiceUnavailable,
     ReplicaNotFound,
+    RSEBlacklisted,
+    ServiceUnavailable,
     SourceNotFound,
-    DuplicateRule,
 )
-
+from rucio.rse import rsemanager
 
 logger = logging.getLogger(__name__)
 ALLOWED_FILESIZES = {
