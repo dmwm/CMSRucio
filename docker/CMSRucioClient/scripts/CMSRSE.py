@@ -28,7 +28,7 @@ PROTO_WEIGHT = {'WebDAV':2, 'XRootD': 3, 'SRMv2': 1}
 IMPL_MAP = {'SRMv2': 'rucio.rse.protocols.gfalv2.Default',
             'XRootD': 'rucio.rse.protocols.gfal.Default',
             'WebDAV': 'rucio.rse.protocols.gfalv2.Default'}
-DEFAULT_PORTS = {'gsiftp': 2811, 'root': 1094, 'davs':1094}
+DEFAULT_PORTS = {'gsiftp': 2811, 'root': 1094, 'davs':443}
 
 
 class CMSRSE:
@@ -167,14 +167,12 @@ class CMSRSE:
             return algorithm, proto
 
         domains = copy.deepcopy(DOMAINS_BY_TYPE[self.cms_type])
-
         try:
             for method, weight in domains['wan'].items():
                 if weight and protocol_name in PROTO_WEIGHT:
                     domains['wan'][method] = PROTO_WEIGHT[protocol_name]
         except KeyError:
             pass  # We're trying to modify an unknown protocol somehow
-
         #TODO: Make sure global-rw is set
         if proto_json.get('prefix', None):
             """
@@ -237,12 +235,16 @@ class CMSRSE:
                             prefix = '/'
                             port = DEFAULT_PORTS[scheme]
 
+            # Make sure that prefix always ends with "/"
+            if prefix[len(prefix) -1] != "/":
+                prefix = prefix +"/"
+
             # if we are building a _Test instance add the specia prefix
             if self.cms_type == "test":
-                prefix = prefix +"/store/test/rucio/"
+                prefix = prefix +"store/test/rucio/"
 
             elif self.cms_type == "temp":
-                prefix = prefix +"/store/temp/"
+                prefix = prefix +"store/temp/"
 
             proto = {
                 'scheme': scheme,
@@ -358,7 +360,13 @@ class CMSRSE:
         except (RSEProtocolNotSupported, RSENotFound):
             current_protocols = []
 
-        for new_proto in self.protocols:
+        # We need to get the new protocols sorted, so that the one
+        # with the highest priority goes first, otherwise the priorites
+        # get messed up.
+        # when a protocol is removed from Rucio, the priorities of the remaining
+        # protocols get adjusted so that there is a protocol with priority = 1
+        sorted_new_protocols = sorted(self.protocols, key = lambda i:i['domains']['wan']['read'])
+        for new_proto in sorted_new_protocols:
             protocol_unchanged = False
             for existing_proto in current_protocols:
                 if existing_proto['scheme'] == new_proto['scheme']:
@@ -417,7 +425,6 @@ class CMSRSE:
         Creates, if needed, and updates the RSE according
         to CMS rules and PhEDEx data.
         """
-
         create_res = self._create_rse()
 
         attrs_res = self._set_attributes()
