@@ -22,21 +22,17 @@ set -x
 
 cd docker/CMSRucioClient/scripts/
 
-echo "Syncing sites from JSON"
+echo "Syncing account roles for managers and group accounts"
+./syncRolesToAttributes.py
+./syncEgroupsToGroupAccounts.py
 
-if [ "$RUCIO_HOME" = "/opt/rucio-int" ]
-  then
-  ./setRucioFromGitlab --type int-real
-fi
 if [ "$RUCIO_HOME" = "/opt/rucio-prod" ]
   then
-  ./setRucioFromGitlab --type prod-real
+  echo "Creating user accounts and setting quotas"
+  ./user_to_site_mapping.py
 fi
 
-./setRucioFromGitlab --type test
-./setRucioFromGitlab --type temp
 
-echo "Setting quotas"
-./setSiteQuotas
-echo "Setting availability"
-./setSiteAvailability
+echo "Creating links"
+./cmslinks.py --overwrite # Remove the --disable flag for Katy's RSE
+## ./cmslinks.py --phedex_link --overwrite --disable
