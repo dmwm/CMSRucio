@@ -23,6 +23,7 @@ def sync_egroups_to_group_accounts():
             group_email = data['egroups'][0] + '@cern.ch'
 
             try:
+                print('Checking for account %s in Rucio' % group_name)
                 client.get_account(group_name)
             except AccountNotFound:
                 print('Adding group account %s with %s' % (group_name, group_email))
