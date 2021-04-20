@@ -24,7 +24,8 @@ DOMAINS_BY_TYPE = {
              'lan': {'read': 0, 'write': 0, 'delete': 0}},
 }
 RUCIO_PROTOS = ['SRMv2', 'XRootD', 'WebDAV']
-PROTO_WEIGHT = {'WebDAV':2, 'XRootD': 3, 'SRMv2': 1}
+PROTO_WEIGHT_TPC = {'WebDAV':1, 'XRootD': 3, 'SRMv2': 2}
+PROTO_WEIGHT_RWD = {'WebDAV':2, 'XRootD': 3, 'SRMv2': 1}
 IMPL_MAP = {'SRMv2': 'rucio.rse.protocols.gfalv2.Default',
             'XRootD': 'rucio.rse.protocols.gfal.Default',
             'WebDAV': 'rucio.rse.protocols.gfalv2.Default'}
@@ -59,8 +60,6 @@ class CMSRSE:
             self.rse_name = json['rse']+"_Temp"
         else:
             self.rse_name = json['rse']
-
-        # pdb.set_trace()
 
         self._get_attributes()
         self.attrs['fts'] = ','.join(json['fts'])
@@ -141,7 +140,6 @@ class CMSRSE:
         return changed
 
     def _get_protocol(self, proto_json, protos_json):
-
         """
         Get the informations about the RSE protocol from creator argument or
         from phedex
@@ -167,10 +165,16 @@ class CMSRSE:
             return algorithm, proto
 
         domains = copy.deepcopy(DOMAINS_BY_TYPE[self.cms_type])
+        # Set the priorities for Read, Write, Delete and TPC for each protocol
+        # IMPORTANT: set SRMv2 Read, Write and Delete as Priority #1 because ASO needs it that way
+        # TPC is the only one we care about.
         try:
             for method, weight in domains['wan'].items():
-                if weight and protocol_name in PROTO_WEIGHT:
-                    domains['wan'][method] = PROTO_WEIGHT[protocol_name]
+                if weight and protocol_name in PROTO_WEIGHT_TPC:
+                    if method == "third_party_copy":
+                        domains['wan'][method] = PROTO_WEIGHT_TPC[protocol_name]
+                    else:
+                        domains['wan'][method] = PROTO_WEIGHT_RWD[protocol_name]
         except KeyError:
             pass  # We're trying to modify an unknown protocol somehow
         #TODO: Make sure global-rw is set
@@ -182,7 +186,7 @@ class CMSRSE:
 
             algorithm = 'cmstfc'
             try:
-                print("Looking for prefix with web service path")
+                logging.debug("Looking for prefix with web service path")
                 prefix_regex = re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+):(\d+)(\/.*\=)(.*)')
                 prefix_match = prefix_regex.match(proto_json['prefix'])
 
@@ -193,7 +197,7 @@ class CMSRSE:
                 prefix = prefix_match.group(5)
             except AttributeError:  # Missing web service path?
                 try:
-                    print("Looking for prefix with port")
+                    logging.debug("Looking for prefix with port")
 
                     prefix_regex = re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+):(\d+)/(.*)')
                     prefix_match = prefix_regex.match(proto_json['prefix'])
@@ -205,7 +209,7 @@ class CMSRSE:
                     extended_attributes = None
                 except AttributeError:
                     try:
-                        print("Looking for prefix, no port and suffix")
+                        logging.debug("Looking for prefix, no port and suffix")
                         prefix_regex = re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+)/(.*)')
                         prefix_match = prefix_regex.match(proto_json['prefix'])
 
@@ -216,7 +220,7 @@ class CMSRSE:
                         port = DEFAULT_PORTS[scheme]
                     except AttributeError:
                         try:
-                            print("Looking for prefix, port and no suffix")
+                            logging.debug("Looking for prefix, port and no suffix")
                             prefix_regex = re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+):(\d+)')
                             prefix_match = prefix_regex.match(proto_json['prefix'])
 
@@ -226,7 +230,7 @@ class CMSRSE:
                             prefix = '/'
                             port = prefix_match.group(3)
                         except AttributeError:
-                            print("Looking for prefix, no port and no suffix")
+                            logging.debug("Looking for prefix, no port and no suffix")
                             prefix_regex = re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+)')
                             prefix_match = prefix_regex.match(proto_json['prefix'])
                             scheme = prefix_match.group(1)
@@ -314,7 +318,6 @@ class CMSRSE:
 
             # If we are building a _Test or _Temp instance
             if self.cms_type == "test" or self.cms_type == "temp":
-
                 # We need to find the rule that applies to the special prefix
                 # used for _Test(/store/test/rucio) or _Temp(/store/temp) and
                 # adpat it as a prefix
@@ -341,15 +344,21 @@ class CMSRSE:
                 elif prefix_match2:
                     prefix = "/"+prefix_match2.group(3)
                 else:
-                    logging.error("something went wrong when trying to calculate the special prefix")
+                    # if we're here chances are the prefix didn't have a prefixed "scheme://"
+                    logging.debug("couldn't find a scheme when calculating special prefix")
 
                 proto['prefix']= prefix
-                proto['extended_attributes']= None
-
+                # Get rid of the TFC since were are using a prefix but don't get rid
+                # of the web_service_path if it is there
+                if 'web_service_path' in proto['extended_attributes']:
+                    aux = proto['extended_attributes']['web_service_path']
+                    proto['extended_attributes']= {'web_service_path':aux}
+                else:
+                    proto['extended_attributes']= None
             else:
                 proto['extended_attributes']['tfc'] = tfc
 
-        pprint.pprint(proto)
+        #pprint.pprint(proto)
         return algorithm, proto
 
     def _set_protocols(self):
