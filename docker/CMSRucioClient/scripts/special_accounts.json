@@ -1,23 +1,27 @@
 {
- "ratnik": {
-  "email": null, 
+ "transfer_ops": {
   "dns": [
-   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=ratnik/CN=577888/CN=Natalia Ratnikova"
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=piperov/CN=422973/CN=Stefcho Piperov",
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=cmsrucio/CN=779320/CN=Robot: CMS Rucio Data Transfer",
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=ncsmith/CN=756162/CN=Nick Smith",
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=ogarzonm/CN=846074/CN=Oscar Fernando Garzon Miguez",
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=jamadova/CN=847612/CN=Jhonatan Andres Amado Valderrama",
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=ewv/CN=644876/CN=Eric Wayne Vaandering"
   ]
- }, 
- "zvada": {
-  "email": null, 
+ },
+ "tier0_test": {
   "dns": [
-   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=zvada/CN=684832/CN=Marian Zvada", 
-   "/C=DE/O=GermanGrid/OU=KIT/CN=Marian Zvada"
+   "/DC=ch/DC=cern/OU=computers/CN=tier0/vocms001.cern.ch"
   ]
- }, 
- "emassaro": {
-  "email": null, 
+ },
+ "wma_prod": {
   "dns": [
-   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=emassaro/CN=833901/CN=Evan Keefe Massaro"
+   "/DC=org/DC=incommon/C=US/ST=IL/L=Batavia/O=Fermi Research Alliance/OU=Fermilab/CN=wmagent.fnal.gov",
+   "/DC=org/DC=incommon/C=US/ST=Illinois/L=Batavia/O=Fermi Research Alliance/OU=Fermilab/CN=wmagent.fnal.gov",
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=cmswebmg/CN=779320/CN=Robot: Service account for CMSWeb migration",
+   "/DC=ch/DC=cern/OU=computers/CN=wmagent/vocms0280.cern.ch"
   ]
- }, 
+ },
  "dciangot": {
   "email": null, 
   "dns": [
@@ -34,17 +38,13 @@
  "root": {
   "email": null, 
   "dns": [
-   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=sartiran/CN=672713/CN=Andrea Sartirana", 
-   "/DC=org/DC=terena/DC=tcs/C=IT/O=Istituto Nazionale di Fisica Nucleare/CN=Diego Ciangottini ciangottini@infn.it", 
    "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=ncsmith/CN=756162/CN=Nick Smith", 
-   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=ratnik/CN=577888/CN=Natalia Ratnikova", 
-   "/C=IT/O=INFN/OU=Personal Certificate/L=Perugia/CN=Diego Ciangottini", 
-   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=bbockelm/CN=659869/CN=Brian Paul Bockelman", 
-   "/C=CH/ST=Geneva/O=CERN/OU=PH-ADP-CO/CN=DDMLAB Client Certificate/emailAddress=ph-adp-ddm-lab@cern.ch", 
    "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=ewv/CN=644876/CN=Eric Wayne Vaandering", 
-   "/C=DE/O=GermanGrid/OU=KIT/CN=Marian Zvada", 
-   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=zvada/CN=684832/CN=Marian Zvada", 
-   "/C=UK/O=eScience/OU=CLRC/L=RAL/CN=katy ellis"
+   "/C=UK/O=eScience/OU=CLRC/L=RAL/CN=katy ellis",
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=piperov/CN=422973/CN=Stefcho Piperov",
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=ncsmith/CN=756162/CN=Nicholas Charles Smith",
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=cmsrucio/CN=779320/CN=Robot: CMS Rucio Data Transfer",
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=cmsrucio/CN=430796/CN=Robot: CMS Rucio Data Transfer"
   ]
  }, 
  "ncsmith": {
@@ -61,6 +61,39 @@
   "email": null, 
   "dns": [
    "/C=UK/O=eScience/OU=CLRC/L=RAL/CN=katy ellis"
+  ]
+ },
+ "wma_test": {
+  "dns": [
+   "/DC=ch/DC=cern/OU=computers/CN=wmagent/vocms0192.cern.ch",
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=cmswebmg/CN=779320/CN=Robot: Service account for CMSWeb migration",
+   "/DC=org/DC=incommon/C=US/ST=IL/L=Batavia/O=Fermi Research Alliance/OU=Fermilab/CN=wmagent.fnal.gov",
+   "/DC=org/DC=incommon/C=US/ST=Illinois/L=Batavia/O=Fermi Research Alliance/OU=Fermilab/CN=wmagent.fnal.gov",
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=cmsbot/CN=545661/CN=Robot: CMS Build Bot",
+   "/DC=ch/DC=cern/OU=computers/CN=dmwm/cmsweb.cern.ch"
+  ]
+ },
+ "wmcore_output": {
+  "dns": [
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=cmswebmi/CN=430796/CN=Robot: CMS Web Service account",
+   "/DC=ch/DC=cern/OU=computers/CN=wmagent/vocms0192.cern.ch",
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=cmswebmg/CN=779320/CN=Robot: Service account for CMSWeb migration",
+   "/DC=org/DC=incommon/C=US/ST=Illinois/L=Batavia/O=Fermi Research Alliance/OU=Fermilab/CN=wmagent.fnal.gov",
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=cmswebmg/CN=657477/CN=Robot: Service account for CMSWeb migration",
+   "/DC=ch/DC=cern/OU=computers/CN=dmwm/cmsweb.cern.ch",
+   "/DC=ch/DC=cern/OU=computers/CN=wmagent/vocms0280.cern.ch"
+  ]
+ },
+ "wmcore_transferor": {
+  "dns": [
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=cmswebmi/CN=430796/CN=Robot: CMS Web Service account",
+   "/DC=ch/DC=cern/OU=computers/CN=wmagent/vocms0192.cern.ch",
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=cmswebmg/CN=779320/CN=Robot: Service account for CMSWeb migration",
+   "/DC=org/DC=incommon/C=US/ST=Illinois/L=Batavia/O=Fermi Research Alliance/OU=Fermilab/CN=wmagent.fnal.gov",
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=cmswebmg/CN=657477/CN=Robot: Service account for CMSWeb migration",
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=cmsbot/CN=545661/CN=Robot: CMS Build Bot",
+   "/DC=ch/DC=cern/OU=computers/CN=dmwm/cmsweb.cern.ch",
+   "/DC=ch/DC=cern/OU=computers/CN=wmagent/vocms0280.cern.ch"
   ]
  }
 }
