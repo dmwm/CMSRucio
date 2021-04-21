@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 """
 createAccounts.py and dumpAccounts.py work in tandem. See the documentation in createAccounts.py

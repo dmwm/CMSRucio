@@ -10,7 +10,7 @@ import gitlab
 from CMSRSE import CMSRSE
 
 SKIP_SITES = ['T2_FI_HIP', 'T2_ES_IFCA', 'T2_CH_CERN', 'T1_US_FNAL_Disk', 'T1_US_FNAL', 'T1_UK_RAL']
-DO_SITES = ['T2_US_Wisconsin']
+DO_SITES = ['T3_CH_PSI']
 
 private_token = os.environ['GITLAB_TOKEN']
 

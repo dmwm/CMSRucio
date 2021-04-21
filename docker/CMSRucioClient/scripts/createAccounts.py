@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 
 """
@@ -20,10 +20,10 @@ from __future__ import absolute_import, division, print_function
 
 import json
 import ssl
-import urllib2
+import urllib.request as urllib2
 
 from rucio.client.accountclient import AccountClient
-from rucio.common.exception import Duplicate
+from rucio.common.exception import Duplicate, InvalidObject, AccountNotFound
 
 CRIC_W_ROLES = 'https://cms-cric.cern.ch/api/accounts/user/query/?json&preset=roles'
 CRIC_USERS = 'https://cms-cric.cern.ch/api/accounts/user/query/?json'
@@ -78,8 +78,8 @@ for account in new_accounts:
     try:
         print('Add account %s' % account)
         ac.add_account(account=account, type='USER', email=None)
-    except Duplicate:
-        print(' Account %s already exists' % account)
+    except (Duplicate, InvalidObject):
+        print(' Account %s already exists or invalid' % account)
 
 # Add all the identities to the list
 for dn, accounts in identity_map.items():
@@ -89,5 +89,5 @@ for dn, accounts in identity_map.items():
             print('Add identity %s for %s' % (dn, account))
             ac.add_identity(account=account, identity=dn, authtype='X509', email=email,
                             default=False)
-        except Duplicate:
-            print(' Identity %s for %s already exists' % (dn, account))
+        except (Duplicate, InvalidObject, AccountNotFound):
+            print(' Identity %s for %s already exists or invalid' % (dn, account))

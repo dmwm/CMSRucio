@@ -1,0 +1,128 @@
+[
+  {
+    "name": "/BTag/Run2012A-v1/RAW",
+    "nblocks": 4,
+    "destinations": [
+      "T2_CH_CERN"
+    ]
+  },
+  {
+    "name": "/BTag/Run2012A-v1/RAW#918e002c-97d9-11e1-9605-003048caaace",
+    "destinations": [
+      "T2_CH_CERN"
+    ]
+  },
+  {
+    "name": "/BTag/Run2012A-v1/RAW#8d6fdc8c-97d3-11e1-9605-003048caaace",
+    "destinations": [
+      "T2_CH_CERN"
+    ]
+  },
+  {
+    "name": "/JetHT/Run2012C-v1/RAW",
+    "nblocks": 4,
+    "destinations": [
+      "T2_CH_CERN"
+    ]
+  },
+  {
+    "name": "/JetHT/Run2012C-v1/RAW#d9e4a69c-f697-11e1-847a-842b2b4671d8",
+    "destinations": [
+      "T2_CH_CERN"
+    ]
+  },
+  {
+    "name": "/JetHT/Run2012C-v1/RAW#e759da30-f693-11e1-847a-842b2b4671d8",
+    "destinations": [
+      "T2_CH_CERN"
+    ]
+  },
+  {
+    "name": "/NoBPTX/Run2018D-12Nov2019_UL2018-v1/MINIAOD",
+    "nblocks": 4,
+    "destinations": [
+      "T2_CH_CERN"
+    ]
+  },
+  {
+    "name": "/NoBPTX/Run2018D-12Nov2019_UL2018-v1/MINIAOD#a9c70800-f936-4c6c-a3a8-c6fa4c9421d0",
+    "destinations": [
+      "T2_CH_CERN"
+    ]
+  },
+  {
+    "name": "/NoBPTX/Run2018D-12Nov2019_UL2018-v1/MINIAOD#1486aad7-f45d-4423-aa7a-ab2ca3d939a9",
+    "destinations": [
+      "T2_CH_CERN"
+    ]
+  },
+  {
+    "name": "/HLTPhysicsIsolatedBunch/Run2016H-v1/RAW",
+    "nblocks": 4,
+    "destinations": [
+      "T2_CH_CERN"
+    ]
+  },
+  {
+    "name": "/HLTPhysicsIsolatedBunch/Run2016H-v1/RAW#92049f6e-92f9-11e6-b150-001e67abf228",
+    "destinations": [
+      "T2_CH_CERN"
+    ]
+  },
+  {
+    "name": "/ZeroBias/Run2016B-UL16_ver2_forHarvestOnly-v1/DQMIO",
+    "destinations": [
+      "T2_CH_CERN"
+    ]
+  },
+  {
+    "name": "/NoBPTX/Run2016F-23Sep2016-v1/DQMIO",
+    "destinations": [
+      "T2_CH_CERN"
+    ]
+  },
+  {
+    "name": "/RelValH125GGgluonfusion_14/CMSSW_10_6_1-106X_mcRun3_2021_realistic_v1_rsb-v1/GEN-SIM",
+    "destinations": [
+      "T2_CH_CERN"
+    ]
+  },
+  {
+    "name": "/RelValMinBias_14TeV/CMSSW_10_6_1-106X_mcRun3_2021_realistic_v1_rsb-v1/GEN-SIM",
+    "destinations": [
+      "T2_CH_CERN"
+    ]
+  },
+  {
+    "name": "/RelValMinBias_14TeV/CMSSW_11_2_0_pre8-112X_mcRun3_2024_realistic_v10_forTrk-v1/GEN-SIM",
+    "destinations": [
+      "T2_CH_CERN"
+    ]
+  },
+  {
+    "name": "/RelValQCD_Pt_600_800_14/CMSSW_11_2_0_pre8-112X_mcRun3_2024_realistic_v10_forTrk-v1/GEN-SIM",
+    "destinations": [
+      "T2_CH_CERN"
+    ]
+  },
+  {
+    "name": "/RelValTTbar_14TeV/CMSSW_11_2_0_pre8-112X_mcRun3_2024_realistic_v10_forTrk-v1/GEN-SIM",
+    "destinations": [
+      "T2_CH_CERN"
+    ]
+  },
+  {
+    "name": "/MinBias_TuneCP5_14TeV-pythia8/PhaseIITDRSpring19GS-106X_upgrade2023_realistic_v2_ext1-v1/GEN-SIM",
+    "nblocks": 4,
+    "destinations": [
+      "T2_CH_CERN"
+    ]
+  },
+  {
+    "name": "/Neutrino_E-10_gun/RunIISummer20ULPrePremix-UL16_106X_mcRun2_asymptotic_v13-v1/PREMIX",
+    "nblocks": 4,
+    "destinations": [
+      "T2_CH_CERN"
+    ]
+  }
+]
