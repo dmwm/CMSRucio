@@ -22,17 +22,14 @@ set -x
 
 cd docker/CMSRucioClient/scripts/
 
-echo "Syncing account roles for managers and group accounts"
-./syncRolesToAttributes.py
-./syncEgroupsToGroupAccounts.py
 
 if [ "$RUCIO_HOME" = "/opt/rucio-prod" ]
   then
+  echo "Syncing account roles for managers and group accounts"
+  ./syncEgroupsToGroupAccounts.py
   echo "Creating user accounts and setting quotas"
   ./user_to_site_mapping.py
 fi
 
-
 echo "Creating links"
-./cmslinks.py --overwrite # Remove the --disable flag for Katy's RSE
-## ./cmslinks.py --phedex_link --overwrite --disable
+./cmslinks.py --overwrite

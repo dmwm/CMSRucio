@@ -21,13 +21,12 @@ cat $RUCIO_HOME/etc/rucio.cfg
 set -x
 
 cd docker/CMSRucioClient/scripts/
-
-echo "Syncing sites from JSON"
-
 if [ "$RUCIO_HOME" = "/opt/rucio-int" ]
   then
-  ./setRucioFromGitlab --type int-real
+  exit 0
 fi
+
+echo "Syncing sites from JSON"
 if [ "$RUCIO_HOME" = "/opt/rucio-prod" ]
   then
   ./setRucioFromGitlab --type prod-real
