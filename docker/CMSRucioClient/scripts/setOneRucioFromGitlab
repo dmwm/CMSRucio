@@ -18,6 +18,8 @@ parser = ArgumentParser(description="Update a site definition from GitLab")
 parser.add_argument('--type', dest='cms_type', help='type of RSE (prod-real, int-real, test, temp).',default=None, required=True)
 parser.add_argument('--dryrun', dest='dry_run', action='store_true')
 parser.add_argument('--debug', action='store_true', help='be more verbose')
+parser.add_argument('--just_print', dest='print_scheme', help='just prints the given scheme: gsiftp, srm, davs, xroot, all', \
+    default=None, required=False, choices=["gsiftp", "srm", "davs", "root", "all"])
 parser.add_argument('rse', help='the RSE to modify e.g. T2_US_UCSD', default=None)
 
 options = parser.parse_args()
@@ -44,21 +46,24 @@ sites = json.loads(base64.b64decode(f.content))
 
 client = Client()
 
-SKIP_SITES = ['T2_US_Caltech_Ceph','T2_FI_HIP', 'T2_ES_IFCA', 'T1_US_FNAL_Disk', 'T1_US_FNAL', 'T1_UK_RAL']
+SKIP_SITES = []
 
 for site in sites:
     print('Checking %s and type %s' % (site['rse'], options.cms_type))
     if site['rse']:
-        if site['rse'] in SKIP_SITES:
+        if "_Tape" in site['rse'] or site['rse'] in SKIP_SITES:
             logger.info("RSE: %s in SKIP_SITES. slkipping ...", site['rse'])
             continue
              
         rse = CMSRSE(site, dry=options.dry_run, cms_type=options.cms_type)
-        if rse.update():
-            print('RSE %s and type %s changed' % (rse.rse_name, rse.rucio_rse_type))
+        if options.print_scheme:
+            rse.show_proto(options.print_scheme)
         else:
-            print('RSE %s and type %s unchanged' % (rse.rse_name, rse.rucio_rse_type))
+            if rse.update():
+                print('RSE %s and type %s changed' % (rse.rse_name, rse.rucio_rse_type))
+            else:
+                print('RSE %s and type %s unchanged' % (rse.rse_name, rse.rucio_rse_type))
     
     else:
-        print('No RSE defined in JSON for site %s' % site)
+        print('No RSE defined in JSON for site %s' % site['site'])
 
