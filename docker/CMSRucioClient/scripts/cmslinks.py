@@ -142,7 +142,7 @@ class LinksMatrix(object):
                 if srse == drse or not src_regex.match(srse) or not dst_regex.match(drse):
                     continue
 
-                if ((srse in CTA_RSES and drse not in CERN_RSES) or (srse in CERN_RSES and drse not in CTA_RSES)):
+                if ((srse in CTA_RSES and drse not in CERN_RSES) or (drse in CTA_RSES and srse not in CERN_RSES)):
                     self.rcli.update_distance(srse, drse, {'ranking': 0, 'distance': 0})
                     continue
                     
