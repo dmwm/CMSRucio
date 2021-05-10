@@ -16,6 +16,9 @@ DEFAULT_EXCLUDE_LINKS = (
     {'dest': {'type': 'temp'}, 'src': {}},
 )
 
+CTA_RSES = ['T0_CH_CERN_Tape']
+CERN_RSES = ['T2_CH_CERN']
+
 DEFAULT_DISTANCE_RULES = {'site': 1, 'region&country': 4, 'country': 7, 'region': 10, 'other': 13}
 
 
@@ -139,6 +142,10 @@ class LinksMatrix(object):
                 if srse == drse or not src_regex.match(srse) or not dst_regex.match(drse):
                     continue
 
+                if ((srse in CTA_RSES and drse not in CERN_RSES) or (srse in CERN_RSES and drse not in CTA_RSES)):
+                    self.rcli.update_distance(srse, drse, {'ranking': 0, 'distance': 0})
+                    continue
+                    
                 count['checked'].append([srse, drse])
 
                 # Todo.. doublecheck I'm not reversing things
