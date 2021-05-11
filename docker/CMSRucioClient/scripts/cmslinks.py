@@ -143,7 +143,7 @@ class LinksMatrix(object):
                     continue
 
                 if ((srse in CTA_RSES and drse not in CERN_RSES) or (drse in CTA_RSES and srse not in CERN_RSES)):
-                    self.rcli.update_distance(srse, drse, {'ranking': 0, 'distance': 0})
+                    logging.info("Not setting link from %s to %s", srse, drse)
                     continue
                     
                 count['checked'].append([srse, drse])
