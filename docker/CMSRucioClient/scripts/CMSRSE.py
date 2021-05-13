@@ -26,6 +26,7 @@ DOMAINS_BY_TYPE = {
 RUCIO_PROTOS = ['SRMv2', 'XRootD', 'WebDAV']
 PROTO_WEIGHT_TPC = {'WebDAV':1, 'XRootD': 3, 'SRMv2': 2}
 PROTO_WEIGHT_RWD = {'WebDAV':2, 'XRootD': 3, 'SRMv2': 1}
+
 IMPL_MAP = {'SRMv2': 'rucio.rse.protocols.gfalv2.Default',
             'XRootD': 'rucio.rse.protocols.gfal.Default',
             'WebDAV': 'rucio.rse.protocols.gfalv2.Default'}
@@ -152,6 +153,42 @@ class CMSRSE:
 
         return scheme, hostname, port, prefix, extended_attributes
 
+    # Make sure that when buidling a TFC all the rules have the same schems, hostname
+    # and port thant the protocol, otherwise the URL gets wrongly calculated
+    def _verify_and_fix(self, rule_pfn, proto):
+        status=None
+        pfn=None
+        rule_regex1 = re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+):(\d+)/(.*)')
+        rule_regex2 = re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+)/(.*)')
+        rule_match1 = rule_regex1.match(rule_pfn)
+        rule_match2 = rule_regex2.match(rule_pfn)
+        if rule_match1:
+            # The rule has scheme, hostname and port. Make sure they are the
+            # exact same as in 'proto'
+            scheme = rule_match1.group(1)
+            hostname = rule_match1.group(2)
+            port = rule_match1.group(3)
+            if scheme == proto['scheme'] and hostname == proto['hostname'] and port == proto['port']:
+                status="ok"
+                pfn=rule_pfn
+            else:
+                status="error"
+        elif rule_match2:
+            # The rule has scheme and hostname but not port. Add the port from 'proto'
+            scheme = rule_match2.group(1)
+            hostname = rule_match2.group(2)
+            prefix = rule_match2.group(3)
+            if scheme == proto['scheme'] and hostname == proto['hostname']:
+                status="changed"
+                pfn = scheme+"://"+hostname+":"+str(proto['port'])+"/"+prefix
+            else:
+                status="error"
+        else:
+            # In this case we assume that the rule was a simple prefix
+            status="ok"
+            pfn=rule_pfn
+
+        return status, pfn
 
     def _get_attributes(self, tier=None, country=None, xattrs=None):
         """
@@ -349,7 +386,15 @@ class CMSRSE:
                     if proto_name.lower() in chains:
                         for rule in test_proto['rules']:
                             entry = {'proto': proto_name.lower()}
-                            entry.update({'path': rule['lfn'], 'out': rule['pfn']})
+                            # make sure that the rule has the exact same scheme, hostname and port as 'proto'
+                            status, rule_pfn = self._verify_and_fix(rule['pfn'], proto)
+                            if status == "ok" and rule_pfn:
+                                entry.update({'path': rule['lfn'], 'out': rule['pfn']})
+                            elif status == "changed" and rule_pfn:
+                                entry.update({'path': rule['lfn'], 'out': rule_pfn})
+                            else:
+                                logging.error("Cannot parse rules: "+proto_json['protocol'])
+                                return None, None
                             if 'chain' in rule:
                                 chains.add(rule['chain'])  # If it's three layers deep
                                 entry.update({'chain': rule['chain']})
