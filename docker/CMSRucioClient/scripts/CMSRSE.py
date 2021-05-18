@@ -147,7 +147,7 @@ class CMSRSE:
         if error:
             return None, None, None, None, None
 
-        # When dealin with rules as opposed to a prefix, the prefix is always "/"
+        # When dealing with rules as opposed to a prefix, the prefix is always "/"
         if not is_prefix:
             prefix = "/"
 
@@ -168,7 +168,7 @@ class CMSRSE:
             scheme = rule_match1.group(1)
             hostname = rule_match1.group(2)
             port = rule_match1.group(3)
-            if scheme == proto['scheme'] and hostname == proto['hostname'] and port == proto['port']:
+            if scheme == proto['scheme'] and hostname == proto['hostname'] and int(port) == proto['port']:
                 status="ok"
                 pfn=rule_pfn
             else:
@@ -335,7 +335,7 @@ class CMSRSE:
             proto = {
                 'scheme': scheme,
                 'hostname': hostname,
-                'port': port,
+                'port': int(port),
                 'extended_attributes': extended_attributes,
                 'domains': domains,
                 'prefix': prefix,
@@ -345,7 +345,7 @@ class CMSRSE:
             """ 
             Instead we have a full set of TFC rules which we need to gather
             """
-            chains = {protocol_name.lower()}
+            chains = {protocol_name}
             done_chains = set()
             tfc = []
 
@@ -356,7 +356,6 @@ class CMSRSE:
                 # including any first level chain names
                 if rule.get('chain', None):
                     chains.add(rule['chain'])
-
                 scheme, hostname, port, prefix, extended_attributes = self._parse_url(rule['pfn'], protocol_name, False)
 
                 # If we couldn't parse a Rule, better not configure this protocol
@@ -367,7 +366,7 @@ class CMSRSE:
                 proto = {
                     'scheme': scheme,
                     'hostname': hostname,
-                    'port': port,
+                    'port': int(port),
                     'extended_attributes': extended_attributes,
                     'domains': domains,
                     'prefix': prefix,
@@ -382,19 +381,17 @@ class CMSRSE:
             # into {u'path': u'(.*)', u'out': u'/pnfs/gridka.de/cms$1', u'proto': u'srmv2', 'chain': 'pnfs'}
             while chains - done_chains:
                 for test_proto in protos_json:  # Keep looking for what we need in all the protos
-                    proto_name = test_proto['protocol'].lower()
-                    if proto_name.lower() in chains:
+                    proto_name = test_proto['protocol']
+                    if proto_name in chains:
                         for rule in test_proto['rules']:
                             entry = {'proto': proto_name.lower()}
                             # make sure that the rule has the exact same scheme, hostname and port as 'proto'
                             status, rule_pfn = self._verify_and_fix(rule['pfn'], proto)
-                            if status == "ok" and rule_pfn:
-                                entry.update({'path': rule['lfn'], 'out': rule['pfn']})
-                            elif status == "changed" and rule_pfn:
+                            if status == "ok" or status=="changed":
                                 entry.update({'path': rule['lfn'], 'out': rule_pfn})
                             else:
-                                logging.error("Cannot parse rules: "+proto_json['protocol'])
-                                return None, None
+                                logging.warning("the 'scheme' and/or 'hostname' is different in the rule: "+str(rule['pfn'])+ " than in the protocol : "+str(proto_json['protocol']))
+                                entry.update({'path': rule['lfn'], 'out': rule['pfn']})
                             if 'chain' in rule:
                                 chains.add(rule['chain'])  # If it's three layers deep
                                 entry.update({'chain': rule['chain']})
