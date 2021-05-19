@@ -77,11 +77,11 @@ class CMSRSE:
     def _parse_url(self, url, protocol_name, is_prefix):
         error = False
         prefix_regexp_list = [
-            {'type': 1, 'regexp': re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+):(\d+)(\/.*\=)(.*)')},
-            {'type': 2, 'regexp': re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+):(\d+)/(.*)')},
-            {'type': 3, 'regexp': re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+):(\d+)')},
-            {'type': 4, 'regexp': re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+)/(.*)')},
-            {'type': 5, 'regexp': re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+)')}
+            {'type': 1, 'regexp': re.compile(r'(?P<scheme>\w+)://(?P<host>[a-zA-Z0-9\-\.]+):(?P<port>\d+)(?P<service_p>\/.*\=)(?P<prefix>.*)')},
+            {'type': 2, 'regexp': re.compile(r'(?P<scheme>\w+)://(?P<host>[a-zA-Z0-9\-\.]+):(?P<port>\d+)/(?P<prefix>.*)')},
+            {'type': 3, 'regexp': re.compile(r'(?P<scheme>\w+)://(?P<host>[a-zA-Z0-9\-\.]+):(?P<port>\d+)')},
+            {'type': 4, 'regexp': re.compile(r'(?P<scheme>\w+)://(?P<host>[a-zA-Z0-9\-\.]+)/(?P<prefix>.*)')},
+            {'type': 5, 'regexp': re.compile(r'(?P<scheme>\w+)://(?P<host>[a-zA-Z0-9\-\.]+)')}
         ]
 
         regexp_type=0
@@ -91,23 +91,23 @@ class CMSRSE:
                 regexp_type = prefix_regexp['type']
                 break
 
-        scheme   = prefix_regexp_match.group(1)
-        hostname = prefix_regexp_match.group(2)
+        scheme   = prefix_regexp_match.group('scheme')
+        hostname = prefix_regexp_match.group('host')
 
         if regexp_type == 1:
             #logging.debug("Looking for prefix with web service path")
-            port    = prefix_regexp_match.group(3)
-            prefix  = prefix_regexp_match.group(5)
+            port    = prefix_regexp_match.group('port')
+            prefix  = prefix_regexp_match.group('prefix')
             if is_prefix:
-                extended_attributes = {'web_service_path': prefix_regexp_match.group(4)}
+                extended_attributes = {'web_service_path': prefix_regexp_match.group('service_p')}
             else:
                 extended_attributes = { 'tfc_proto': protocol_name.lower(),
-                                        'web_service_path': prefix_regexp_match.group(4)}
+                                        'web_service_path': prefix_regexp_match.group('service_p')}
 
         elif regexp_type == 2:
             #logging.debug("Looking for prefix with port")
-            port                = prefix_regexp_match.group(3)
-            prefix              = '/' + prefix_regexp_match.group(4)
+            port                = prefix_regexp_match.group('port')
+            prefix              = '/' + prefix_regexp_match.group('prefix')
             if is_prefix:
                 extended_attributes = None
             else:
@@ -115,7 +115,7 @@ class CMSRSE:
 
         elif regexp_type == 3:
             #logging.debug("Looking for port and no prefix")
-            port                = prefix_regexp_match.group(3)
+            port                = prefix_regexp_match.group('port')
             prefix              = '/'
             if is_prefix:
                 extended_attributes = None
@@ -125,7 +125,7 @@ class CMSRSE:
         elif regexp_type == 4:
             #logging.debug("Looking for a prefix and no port")
             port                = DEFAULT_PORTS[scheme]
-            prefix              = '/' + prefix_regexp_match.group(3)
+            prefix              = '/' + prefix_regexp_match.group('prefix')
             if is_prefix:
                 extended_attributes = None
             else:
@@ -158,16 +158,16 @@ class CMSRSE:
     def _verify_and_fix(self, rule_pfn, proto):
         status=None
         pfn=None
-        rule_regex1 = re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+):(\d+)/(.*)')
-        rule_regex2 = re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+)/(.*)')
+        rule_regex1 = re.compile(r'(?P<scheme>\w+)://(?P<host>[a-zA-Z0-9\-\.]+):(?P<port>\d+)/(?P<prefix>.*)')
+        rule_regex2 = re.compile(r'(?P<scheme>\w+)://(?P<host>[a-zA-Z0-9\-\.]+)/(?P<prefix>.*)')
         rule_match1 = rule_regex1.match(rule_pfn)
         rule_match2 = rule_regex2.match(rule_pfn)
         if rule_match1:
             # The rule has scheme, hostname and port. Make sure they are the
             # exact same as in 'proto'
-            scheme = rule_match1.group(1)
-            hostname = rule_match1.group(2)
-            port = rule_match1.group(3)
+            scheme = rule_match1.group('scheme')
+            hostname = rule_match1.group('host')
+            port = rule_match1.group('port')
             if scheme == proto['scheme'] and hostname == proto['hostname'] and int(port) == proto['port']:
                 status="ok"
                 pfn=rule_pfn
@@ -175,9 +175,9 @@ class CMSRSE:
                 status="error"
         elif rule_match2:
             # The rule has scheme and hostname but not port. Add the port from 'proto'
-            scheme = rule_match2.group(1)
-            hostname = rule_match2.group(2)
-            prefix = rule_match2.group(3)
+            scheme = rule_match2.group('scheme')
+            hostname = rule_match2.group('host')
+            prefix = rule_match2.group('prefix')
             if scheme == proto['scheme'] and hostname == proto['hostname']:
                 status="changed"
                 pfn = scheme+"://"+hostname+":"+str(proto['port'])+"/"+prefix
