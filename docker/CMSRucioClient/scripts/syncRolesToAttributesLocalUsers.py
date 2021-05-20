@@ -138,8 +138,10 @@ def sync_roles_to_rses():
                 print("No site manager found for %s" % rse_name)
 
     for site, dns in local_users.items():
-        set_local_identities(client=client, site=site, dns=dns, user_map=dn_account_map, site_map=site_map)
-
+        try:
+            set_local_identities(client=client, site=site, dns=dns, user_map=dn_account_map, site_map=site_map)
+        except KeyError:
+            print("Could not make account for %s. Perhaps the facility is not defined." % site)
 
 if __name__ == '__main__':
     """
