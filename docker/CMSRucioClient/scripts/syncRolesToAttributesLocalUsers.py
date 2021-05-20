@@ -6,7 +6,7 @@ from collections import defaultdict
 
 import requests
 from rucio.client.client import Client
-from rucio.common.exception import RSEAttributeNotFound, Duplicate, AccountNotFound
+from rucio.common.exception import RSEAttributeNotFound, Duplicate, AccountNotFound, InvalidObject
 
 TO_STRIP = ['_Disk', '_Tape', '_Temp', '_Test', '_Disk_Test', '_Tape_Test', '_Ceph']
 
@@ -140,8 +140,8 @@ def sync_roles_to_rses():
     for site, dns in local_users.items():
         try:
             set_local_identities(client=client, site=site, dns=dns, user_map=dn_account_map, site_map=site_map)
-        except KeyError:
-            print("Could not make account for %s. Perhaps the facility is not defined." % site)
+        except (KeyError, InvalidObject):
+            print("Could not make account for %s. Perhaps the facility is not defined or the name is too long." % site)
 
 if __name__ == '__main__':
     """
