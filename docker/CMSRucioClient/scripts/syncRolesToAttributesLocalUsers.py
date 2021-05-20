@@ -13,6 +13,7 @@ TO_STRIP = ['_Disk', '_Tape', '_Temp', '_Test', '_Disk_Test', '_Tape_Test', '_Ce
 CRIC_USERS_API = 'https://cms-cric.cern.ch/api/accounts/user/query/list/?json&preset=roles'
 CRIC_SITE_API = 'https://cms-cric.cern.ch/api/cms/site/query/?json'
 
+
 def build_site_facility_map():
     """
     Build a dictionary mapping lower case site name to lower case facility name (used as an e-mail address)
@@ -54,14 +55,18 @@ def set_rse_manager(client, rse_name, site_managers, alt_rse=None):
 
 
 def set_local_identities(client, site, dns=None, user_map=None, site_map=None):
+    dns = dns or set()
+    user_map = user_map or {}
+
     account = site + '_local_users'
     if len(account) > 25:
         account = site + '_local'
     account = account.replace('-', '_')
-    email = 'cms-' + site_map[site] + '-local@cern.ch'
 
-    dns = dns or set()
-    user_map = user_map or {}
+    # Go back and forth since sites are underscore, emails are dash
+    site_key = site.replace('-', '_')
+    email = 'cms-' + site_map[site_key] + '-local@cern.ch'
+    email = email.replace('_', '-')
 
     try:
         print('Checking for account %s in Rucio' % account)
