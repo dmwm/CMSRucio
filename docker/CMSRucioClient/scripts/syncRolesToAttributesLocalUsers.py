@@ -6,7 +6,7 @@ from collections import defaultdict
 
 import requests
 from rucio.client.client import Client
-from rucio.common.exception import RSEAttributeNotFound, Duplicate
+from rucio.common.exception import RSEAttributeNotFound, Duplicate, AccountNotFound
 
 TO_STRIP = ['_Disk', '_Tape', '_Temp', '_Test', '_Disk_Test', '_Tape_Test', '_Ceph']
 
@@ -37,19 +37,59 @@ def set_rse_manager(client, rse_name, site_managers, alt_rse=None):
         except Duplicate:
             pass
 
+
+def set_local_identities(client, site, dns=None, user_map=None):
+    account = site + '_local_users'
+    if len(account) > 25:
+        account = site + '_local'
+    account = account.replace('-', '_')
+    email = 'cms-' + site + '-local@cern.ch'
+
+    dns = dns or set()
+    user_map = user_map or {}
+
+    try:
+        print('Checking for account %s in Rucio' % account)
+        client.get_account(account)
+    except AccountNotFound:
+        print('Adding group account %s with %s' % (account, email))
+        client.add_account(account, 'GROUP', email)
+
+    current_identities = set(identity['identity'] for identity in client.list_identities(account))
+    target_identities = dns
+    add_identities = target_identities - current_identities
+    del_identities = current_identities - target_identities
+
+    for identity in add_identities:
+        print('Adding %s to %s with %s' % (identity, account, user_map[identity]))
+        client.add_identity(account=account, identity=identity, authtype='X509', email=user_map[identity])
+    for identity in del_identities:
+        print('Deleting %s from %s' % (identity, account))
+        client.del_identity(account=account, identity=identity, authtype='X509')
+
+
 def sync_roles_to_rses():
     result = requests.get(CRIC_USERS_API, verify=False)  # Pods don't like the CRIC certificate
     all_cric_users = json.loads(result.text)
 
     site_managers = defaultdict(set)
+    local_users = defaultdict(set)
+    dn_account_map = {}
     for user in all_cric_users:
         roles = user['ROLES']
         username = user['LOGIN']
+        dn = user['DN']
         if 'data-manager' in roles:
             for thing in roles['data-manager']:
                 if thing.startswith('site:'):
                     site = (thing.replace('site:', '', 1)).replace('-', '_')
                     site_managers[site].add(username)
+        if 'local-data-manager' in roles:
+            for thing in roles['local-data-manager']:
+                if thing.startswith('site:'):
+                    site = (thing.replace('site:', '', 1))
+                    local_users[site].add(dn)
+                    dn_account_map[dn] = username
 
     client = Client()
     all_rses = client.list_rses()
@@ -70,6 +110,9 @@ def sync_roles_to_rses():
                     break
             if not set_approvers:
                 print("No site manager found for %s" % rse_name)
+
+    for site, dns in local_users.items():
+        set_local_identities(client=client, site=site, dns=dns, user_map=dn_account_map)
 
 
 if __name__ == '__main__':
