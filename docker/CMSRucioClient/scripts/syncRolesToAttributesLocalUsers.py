@@ -11,6 +11,21 @@ from rucio.common.exception import RSEAttributeNotFound, Duplicate, AccountNotFo
 TO_STRIP = ['_Disk', '_Tape', '_Temp', '_Test', '_Disk_Test', '_Tape_Test', '_Ceph']
 
 CRIC_USERS_API = 'https://cms-cric.cern.ch/api/accounts/user/query/list/?json&preset=roles'
+CRIC_SITE_API = 'https://cms-cric.cern.ch/api/cms/site/query/?json'
+
+def build_site_facility_map():
+    """
+    Build a dictionary mapping lower case site name to lower case facility name (used as an e-mail address)
+    :return:
+    """
+
+    result = requests.get(CRIC_SITE_API, verify=False)  # Pods don't like the CRIC certificate
+    all_sites = json.loads(result.text)
+    site_map = {}
+    for site, values in all_sites.items():
+        site_map[site.lower()] = values['facility'].lower()
+
+    return site_map
 
 
 def set_rse_manager(client, rse_name, site_managers, alt_rse=None):
@@ -38,12 +53,12 @@ def set_rse_manager(client, rse_name, site_managers, alt_rse=None):
             pass
 
 
-def set_local_identities(client, site, dns=None, user_map=None):
+def set_local_identities(client, site, dns=None, user_map=None, site_map=None):
     account = site + '_local_users'
     if len(account) > 25:
         account = site + '_local'
     account = account.replace('-', '_')
-    email = 'cms-' + site + '-local@cern.ch'
+    email = 'cms-' + site_map[site] + '-local@cern.ch'
 
     dns = dns or set()
     user_map = user_map or {}
@@ -71,6 +86,7 @@ def set_local_identities(client, site, dns=None, user_map=None):
 def sync_roles_to_rses():
     result = requests.get(CRIC_USERS_API, verify=False)  # Pods don't like the CRIC certificate
     all_cric_users = json.loads(result.text)
+    site_map = build_site_facility_map()
 
     site_managers = defaultdict(set)
     local_users = defaultdict(set)
@@ -112,7 +128,7 @@ def sync_roles_to_rses():
                 print("No site manager found for %s" % rse_name)
 
     for site, dns in local_users.items():
-        set_local_identities(client=client, site=site, dns=dns, user_map=dn_account_map)
+        set_local_identities(client=client, site=site, dns=dns, user_map=dn_account_map, site_map=site_map)
 
 
 if __name__ == '__main__':
