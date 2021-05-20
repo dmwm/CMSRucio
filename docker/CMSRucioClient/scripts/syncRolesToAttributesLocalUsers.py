@@ -105,6 +105,11 @@ def sync_roles_to_rses():
                 if thing.startswith('site:'):
                     site = (thing.replace('site:', '', 1)).replace('-', '_')
                     site_managers[site].add(username)
+                    # Add data managers to local users as well
+                    user_site = (thing.replace('site:', '', 1))
+                    local_users[user_site].add(dn)
+                    dn_account_map[dn] = username
+
         if 'local-data-manager' in roles:
             for thing in roles['local-data-manager']:
                 if thing.startswith('site:'):
