@@ -22,6 +22,16 @@
    "/DC=ch/DC=cern/OU=computers/CN=wmagent/vocms0280.cern.ch"
   ]
  },
+ "amaltaro": {
+  "dns": [
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=amaltaro/CN=718748/CN=Alan Malta Rodrigues"
+  ]
+ },
+ "tivanov": {
+  "dns": [
+   "/DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=tivanov/CN=726807/CN=Todor Trendafilov Ivanov"                                                                                         
+  ]
+ },
  "dciangot": {
   "email": null, 
   "dns": [
