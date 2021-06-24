@@ -84,5 +84,5 @@ for project in projects:
                     print('RSE %s and type %s unchanged' % (rse.rse_name, rse.rucio_rse_type))
             elif not site['rse']:
                 print('No RSE defined in JSON %s' % site)
-    except gitlab.exceptions.GitlabGetError:
-        print("Unable to download storage.json for %s" % project.name)
+    except (gitlab.exceptions.GitlabGetError, json.decoder.JSONDecodeError):
+        print("Unable to download or decode storage.json for %s" % project.name)
