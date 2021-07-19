@@ -2,6 +2,7 @@
 from __future__ import print_function
 
 import json
+import os
 from collections import defaultdict
 
 import requests
@@ -12,6 +13,7 @@ TO_STRIP = ['_Disk', '_Tape', '_Temp', '_Test', '_Disk_Test', '_Tape_Test', '_Ce
 
 CRIC_USERS_API = 'https://cms-cric.cern.ch/api/accounts/user/query/list/?json&preset=roles'
 CRIC_SITE_API = 'https://cms-cric.cern.ch/api/cms/site/query/?json'
+PROXY = os.getenv('X509_USER_PROXY')
 
 
 def build_site_facility_map():
@@ -20,7 +22,7 @@ def build_site_facility_map():
     :return:
     """
 
-    result = requests.get(CRIC_SITE_API, verify=False)  # Pods don't like the CRIC certificate
+    result = requests.get(CRIC_SITE_API, cert=PROXY, verify=False)  # Pods don't like the CRIC certificate
     all_sites = json.loads(result.text)
     site_map = {}
     for site, values in all_sites.items():
@@ -89,7 +91,7 @@ def set_local_identities(client, site, dns=None, user_map=None, site_map=None):
 
 
 def sync_roles_to_rses():
-    result = requests.get(CRIC_USERS_API, verify=False)  # Pods don't like the CRIC certificate
+    result = requests.get(CRIC_USERS_API, cert=PROXY, verify=False)  # Pods don't like the CRIC certificate
     all_cric_users = json.loads(result.text)
     site_map = build_site_facility_map()
 
