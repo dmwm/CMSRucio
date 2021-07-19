@@ -2,6 +2,7 @@
 
 import getopt
 import json
+import os
 import pprint
 import sys
 
@@ -15,6 +16,8 @@ sys.path.insert(1, './tests')
 from policy_test import TestPolicy
 from cric_user import CricUser
 
+PROXY = os.getenv('X509_USER_PROXY')
+
 client = Client()
 institute_policy = InstitutePolicy()
 test_policy = TestPolicy()
@@ -27,7 +30,7 @@ This function loads the JSON file by CRIC API or by local file depending on the 
 
 def load_cric_users(policy, dry_run):
     if not dry_run:
-        result = requests.get(policy.CRIC_USERS_API, verify=False)  # Pods don't like the CRIC certificate
+        result = requests.get(policy.CRIC_USERS_API, cert=PROXY, verify=False)  # Pods don't like the CRIC certificate
         worldwide_cric_users = json.loads(result.text)
     else:
         sys.stdout.write('\t- dry_run version with the new fake user loaded\n')

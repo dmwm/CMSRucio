@@ -36,6 +36,7 @@ except IOError:
     special_accounts = {}
 
 # Get the entire DN <-> user map from CRIC
+# Should we ever need to run this again, it should be updated to use a certificate for CRIC and to "requests"
 cric_data = json.load(urllib2.urlopen(CRIC_W_ROLES, context=ssl._create_unverified_context()))
 cric_users = json.load(urllib2.urlopen(CRIC_USERS, context=ssl._create_unverified_context()))
 
