@@ -124,7 +124,11 @@ if __name__ == "__main__":
         row["rule_id"] = row["rule_id"].hex()
         logger.debug(f"Checking status for {row}")
         pfn = client.lfns2pfns(row["rse"], [lfn])[lfn]
-        stat = ctx.stat(pfn)
+        try:
+            stat = ctx.stat(pfn)
+        except gfal2.GError as ex:
+            logger.info(f"Exception during stat of {pfn}: {str(ex)}")
+            continue
         logger.debug(f"statinfo = {stat}")
         if stat.st_size != row["bytes"]:
             logger.info(
