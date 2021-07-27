@@ -66,57 +66,7 @@ def build_query(engine, args):
     return qry
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-v",
-        "--verbose",
-        action="count",
-        default=0,
-        help="Verbosity",
-    )
-    parser.add_argument(
-        "--account",
-        type=str,
-        default="transfer_ops",
-        help="Account to run under (default: %(default)s)",
-    )
-    parser.add_argument(
-        "--connection",
-        type=str,
-        help="DB connection secret path",
-        required=True,
-    )
-    parser.add_argument(
-        "--dry",
-        action="store_true",
-        help="Dry-run (don't update replica status)",
-    )
-    parser.add_argument(
-        "--rse",
-        type=str,
-        help="Limit search to a specific RSE",
-    )
-    parser.add_argument(
-        "--limit",
-        type=int,
-        default=100,
-        help="Limit number of files (default: %(default)s)",
-    )
-
-    args = parser.parse_args()
-    loglevel = {0: logging.WARNING, 1: logging.INFO, 2: logging.DEBUG}
-    logging.basicConfig(
-        format="%(asctime)s %(name)s:%(levelname)s:%(message)s",
-        level=loglevel[min(2, args.verbose)],
-    )
-    client = Client(account=args.account)
-    ctx = gfal2.creat_context()
-    with open(args.connection) as fin:
-        engine = create_engine(fin.read())
-
-    qry = build_query(engine, args)
-
+def run(args, client, ctx, engine, qry):
     updated_replicas = defaultdict(list)
     updated_rules = set()
     for row in map(dict, qry.execute(engine)):
@@ -170,3 +120,66 @@ if __name__ == "__main__":
         for rule_id in updated_rules:
             logger.info(f"Updating rule {rule_id} to stuck")
             client.update_replication_rule(rule_id, {"state": "STUCK"})
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="count",
+        default=0,
+        help="Verbosity",
+    )
+    parser.add_argument(
+        "--account",
+        type=str,
+        default="transfer_ops",
+        help="Account to run under (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--connection",
+        type=str,
+        help="DB connection secret path",
+        required=True,
+    )
+    parser.add_argument(
+        "--dry",
+        action="store_true",
+        help="Dry-run (don't update replica status)",
+    )
+    parser.add_argument(
+        "--rse",
+        type=str,
+        help="Limit search to a specific RSE",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=100,
+        help="Limit number of files (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--loop",
+        action="store_true",
+        help="Loop forever",
+    )
+
+    args = parser.parse_args()
+    loglevel = {0: logging.WARNING, 1: logging.INFO, 2: logging.DEBUG}
+    logging.basicConfig(
+        format="%(asctime)s %(name)s:%(levelname)s:%(message)s",
+        level=loglevel[min(2, args.verbose)],
+    )
+    client = Client(account=args.account)
+    ctx = gfal2.creat_context()
+    with open(args.connection) as fin:
+        engine = create_engine(fin.read())
+
+    qry = build_query(engine, args)
+
+    if args.loop:
+        while True:
+            run(args, client, ctx, engine, qry)
+    else:
+        run(args, client, ctx, engine, qry)
