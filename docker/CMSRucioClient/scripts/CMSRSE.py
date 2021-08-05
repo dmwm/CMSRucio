@@ -90,8 +90,9 @@ class CMSRSE:
         else:
             attrs['cms_type'] = self.cms_type
 
-        if self.cms_type in ['test', 'prod-real'] and not self.rse_name.endswith('_Tape'):
-            attrs['reaper'] = True
+        # We should no longer be turning reaper back on
+        # if self.cms_type in ['test', 'prod-real'] and not self.rse_name.endswith('_Tape'):
+        #     attrs['reaper'] = True
 
         self.protocols = []
         protos_json = self.json['protocols']
