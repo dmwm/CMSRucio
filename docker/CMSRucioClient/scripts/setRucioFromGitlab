@@ -13,7 +13,7 @@ import logging
 
 from CMSRSE import CMSRSE
 
-SKIP_SITES = ['T2_FI_HIP', 'T2_ES_IFCA', 'T2_CH_CERN', 'T1_US_FNAL_Disk', 'T1_US_FNAL', 'T1_UK_RAL']
+SKIP_SITES = []
 
 parser = ArgumentParser(description="Update a site definition from GitLab")
 parser.add_argument('--type', dest='cms_type', help='type of RSE (prod-real, int-real, test, temp).',

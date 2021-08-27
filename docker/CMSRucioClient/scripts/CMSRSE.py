@@ -26,6 +26,7 @@ DOMAINS_BY_TYPE = {
 RUCIO_PROTOS = ['SRMv2', 'XRootD', 'WebDAV']
 PROTO_WEIGHT_TPC = {'WebDAV':1, 'XRootD': 3, 'SRMv2': 2}
 PROTO_WEIGHT_RWD = {'WebDAV':2, 'XRootD': 3, 'SRMv2': 1}
+
 IMPL_MAP = {'SRMv2': 'rucio.rse.protocols.gfalv2.Default',
             'XRootD': 'rucio.rse.protocols.gfal.Default',
             'WebDAV': 'rucio.rse.protocols.gfalv2.Default'}
@@ -64,6 +65,131 @@ class CMSRSE:
         self._get_attributes()
         self.attrs['fts'] = ','.join(json['fts'])
 
+    """
+    Parses either a prefix or a pfn within a rule in the storage.json
+    @url is something like:
+    - root://redirector.t2.ucsd.edu:1094//$1
+    - davs://xrootd.ultralight.org:1094
+    - srm://cmsrm-se01.roma1.infn.it:8443/srm/managerv2?SFN=/pnfs/roma1.infn.it/data/cms
+    @protocol_name. Is one of RUCIO_PROTOS = ['SRMv2', 'XRootD', 'WebDAV']
+    @is_prefix. Tell use whethere we are analyzing a prefix or a rule from the TFC
+    """
+    def _parse_url(self, url, protocol_name, is_prefix):
+        error = False
+        prefix_regexp_list = [
+            {'type': 1, 'regexp': re.compile(r'(?P<scheme>\w+)://(?P<host>[a-zA-Z0-9\-\.]+):(?P<port>\d+)(?P<service_p>\/.*\=)(?P<prefix>.*)')},
+            {'type': 2, 'regexp': re.compile(r'(?P<scheme>\w+)://(?P<host>[a-zA-Z0-9\-\.]+):(?P<port>\d+)/(?P<prefix>.*)')},
+            {'type': 3, 'regexp': re.compile(r'(?P<scheme>\w+)://(?P<host>[a-zA-Z0-9\-\.]+):(?P<port>\d+)')},
+            {'type': 4, 'regexp': re.compile(r'(?P<scheme>\w+)://(?P<host>[a-zA-Z0-9\-\.]+)/(?P<prefix>.*)')},
+            {'type': 5, 'regexp': re.compile(r'(?P<scheme>\w+)://(?P<host>[a-zA-Z0-9\-\.]+)')}
+        ]
+
+        regexp_type=0
+        for prefix_regexp in prefix_regexp_list:
+            prefix_regexp_match = prefix_regexp['regexp'].match(url)
+            if prefix_regexp_match:
+                regexp_type = prefix_regexp['type']
+                break
+
+        scheme   = prefix_regexp_match.group('scheme')
+        hostname = prefix_regexp_match.group('host')
+
+        if regexp_type == 1:
+            #logging.debug("Looking for prefix with web service path")
+            port    = prefix_regexp_match.group('port')
+            prefix  = prefix_regexp_match.group('prefix')
+            if is_prefix:
+                extended_attributes = {'web_service_path': prefix_regexp_match.group('service_p')}
+            else:
+                extended_attributes = { 'tfc_proto': protocol_name.lower(),
+                                        'web_service_path': prefix_regexp_match.group('service_p')}
+
+        elif regexp_type == 2:
+            #logging.debug("Looking for prefix with port")
+            port                = prefix_regexp_match.group('port')
+            prefix              = '/' + prefix_regexp_match.group('prefix')
+            if is_prefix:
+                extended_attributes = None
+            else:
+                extended_attributes = {'tfc_proto': protocol_name.lower()}
+
+        elif regexp_type == 3:
+            #logging.debug("Looking for port and no prefix")
+            port                = prefix_regexp_match.group('port')
+            prefix              = '/'
+            if is_prefix:
+                extended_attributes = None
+            else:
+                extended_attributes = {'tfc_proto': protocol_name.lower()}
+
+        elif regexp_type == 4:
+            #logging.debug("Looking for a prefix and no port")
+            port                = DEFAULT_PORTS[scheme]
+            prefix              = '/' + prefix_regexp_match.group('prefix')
+            if is_prefix:
+                extended_attributes = None
+            else:
+                extended_attributes = {'tfc_proto': protocol_name.lower()}
+
+        elif regexp_type == 5:
+            #logging.debug("Looking for no prefix and no port")
+            port                = DEFAULT_PORTS[scheme]
+            prefix              = '/'
+            if is_prefix:
+                extended_attributes = None
+            else:
+                extended_attributes = {'tfc_proto': protocol_name.lower()}
+
+        else:
+            #logging.error("Cannot parse the following url: "+url)
+            error = True
+
+        if error:
+            return None, None, None, None, None
+
+        # When dealing with rules as opposed to a prefix, the prefix is always "/"
+        if not is_prefix:
+            prefix = "/"
+
+        return scheme, hostname, port, prefix, extended_attributes
+
+    # Make sure that when buidling a TFC all the rules have the same schems, hostname
+    # and port thant the protocol, otherwise the URL gets wrongly calculated
+    def _verify_and_fix(self, rule_pfn, proto):
+        status=None
+        pfn=None
+        rule_regex1 = re.compile(r'(?P<scheme>\w+)://(?P<host>[a-zA-Z0-9\-\.]+):(?P<port>\d+)/(?P<prefix>.*)')
+        rule_regex2 = re.compile(r'(?P<scheme>\w+)://(?P<host>[a-zA-Z0-9\-\.]+)/(?P<prefix>.*)')
+        rule_match1 = rule_regex1.match(rule_pfn)
+        rule_match2 = rule_regex2.match(rule_pfn)
+        if rule_match1:
+            # The rule has scheme, hostname and port. Make sure they are the
+            # exact same as in 'proto'
+            scheme = rule_match1.group('scheme')
+            hostname = rule_match1.group('host')
+            port = rule_match1.group('port')
+            if scheme == proto['scheme'] and hostname == proto['hostname'] and int(port) == proto['port']:
+                status="ok"
+                pfn=rule_pfn
+            else:
+                status="error"
+        elif rule_match2:
+            # The rule has scheme and hostname but not port. Add the port from 'proto'
+            scheme = rule_match2.group('scheme')
+            hostname = rule_match2.group('host')
+            prefix = rule_match2.group('prefix')
+            if scheme == proto['scheme'] and hostname == proto['hostname']:
+                status="changed"
+                pfn = scheme+"://"+hostname+":"+str(proto['port'])+"/"+prefix
+            else:
+                status="error"
+        else:
+            # In this case we assume that the rule was a simple prefix
+            status="ok"
+            pfn=rule_pfn
+
+        return status, pfn
+
     def _get_attributes(self, tier=None, country=None, xattrs=None):
         """
         Gets the expected RSE attributes according to the
@@ -101,6 +227,8 @@ class CMSRSE:
             if algorithm:
                 self.protocols.append(proto)
                 attrs['lfn2pfn_algorithm'] = algorithm
+            elif proto_json['protocol'] in RUCIO_PROTOS:
+                logging.info("Not adding protocol: "+proto_json['protocol'])
 
         if self.rse_name in APPROVAL_REQUIRED:
             attrs['requires_approval'] = 'True'
@@ -139,6 +267,7 @@ class CMSRSE:
                     self.rcli.add_rse_attribute(rse=self.rse_name, key=key, value=value)
 
         return changed
+
 
     def _get_protocol(self, proto_json, protos_json):
         """
@@ -186,59 +315,12 @@ class CMSRSE:
             """
 
             algorithm = 'cmstfc'
-            try:
-                logging.debug("Looking for prefix with web service path")
-                prefix_regex = re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+):(\d+)(\/.*\=)(.*)')
-                prefix_match = prefix_regex.match(proto_json['prefix'])
+            scheme, hostname, port, prefix, extended_attributes = self._parse_url(proto_json['prefix'], protocol_name, True)
 
-                scheme = prefix_match.group(1)
-                hostname = prefix_match.group(2)
-                port = prefix_match.group(3)
-                extended_attributes = {'web_service_path': prefix_match.group(4)}
-                prefix = prefix_match.group(5)
-            except AttributeError:  # Missing web service path?
-                try:
-                    logging.debug("Looking for prefix with port")
-
-                    prefix_regex = re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+):(\d+)/(.*)')
-                    prefix_match = prefix_regex.match(proto_json['prefix'])
-
-                    scheme = prefix_match.group(1)
-                    hostname = prefix_match.group(2)
-                    port = prefix_match.group(3)
-                    prefix = '/' + prefix_match.group(4)
-                    extended_attributes = None
-                except AttributeError:
-                    try:
-                        logging.debug("Looking for prefix, no port and suffix")
-                        prefix_regex = re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+)/(.*)')
-                        prefix_match = prefix_regex.match(proto_json['prefix'])
-
-                        scheme = prefix_match.group(1)
-                        hostname = prefix_match.group(2)
-                        extended_attributes = None
-                        prefix = '/' + prefix_match.group(3)
-                        port = DEFAULT_PORTS[scheme]
-                    except AttributeError:
-                        try:
-                            logging.debug("Looking for prefix, port and no suffix")
-                            prefix_regex = re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+):(\d+)')
-                            prefix_match = prefix_regex.match(proto_json['prefix'])
-
-                            scheme = prefix_match.group(1)
-                            hostname = prefix_match.group(2)
-                            extended_attributes = None
-                            prefix = '/'
-                            port = prefix_match.group(3)
-                        except AttributeError:
-                            logging.debug("Looking for prefix, no port and no suffix")
-                            prefix_regex = re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+)')
-                            prefix_match = prefix_regex.match(proto_json['prefix'])
-                            scheme = prefix_match.group(1)
-                            hostname = prefix_match.group(2)
-                            extended_attributes = None
-                            prefix = '/'
-                            port = DEFAULT_PORTS[scheme]
+            # If we cannot parse the prefix correctly, let's better not try to configure this protocol
+            if scheme is None:
+                logging.error("Cannot parse prefix: "+proto_json['protocol'])
+                return None, None
 
             # Make sure that prefix always ends with "/"
             if prefix[len(prefix) -1] != "/":
@@ -254,7 +336,7 @@ class CMSRSE:
             proto = {
                 'scheme': scheme,
                 'hostname': hostname,
-                'port': port,
+                'port': int(port),
                 'extended_attributes': extended_attributes,
                 'domains': domains,
                 'prefix': prefix,
@@ -264,7 +346,7 @@ class CMSRSE:
             """ 
             Instead we have a full set of TFC rules which we need to gather
             """
-            chains = {protocol_name.lower()}
+            chains = {protocol_name}
             done_chains = set()
             tfc = []
 
@@ -275,27 +357,22 @@ class CMSRSE:
                 # including any first level chain names
                 if rule.get('chain', None):
                     chains.add(rule['chain'])
-                try:
-                    prefix_regex = re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+):(\d+)(\/.*\=)(.*)')
-                    prefix_match = prefix_regex.match(rule['pfn'])
-                    proto['scheme'] = prefix_match.group(1)
-                    proto['hostname'] = prefix_match.group(2)
-                    proto['port'] = prefix_match.group(3)
-                    proto['extended_attributes'] = {'tfc_proto': protocol_name.lower(),
-                                                    'web_service_path': prefix_match.group(4)}
-                    proto['prefix'] = '/'
-                    proto['domains'] = domains
-                    proto['impl'] = IMPL_MAP[protocol_name]
-                except AttributeError:
-                    prefix_regex = re.compile(r'(\w+)://([a-zA-Z0-9\-\.]+)(.*)')
-                    prefix_match = prefix_regex.match(rule['pfn'])
-                    proto['scheme'] = prefix_match.group(1)
-                    proto['hostname'] = prefix_match.group(2)
-                    proto['port'] = DEFAULT_PORTS[proto['scheme']]
-                    proto['extended_attributes'] = {'tfc_proto': protocol_name.lower()}
-                    proto['prefix'] = '/'
-                    proto['domains'] = domains
-                    proto['impl'] = IMPL_MAP[protocol_name]
+                scheme, hostname, port, prefix, extended_attributes = self._parse_url(rule['pfn'], protocol_name, False)
+
+                # If we couldn't parse a Rule, better not configure this protocol
+                if scheme is None:
+                    logging.error("Cannot parse rules: "+proto_json['protocol'])
+                    return None, None
+
+                proto = {
+                    'scheme': scheme,
+                    'hostname': hostname,
+                    'port': int(port),
+                    'extended_attributes': extended_attributes,
+                    'domains': domains,
+                    'prefix': prefix,
+                    'impl': IMPL_MAP[protocol_name]
+                }
 
             # Now go through all the protocols including ones we were not interested in at first and get rules
             # Turn {"protocol": "SRMv2",
@@ -305,11 +382,17 @@ class CMSRSE:
             # into {u'path': u'(.*)', u'out': u'/pnfs/gridka.de/cms$1', u'proto': u'srmv2', 'chain': 'pnfs'}
             while chains - done_chains:
                 for test_proto in protos_json:  # Keep looking for what we need in all the protos
-                    proto_name = test_proto['protocol'].lower()
-                    if proto_name.lower() in chains:
+                    proto_name = test_proto['protocol']
+                    if proto_name in chains:
                         for rule in test_proto['rules']:
                             entry = {'proto': proto_name.lower()}
-                            entry.update({'path': rule['lfn'], 'out': rule['pfn']})
+                            # make sure that the rule has the exact same scheme, hostname and port as 'proto'
+                            status, rule_pfn = self._verify_and_fix(rule['pfn'], proto)
+                            if status == "ok" or status=="changed":
+                                entry.update({'path': rule['lfn'], 'out': rule_pfn})
+                            else:
+                                logging.warning("the 'scheme' and/or 'hostname' is different in the rule: "+str(rule['pfn'])+ " than in the protocol : "+str(proto_json['protocol']))
+                                entry.update({'path': rule['lfn'], 'out': rule['pfn']})
                             if 'chain' in rule:
                                 chains.add(rule['chain'])  # If it's three layers deep
                                 entry.update({'chain': rule['chain']})
@@ -345,7 +428,7 @@ class CMSRSE:
                 elif prefix_match2:
                     prefix = "/"+prefix_match2.group(3)
                 else:
-                    # if we're here chances are the prefix didn't have a prefixed "scheme://"
+                    # if we're here chances are that the prefix didn't have a prefixed "scheme://"
                     logging.debug("couldn't find a scheme when calculating special prefix")
 
                 proto['prefix']= prefix
@@ -441,3 +524,16 @@ class CMSRSE:
         proto_res = self._set_protocols()
 
         return create_res or attrs_res or proto_res
+
+    # This can be used to see how a protocol would be set for a given RSE
+    # @scheme the scheme of the protocol we want to see e.g. srm, gsiftp, davs
+    def show_proto(self, scheme):
+        if scheme in ["srm","gsiftp"]:
+            schemes = ["srm", "gsiftp"]
+        elif scheme == "all":
+            schemes = ["srm", "gsiftp", "root", "davs"]
+        else:
+            schemes = [scheme]
+        for proto in self.protocols:
+            if proto['scheme'] in schemes:
+                print(json.dumps(proto, sort_keys=False, indent=4))
