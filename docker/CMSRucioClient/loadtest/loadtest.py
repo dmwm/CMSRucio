@@ -31,7 +31,7 @@ from rucio.common.exception import (
     InvalidRSEExpression,
     NoFilesUploaded,
     ReplicaNotFound,
-    RSEBlacklisted,
+    RSEWriteBlocked,
     ServiceUnavailable,
     SourceNotFound,
 )
@@ -147,7 +147,7 @@ def upload_source_data(client, uploader, rse, filesize, filenumber):
         logger.error(f"RSE {rse} is missing self-expression")
     except NoFilesUploaded:
         logger.error(f"RSE {rse} was unable to upload loadtest file {item}")
-    except RSEBlacklisted:
+    except RSEWriteBlocked:
         logger.error(f"RSE {rse} is disabled for writes")
     except DestinationNotAccessible:
         logger.error(f"RSE {rse} has permission issues")
