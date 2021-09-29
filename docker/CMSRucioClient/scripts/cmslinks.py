@@ -15,6 +15,8 @@ from rucio.client import Client
 DEFAULT_EXCLUDE_LINKS = (
     {'dest': {'type': 'temp'}, 'src': {}},
     {'dest': {'rse': 'T2_US_Caltech'}, 'src': {'rse': 'T2_US_Caltech_Ceph'}},
+    {'dest': {'rse': 'T1_UK_RAL_Tape_Test'}, 'src': {}},
+    {'dest': {}, 'src': {'rse': 'T1_UK_RAL_Tape_Test'}},
 )
 
 CTA_RSES = ['T0_CH_CERN_Tape']
