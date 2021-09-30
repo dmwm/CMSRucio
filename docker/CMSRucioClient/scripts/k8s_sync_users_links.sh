@@ -32,4 +32,4 @@ if [ "$RUCIO_HOME" = "/opt/rucio-prod" ]
 fi
 
 echo "Creating links"
-./cmslinks.py --overwrite
+./cmslinks.py --overwrite --disable
