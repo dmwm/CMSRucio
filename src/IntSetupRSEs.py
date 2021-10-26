@@ -163,7 +163,7 @@ def rewrite_protocols(protocols, pfns, read_write=False, enforce_prefix=True):
 
 
 if __name__ == '__main__':
-    rci = Client(rucio_host='http://cmsrucio-int.cern.ch', auth_host='https://cmsrucio-auth-int.cern.ch',
+    rci = Client(rucio_host='http://cms-rucio-int.cern.ch', auth_host='https://cms-rucio-auth-int.cern.ch',
                  account='root')
     rcp = Client(rucio_host='http://cms-rucio.cern.ch', auth_host='https://cms-rucio-auth.cern.ch',
                  account='ewv')
