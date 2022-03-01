@@ -17,7 +17,7 @@ DEFAULT_EXCLUDE_LINKS = (
     {'dest': {'rse': 'T2_US_Caltech'}, 'src': {'rse': 'T2_US_Caltech_Ceph'}},
     {'dest': {'rse': 'T1_UK_RAL_Tape_Test'}, 'src': {}},
     {'dest': {}, 'src': {'rse': 'T1_UK_RAL_Tape_Test'}},
-    {'dest': {'rse': 'T1_UK_RAL_Tape'}, 'src': {'rse': '^(?!T1_UK_RAL_Disk).*$'}},
+    {'dest': {'rse': 'T1_UK_RAL_Tape'}, 'src': {'rse': '^(?!T1_UK_RAL_Disk|T0_CH_CERN_Disk).*$'}},
     {'dest': {'rse': '^(?!T1_UK_RAL_Disk).*$'}, 'src': {'rse': 'T1_UK_RAL_Tape'}},
 )
 
