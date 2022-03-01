@@ -17,8 +17,8 @@ DEFAULT_EXCLUDE_LINKS = (
     {'dest': {'rse': 'T2_US_Caltech'}, 'src': {'rse': 'T2_US_Caltech_Ceph'}},
     {'dest': {'rse': 'T1_UK_RAL_Tape_Test'}, 'src': {}},
     {'dest': {}, 'src': {'rse': 'T1_UK_RAL_Tape_Test'}},
-    {'dest': {'rse': 'T1_UK_RAL_Tape'}, 'src': {'rse': '^(?!T1_UK_RAL_Disk)$'}},
-    {'dest': {'rse': '^(?!T1_UK_RAL_Disk)$'}, 'src': {'rse': 'T1_UK_RAL_Tape'}},
+    {'dest': {'rse': 'T1_UK_RAL_Tape'}, 'src': {'rse': '^(?!T1_UK_RAL_Disk).*$'}},
+    {'dest': {'rse': '^(?!T1_UK_RAL_Disk).*$'}, 'src': {'rse': 'T1_UK_RAL_Tape'}},
 )
 
 CTA_RSES = ['T0_CH_CERN_Tape']
@@ -147,7 +147,7 @@ class LinksMatrix(object):
                 if srse == drse or not src_regex.match(srse) or not dst_regex.match(drse):
                     continue
 
-                if ((srse in CTA_RSES and drse not in CERN_RSES) or (drse in CTA_RSES and srse not in CERN_RSES)):
+                if (srse in CTA_RSES and drse not in CERN_RSES) or (drse in CTA_RSES and srse not in CERN_RSES):
                     logging.info("Not setting link from %s to %s", srse, drse)
                     continue
                     
