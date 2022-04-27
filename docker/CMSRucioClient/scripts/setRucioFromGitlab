@@ -67,7 +67,9 @@ for project in projects:
                     deterministic = False
                 if rse_name in SKIP_SITES or not DO_SITES or rse_name not in DO_SITES:
                     continue
-
+                    
+                if 'fts' not in site:
+                  site.update({'fts': [ "https://fts3-cms.cern.ch:8446", "https://lcgfts3.gridpp.rl.ac.uk:8446" ] })
                 rse = CMSRSE(site, dry=options.dry_run, cms_type=options.cms_type, deterministic=deterministic)
                 if rse.update():
                     print('RSE %s and type %s changed' % (rse.rse_name, rse.rucio_rse_type))
@@ -77,6 +79,8 @@ for project in projects:
                 if site['rse'] in SKIP_SITES or not DO_SITES or site['rse'] not in DO_SITES:
                     continue
 
+                if 'fts' not in site:
+                  site.update({'fts': [ "https://fts3-cms.cern.ch:8446", "https://lcgfts3.gridpp.rl.ac.uk:8446" ] })
                 rse = CMSRSE(site, dry=options.dry_run, cms_type=options.cms_type)
                 if rse.update():
                     print('RSE %s and type %s changed' % (rse.rse_name, rse.rucio_rse_type))
