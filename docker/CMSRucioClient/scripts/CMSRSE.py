@@ -27,9 +27,9 @@ RUCIO_PROTOS = ['SRMv2', 'XRootD', 'WebDAV']
 PROTO_WEIGHT_TPC = {'WebDAV':1, 'XRootD': 3, 'SRMv2': 2}
 PROTO_WEIGHT_RWD = {'WebDAV':2, 'XRootD': 3, 'SRMv2': 1}
 
-IMPL_MAP = {'SRMv2': 'rucio.rse.protocols.gfalv2.Default',
+IMPL_MAP = {'SRMv2': 'rucio.rse.protocols.gfal.Default',
             'XRootD': 'rucio.rse.protocols.gfal.Default',
-            'WebDAV': 'rucio.rse.protocols.gfalv2.Default'}
+            'WebDAV': 'rucio.rse.protocols.gfal.Default'}
 DEFAULT_PORTS = {'gsiftp': 2811, 'root': 1094, 'davs':443}
 
 
