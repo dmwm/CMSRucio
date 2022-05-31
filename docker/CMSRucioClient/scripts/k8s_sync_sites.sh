@@ -14,6 +14,13 @@ cd /root/CMSRucio
 git pull origin master
 export RUCIO_ACCOUNT=root
 
+echo "Generating config file"
+python3 /root/rucio/tools/merge_rucio_configs.py \
+        -s /tmp/rucio.config.default.cfg $RUCIO_OVERRIDE_CONFIGS \
+        --use-env \
+        -d $RUCIO_HOME/etc/rucio.cfg
+
+
 echo Using config file in $RUCIO_HOME
 
 cat $RUCIO_HOME/etc/rucio.cfg
