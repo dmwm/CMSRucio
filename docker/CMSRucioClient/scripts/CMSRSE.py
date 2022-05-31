@@ -14,23 +14,31 @@ from rucio.common.exception import RSEProtocolNotSupported, RSENotFound
 
 APPROVAL_REQUIRED = ['T1_DE_KIT_Tape', 'T1_ES_PIC_Tape', 'T1_RU_JINR_Tape', 'T1_UK_RAL_Tape', 'T1_US_FNAL_Tape']
 DOMAINS_BY_TYPE = {
-    'prod-real': {'wan': {'read': 1, 'write': 1, 'third_party_copy': 1, 'delete': 1},
-                  'lan': {'read': 0, 'write': 0, 'delete': 0}},
-    'int-real': {'wan': {'read': 1, 'write': 0, 'third_party_copy': 1, 'delete': 0},
-                 'lan': {'read': 0, 'write': 0, 'delete': 0}},
-    'test': {'wan': {'read': 1, 'write': 1, 'third_party_copy': 1, 'delete': 1},
-             'lan': {'read': 0, 'write': 0, 'delete': 0}},
-    'temp': {'wan': {'read': 1, 'write': 1, 'third_party_copy': 1, 'delete': 1},
-             'lan': {'read': 0, 'write': 0, 'delete': 0}},
+    'prod-real': {
+        'wan': {'read': 1, 'write': 1, 'third_party_copy': 1, 'third_party_copy_write': 1, 'third_party_copy_read': 1,
+                'delete': 1},
+        'lan': {'read': 0, 'write': 0, 'delete': 0}},
+    'int-real': {
+        'wan': {'read': 1, 'write': 0, 'third_party_copy': 1, 'third_party_copy_write': 1, 'third_party_copy_read': 1,
+                'delete': 0},
+        'lan': {'read': 0, 'write': 0, 'delete': 0}},
+    'test': {
+        'wan': {'read': 1, 'write': 1, 'third_party_copy': 1, 'third_party_copy_write': 1, 'third_party_copy_read': 1,
+                'delete': 1},
+        'lan': {'read': 0, 'write': 0, 'delete': 0}},
+    'temp': {
+        'wan': {'read': 1, 'write': 1, 'third_party_copy': 1, 'third_party_copy_write': 1, 'third_party_copy_read': 1,
+                'delete': 1},
+        'lan': {'read': 0, 'write': 0, 'delete': 0}},
 }
 RUCIO_PROTOS = ['SRMv2', 'XRootD', 'WebDAV']
-PROTO_WEIGHT_TPC = {'WebDAV':1, 'XRootD': 3, 'SRMv2': 2}
-PROTO_WEIGHT_RWD = {'WebDAV':2, 'XRootD': 3, 'SRMv2': 1}
+PROTO_WEIGHT_TPC = {'WebDAV': 1, 'XRootD': 3, 'SRMv2': 2}
+PROTO_WEIGHT_RWD = {'WebDAV': 2, 'XRootD': 3, 'SRMv2': 1}
 
-IMPL_MAP = {'SRMv2': 'rucio.rse.protocols.gfalv2.Default',
+IMPL_MAP = {'SRMv2': 'rucio.rse.protocols.gfal.Default',
             'XRootD': 'rucio.rse.protocols.gfal.Default',
-            'WebDAV': 'rucio.rse.protocols.gfalv2.Default'}
-DEFAULT_PORTS = {'gsiftp': 2811, 'root': 1094, 'davs':443}
+            'WebDAV': 'rucio.rse.protocols.gfal.Default'}
+DEFAULT_PORTS = {'gsiftp': 2811, 'root': 1094, 'davs': 443}
 
 
 class CMSRSE:
