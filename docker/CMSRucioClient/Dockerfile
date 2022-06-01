@@ -61,7 +61,6 @@ COPY rucio-testbed.cfg /opt/rucio-testbed/etc/rucio.cfg
 COPY rucio-dev.cfg /opt/rucio-dev/etc/rucio.cfg
 COPY rucio-int.cfg /opt/rucio-int/etc/rucio.cfg
 COPY rucio-prod.cfg /opt/rucio-prod/etc/rucio.cfg
-COPY rucio.config.default.cfg /tmp/
 
 # Pull some useful stuff out of git
 WORKDIR /root
