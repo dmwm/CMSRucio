@@ -309,13 +309,13 @@ class CMSRSE:
         try:
             for method, weight in domains['wan'].items():
                 if weight and protocol_name in PROTO_WEIGHT_TPC:
-                    if method == "third_party_copy":
+                    if method.startswith("third_party_copy"):
                         domains['wan'][method] = PROTO_WEIGHT_TPC[protocol_name]
                     else:
                         domains['wan'][method] = PROTO_WEIGHT_RWD[protocol_name]
         except KeyError:
             pass  # We're trying to modify an unknown protocol somehow
-        #TODO: Make sure global-rw is set
+        # TODO: Make sure global-rw is set
         if proto_json.get('prefix', None):
             """
             The simple case where all we have is a prefix. This just triggers the identity algorithm 
