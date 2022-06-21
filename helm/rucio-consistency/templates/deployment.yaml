@@ -43,7 +43,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: "rucio-secrets"
-                  key: db_string
+                  key: db_ro_string
           command: ["/consistency/run.sh"]
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
