@@ -11,6 +11,7 @@ image:
   tag: "latest"
 
 consistency:
+  schema: "CMS_RUCIO_PROD"
   logLevel: "INFO"
   scratchSize: 100Gi
   reportSize: 10Gi
