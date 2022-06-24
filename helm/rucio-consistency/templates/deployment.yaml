@@ -44,6 +44,10 @@ spec:
                 secretKeyRef:
                   name: "rucio-secrets"
                   key: db_ro_string
+        {{- if .Values.consistency.schema }}
+            - name: RUCIO_CFG_DATABASE_DEFAULT
+              value: {{ .Values.consistency.schema }}
+        {{- end }}
           command: ["/consistency/run.sh"]
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
