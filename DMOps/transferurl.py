@@ -52,7 +52,10 @@ def turl(protocols, scheme=None, file=None):
                 extended_attributes = protocol['extended_attributes']['web_service_path']
             else:
                 extended_attributes = ''
-            p = protocol['scheme']+'://'+protocol['hostname']+':'+str(protocol['port'])+extended_attributes+protocol['prefix']+lfn(file)
+            prefix= protocol['prefix']
+            if prefix[-1] == '/':
+                prefix = prefix[:-1]
+            p = protocol['scheme']+'://'+protocol['hostname']+':'+str(protocol['port'])+extended_attributes+prefix+lfn(file)
             res.append(p)
     return res
 
