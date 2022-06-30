@@ -1,23 +1,23 @@
 # Helper Scripts for DM Operation
 
 
-### dynamic_ddmquota_update.py
-### find_file_replicas.py
-### fix_tape_file_exists.py
-### get_account_info.py
-### get_error_logs.py
-### get_stuck_rules.py
-### InvalidateReplicas.py
-### list_dids.py
-### list_replicas.py
-### list_subscription_rules.py
-### list_subscriptions.py
-### modify_protocol.py
-### nanoaod_subscription.py
-### RepairFromDBS.py
-### rule_requests
-### set_regions.py
-### StageDatasetForUser.py
-### transferurl.py
-### update_account.py
-### update_rule.py
+### _dynamic_ddmquota_update.py_
+### _find_file_replicas.py_
+### _fix_tape_file_exists.py_
+### _get_account_info.py_
+### _get_error_logs.py_
+### _get_stuck_rules.py_
+### _InvalidateReplicas.py_
+### _list_dids.py_
+### _list_replicas.py_
+### _list_subscription_rules.py_
+### _list_subscriptions.py_
+### _modify_protocol.py_
+### _nanoaod_subscription.py_
+### _RepairFromDBS.py_
+### _rule_requests_
+### _set_regions.py_
+### _StageDatasetForUser.py_
+### _transferurl.py_
+### _update_account.py_
+### _update_rule.py_
