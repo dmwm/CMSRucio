@@ -3,7 +3,7 @@
 
 ### _dynamic_ddmquota_update.py_
 ### _find_file_replicas.py_
-"""
+```
 usage: find_file_replicas.py [-h] [-f FILE] [-v] [-n] [lfn [lfn ...]]
 
 find RSEs that have replica
@@ -18,7 +18,7 @@ optional arguments:
   -n          with -v, do not show LFN
 
 ** without arguments, input is taken from stdin
-"""
+```
 ### _fix_tape_file_exists.py_
 ### _get_account_info.py_
 ### _get_error_logs.py_
