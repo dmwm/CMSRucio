@@ -82,5 +82,21 @@ optional arguments:
 
 ** without arguments, input is taken from stdin, one line per file
 ```
+examples:
+```
+bash-4.2$ transferurl.py T1_US_FNAL_Disk /store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/0b07e67c-c236-452c-b2c9-1e4506ea487d.root
+davs://cmsdcadisk.fnal.gov:2880/dcache/uscmsdisk/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/0b07e67c-c236-452c-b2c9-1e4506ea487d.root
+root://cmsdcadisk.fnal.gov:1094//dcache/uscmsdisk/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/0b07e67c-c236-452c-b2c9-1e4506ea487d.root
+srm://cmsdcadisk.fnal.gov:8443/srm/managerv2?SFN=/dcache/uscmsdisk/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/0b07e67c-c236-452c-b2c9-1e4506ea487d.root
+bash-4.2$ transferurl.py T1_US_FNAL_Disk srm /store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/0b07e67c-c236-452c-b2c9-1e4506ea487d.root
+srm://cmsdcadisk.fnal.gov:8443/srm/managerv2?SFN=/dcache/uscmsdisk/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/0b07e67c-c236-452c-b2c9-1e4506ea487d.root
+bash-4.2$ printf "T1_US_FNAL_Disk /store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/0b07e67c-c236-452c-b2c9-1e4506ea487d.root" | transferurl.py
+davs://cmsdcadisk.fnal.gov:2880/dcache/uscmsdisk/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/0b07e67c-c236-452c-b2c9-1e4506ea487d.root
+root://cmsdcadisk.fnal.gov:1094//dcache/uscmsdisk/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/0b07e67c-c236-452c-b2c9-1e4506ea487d.root
+srm://cmsdcadisk.fnal.gov:8443/srm/managerv2?SFN=/dcache/uscmsdisk/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/0b07e67c-c236-452c-b2c9-1e4506ea487d.root
+bash-4.2$ printf "T1_US_FNAL_Disk davs /store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/0b07e67c-c236-452c-b2c9-1e4506ea487d.root" | transferurl.py
+davs://cmsdcadisk.fnal.gov:2880/dcache/uscmsdisk/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/0b07e67c-c236-452c-b2c9-1e4506ea487d.root
+bash-4.2$ 
+```
 ### _update_account.py_
 ### _update_rule.py_
