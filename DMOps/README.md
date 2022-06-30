@@ -35,5 +35,20 @@ optional arguments:
 ### _set_regions.py_
 ### _StageDatasetForUser.py_
 ### _transferurl.py_
+```
+usage: transferurl.py [-h] rse [protocol] file
+
+compose transfer url at RSE according to storage.json
+
+positional arguments:
+  rse         Rucio Storage Element
+  protocol    transfer protocol
+  file        file
+
+optional arguments:
+  -h, --help  show this help message and exit
+
+** without arguments, input is taken from stdin, one line per file
+```
 ### _update_account.py_
 ### _update_rule.py_
