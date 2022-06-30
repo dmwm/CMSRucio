@@ -21,10 +21,10 @@ optional arguments:
 ```
 examples:
 ```
-**bash-4.2$ find_file_replicas.py /dcache/uscmsdisk/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/0b07e67c-c236-452c-b2c9-1e4506ea487d.root /dcache/uscmsdisk/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/102b05ec-b52a-4ea1-828c-2b5948d9f1e1.root**
+bash-4.2$ find_file_replicas.py /dcache/uscmsdisk/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/0b07e67c-c236-452c-b2c9-1e4506ea487d.root /dcache/uscmsdisk/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/102b05ec-b52a-4ea1-828c-2b5948d9f1e1.root
 /store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/0b07e67c-c236-452c-b2c9-1e4506ea487d.root [ T1_US_FNAL_Disk T0_CH_CERN_Disk T2_US_MIT_Tape T1_US_FNAL_Tape T0_CH_CERN_Tape ]
 /store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/102b05ec-b52a-4ea1-828c-2b5948d9f1e1.root [ T1_US_FNAL_Disk T0_CH_CERN_Disk T2_US_MIT_Tape T1_US_FNAL_Tape ]
-**bash-4.2$ find_file_replicas.py -v /dcache/uscmsdisk/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/0b07e67c-c236-452c-b2c9-1e4506ea487d.root /dcache/uscmsdisk/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/102b05ec-b52a-4ea1-828c-2b5948d9f1e1.root**
+bash-4.2$ find_file_replicas.py -v /dcache/uscmsdisk/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/0b07e67c-c236-452c-b2c9-1e4506ea487d.root /dcache/uscmsdisk/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/102b05ec-b52a-4ea1-828c-2b5948d9f1e1.root
 /store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/0b07e67c-c236-452c-b2c9-1e4506ea487d.root [ T1_US_FNAL_Disk T0_CH_CERN_Disk T2_US_MIT_Tape T1_US_FNAL_Tape T0_CH_CERN_Tape ]
     T1_US_FNAL_Disk  srm://cmsdcadisk.fnal.gov:8443/srm/managerv2?SFN=/dcache/uscmsdisk/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/0b07e67c-c236-452c-b2c9-1e4506ea487d.root
     T0_CH_CERN_Disk  gsiftp://eoscmsftp.cern.ch:2811/eos/cms/tier0/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/0b07e67c-c236-452c-b2c9-1e4506ea487d.root
@@ -36,10 +36,10 @@ examples:
     T0_CH_CERN_Disk  gsiftp://eoscmsftp.cern.ch:2811/eos/cms/tier0/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/102b05ec-b52a-4ea1-828c-2b5948d9f1e1.root
     T2_US_MIT_Tape   gsiftp://tapesrmcms.nese.rc.fas.harvard.edu:2811/cms/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/102b05ec-b52a-4ea1-828c-2b5948d9f1e1.root
     T1_US_FNAL_Tape  srm://cmsdcatape.fnal.gov:8443/srm/managerv2?SFN=/11/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/102b05ec-b52a-4ea1-828c-2b5948d9f1e1.root
-**bash-4.2$ printf "/dcache/uscmsdisk/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/0b07e67c-c236-452c-b2c9-1e4506ea487d.root\n/dcache/uscmsdisk/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/102b05ec-b52a-4ea1-828c-2b5948d9f1e1.root" | find_file_replicas.py**
+bash-4.2$ printf "/dcache/uscmsdisk/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/0b07e67c-c236-452c-b2c9-1e4506ea487d.root\n/dcache/uscmsdisk/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/102b05ec-b52a-4ea1-828c-2b5948d9f1e1.root" | find_file_replicas.py
 /store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/0b07e67c-c236-452c-b2c9-1e4506ea487d.root [ T1_US_FNAL_Disk T0_CH_CERN_Disk T2_US_MIT_Tape T1_US_FNAL_Tape T0_CH_CERN_Tape ]
 /store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/102b05ec-b52a-4ea1-828c-2b5948d9f1e1.root [ T1_US_FNAL_Disk T0_CH_CERN_Disk T2_US_MIT_Tape T1_US_FNAL_Tape ]
-**bash-4.2$ printf "/dcache/uscmsdisk/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/0b07e67c-c236-452c-b2c9-1e4506ea487d.root\n/dcache/uscmsdisk/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/102b05ec-b52a-4ea1-828c-2b5948d9f1e1.root" | find_file_replicas.py -v -n**
+bash-4.2$ printf "/dcache/uscmsdisk/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/0b07e67c-c236-452c-b2c9-1e4506ea487d.root\n/dcache/uscmsdisk/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/102b05ec-b52a-4ea1-828c-2b5948d9f1e1.root" | find_file_replicas.py -v -n
     T1_US_FNAL_Disk  srm://cmsdcadisk.fnal.gov:8443/srm/managerv2?SFN=/dcache/uscmsdisk/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/0b07e67c-c236-452c-b2c9-1e4506ea487d.root
     T0_CH_CERN_Disk  gsiftp://eoscmsftp.cern.ch:2811/eos/cms/tier0/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/0b07e67c-c236-452c-b2c9-1e4506ea487d.root
     T2_US_MIT_Tape   gsiftp://tapesrmcms.nese.rc.fas.harvard.edu:2811/cms/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/0b07e67c-c236-452c-b2c9-1e4506ea487d.root
@@ -49,7 +49,7 @@ examples:
     T0_CH_CERN_Disk  gsiftp://eoscmsftp.cern.ch:2811/eos/cms/tier0/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/102b05ec-b52a-4ea1-828c-2b5948d9f1e1.root
     T2_US_MIT_Tape   gsiftp://tapesrmcms.nese.rc.fas.harvard.edu:2811/cms/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/102b05ec-b52a-4ea1-828c-2b5948d9f1e1.root
     T1_US_FNAL_Tape  srm://cmsdcatape.fnal.gov:8443/srm/managerv2?SFN=/11/store/data/Run2022A/ZeroBias9/RAW/v1/000/354/655/00000/102b05ec-b52a-4ea1-828c-2b5948d9f1e1.root
-**bash-4.2$**
+bash-4.2$
 ```
 ### _fix_tape_file_exists.py_
 ### _get_account_info.py_
