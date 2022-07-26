@@ -1,0 +1,15 @@
+kind: Dataset
+
+metadata:
+  name: myconfigmap
+
+specs:
+  datasetPath: /afs/cern.ch/user/r/<username>/<folder_path>
+  datasetName: /TestDataset/TestDataset/USER#TestDataset
+  options:
+    upload:
+      tempRSE: T2_CH_CERN_Temp
+    rule:
+      rse: T2_CH_CERN
+      copies: 1
+      lifetime: 1200000

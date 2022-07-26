@@ -1,0 +1,16 @@
+kind: File
+
+metadata:
+  name: myconfigmap
+
+specs:
+  filePath: /afs/cern.ch/user/r/<username>/<file_path>
+  lfn: /store/user/rucio/<username>/filename
+  options:
+    upload:
+      tempRSE: T2_CH_CERN_Temp
+    rule:
+      rse: T2_CH_CERN
+      copies: 1
+      lifetime: 120000
+
