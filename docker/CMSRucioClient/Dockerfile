@@ -46,6 +46,7 @@ RUN pip3 install --upgrade pip
 RUN pip3 install --upgrade setuptools
 RUN pip3 install rucio-clients
 RUN pip3 install python-gitlab
+RUN pip3 install liboidcagent
 
 # Install DAS client to pull info from PhEDEx/DBS
 RUN curl -k -o  /bin/dasgoclient https://www.lns.cornell.edu/~vk/Work/dasgoclient && chmod +x /bin/dasgoclient
@@ -66,8 +67,11 @@ COPY rucio-prod.cfg /opt/rucio-prod/etc/rucio.cfg
 WORKDIR /root
 RUN git clone https://github.com/dmwm/CMSRucio.git
 
+RUN cd /etc/yum.repos.d; wget https://repo.data.kit.edu/data-kit-edu-centos7.repo
+
+RUN yum install -y oidc-agent
 # Overwrite what's there for testing
-# COPY scripts /root/CMSRucio/docker/CMSRucioClient/scripts
+COPY scripts /root/CMSRucio/docker/CMSRucioClient/scripts
 
 # Our schema
 ADD https://raw.githubusercontent.com/ericvaandering/rucio/cms_nano12/lib/rucio/common/schema/cms.py /usr/lib/python2.7/site-packages/rucio/common/schema/cms.py
