@@ -84,17 +84,9 @@ spec:
                       name: "rucio-secrets"
                       key: monit_token
                 - name: IAM_SERVER
-                  valueFrom:
-                    secretKeyRef:
-                      name: "rucio-secrets"
-                      key: oidc_iam_server
-                      optional: true
+                  value: "{{ .Values.oidc.iamServer }}"
                 - name: IAM_CLIENT_ID
-                  valueFrom:
-                    secretKeyRef:
-                      name: "rucio-secrets"
-                      key: oidc_iam_client_id
-                      optional: true
+                  value: "{{ .Values.oidc.iamClientId }}"
                 - name: IAM_CLIENT_SECRET
                   valueFrom:
                     secretKeyRef:
