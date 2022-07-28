@@ -37,9 +37,9 @@ echo "Creating links"
 # Preparing oidc-agent to get/refresh token to retrieve OIDC user information
 export OIDC_CONFIG_DIR=$HOME/.oidc-agent
 
-eval $(oidc-keychain)
+eval $(oidc-agent)
 
-oidc-gen cms --issuer "https://$IAM_SERVER/" \
+oidc-gen cms --issuer "$IAM_SERVER" \
     --client-id "$IAM_CLIENT_ID" \
     --client-secret "$IAM_CLIENT_SECRET" \
     --rt "$REFRESH_TOKEN" \

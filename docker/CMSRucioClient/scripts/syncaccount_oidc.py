@@ -1,4 +1,4 @@
-#! /bin/env python
+#! /bin/env python3
 """
 Functions and scripts to sync OIDC identities on user accounts
 """
@@ -17,12 +17,16 @@ page_length = 100
 iam_server = "https://cms-auth.web.cern.ch/"
 
 def  get_oidc_identities(n_iteration, headers, oidc_agent_name):
+    token = None
     try:
         token = agent.get_access_token(oidc_agent_name,scope="scim:read")
         #print(token)
     except agent.OidcAgentError as e:
         print("ERROR oidc-agent: {}".format(e))
         return [], [], []
+
+    if not token:
+        print("Sync OIDC failed: no valid token retrieved")
 
     params = {}
     headers = {'Authorization': 'Bearer %s' % token, 'Content-type': 'application/json' }
