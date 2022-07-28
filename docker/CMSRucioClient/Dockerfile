@@ -72,7 +72,7 @@ RUN cd /etc/yum.repos.d; wget https://repo.data.kit.edu/data-kit-edu-centos7.rep
 RUN yum install -y oidc-agent
 
 # Overwrite what's there for testing
-COPY scripts /root/CMSRucio/docker/CMSRucioClient/scripts
+# COPY scripts /root/CMSRucio/docker/CMSRucioClient/scripts
 
 # Our schema
 ADD https://raw.githubusercontent.com/ericvaandering/rucio/cms_nano12/lib/rucio/common/schema/cms.py /usr/lib/python2.7/site-packages/rucio/common/schema/cms.py
