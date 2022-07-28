@@ -67,9 +67,10 @@ COPY rucio-prod.cfg /opt/rucio-prod/etc/rucio.cfg
 WORKDIR /root
 RUN git clone https://github.com/dmwm/CMSRucio.git
 
+# Install oidc-agent to renew token for SCIM user info retrieval
 RUN cd /etc/yum.repos.d; wget https://repo.data.kit.edu/data-kit-edu-centos7.repo
-
 RUN yum install -y oidc-agent
+
 # Overwrite what's there for testing
 COPY scripts /root/CMSRucio/docker/CMSRucioClient/scripts
 
