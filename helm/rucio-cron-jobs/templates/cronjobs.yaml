@@ -6,6 +6,7 @@ spec:
   schedule: "5 * * * *"
   jobTemplate:
     spec:
+      activeDeadlineSeconds: 1800
       template:
         spec:
           volumes:
@@ -50,6 +51,7 @@ spec:
   schedule: "10 */12 * * *"
   jobTemplate:
     spec:
+      activeDeadlineSeconds: 7200
       template:
         spec:
           volumes:
