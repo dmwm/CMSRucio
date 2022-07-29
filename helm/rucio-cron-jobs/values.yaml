@@ -20,7 +20,7 @@ cronjobSettings:
 
 oidc:
   iamServer: https://cms-auth.web.cern.ch/ 
-  iamClientID: c6620262-0b0d-4d8a-b025-73c5a601080c
+  iamClientId: c6620262-0b0d-4d8a-b025-73c5a601080c
 
 serviceAccount:
   # Specifies whether a service account should be created
