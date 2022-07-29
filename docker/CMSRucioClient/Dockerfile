@@ -46,6 +46,7 @@ RUN pip3 install --upgrade pip
 RUN pip3 install --upgrade setuptools
 RUN pip3 install rucio-clients
 RUN pip3 install python-gitlab
+RUN pip3 install liboidcagent
 
 # Install DAS client to pull info from PhEDEx/DBS
 RUN curl -k -o  /bin/dasgoclient https://www.lns.cornell.edu/~vk/Work/dasgoclient && chmod +x /bin/dasgoclient
@@ -65,6 +66,10 @@ COPY rucio-prod.cfg /opt/rucio-prod/etc/rucio.cfg
 # Pull some useful stuff out of git
 WORKDIR /root
 RUN git clone https://github.com/dmwm/CMSRucio.git
+
+# Install oidc-agent to renew token for SCIM user info retrieval
+RUN cd /etc/yum.repos.d; wget https://repo.data.kit.edu/data-kit-edu-centos7.repo
+RUN yum install -y oidc-agent
 
 # Overwrite what's there for testing
 # COPY scripts /root/CMSRucio/docker/CMSRucioClient/scripts

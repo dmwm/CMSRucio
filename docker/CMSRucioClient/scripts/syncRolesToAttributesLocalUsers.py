@@ -86,6 +86,9 @@ def set_local_identities(client, site, dns=None, user_map=None, site_map=None):
         print('Adding %s to %s with %s' % (identity, account, user_map[identity]))
         client.add_identity(account=account, identity=identity, authtype='X509', email=user_map[identity])
     for identity in del_identities:
+        if identity.startswith("SUB="):
+            print('OIDC identity, skipping delete')
+            continue
         print('Deleting %s from %s' % (identity, account))
         client.del_identity(account=account, identity=identity, authtype='X509')
 
