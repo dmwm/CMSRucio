@@ -2,9 +2,9 @@
 
 set -e
 
-export CMS_VERSION=1.28.6.cms1
-export RUCIO_VERSION=1.28.6
-export CMS_TAG=cms_128_3
+export CMS_VERSION=1.29.2.cms1
+export RUCIO_VERSION=1.29.2.post1
+export CMS_TAG=cms_1_29_1
 export HARBOR=registry.cern.ch/cmsrucio
 
 # Globus Online (need to revisit in 1.26)

@@ -22,10 +22,6 @@ ADD globus-config.yml.j2 /tmp
 ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/docker/CMSRucioClient/scripts/cmstfc.py /usr/local/lib/python3.6/site-packages/cmstfc.py
 RUN chmod 755 /usr/local/lib/python3.6/site-packages/cmstfc.py
 
-# Delete checks that it exists
-ADD https://raw.githubusercontent.com/ericvaandering/rucio/$CMS_TAG/lib/rucio/rse/protocols/gfal.py /usr/local/lib/python3.6/site-packages/rucio/rse/protocols/gfal.py
-RUN python3 -m compileall /usr/local/lib/python3.6/site-packages/rucio/rse/protocols
-
 ADD cms-entrypoint.sh /
 
 # Eric patches for Globus (need to revisit in 1.26)
@@ -45,13 +41,6 @@ ADD https://raw.githubusercontent.com/ericvaandering/rucio/fix_cache_consumer/li
 RUN python3 -m compileall /usr/local/lib/python3.6/site-packages/rucio/core
 ADD https://raw.githubusercontent.com/ericvaandering/rucio/fix_cache_consumer/lib/rucio/common/stomp_utils.py /usr/local/lib/python3.6/site-packages/rucio/common/stomp_utils.py
 RUN python3 -m compileall /usr/local/lib/python3.6/site-packages/rucio/common
-
-# Eric patch for kronos
-
-ADD https://raw.githubusercontent.com/ericvaandering/rucio/kronos_both_threads/lib/rucio/daemons/tracer/kronos.py /usr/local/lib/python3.6/site-packages/rucio/daemons/tracer/kronos.py
-RUN python3 -m compileall /usr/local/lib/python3.6/site-packages/rucio/daemons/tracer
-
-
 
 ADD https://raw.githubusercontent.com/ericvaandering/containers/add_preparer/daemons/rucio.cfg.j2 /tmp/rucio.cfg.j2
 
