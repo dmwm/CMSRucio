@@ -42,4 +42,9 @@ RUN /tmp/install_mail_templates.sh
 # Might get recreated if apache was upgraded
 RUN rm -f /etc/httpd/conf.d/welcome.conf /etc/httpd/conf.d/userdir.conf /etc/httpd/conf.d/ssl.conf
 
+# PR 5798 - Igor
+ADD https://raw.githubusercontent.com/rucio/rucio/7fe814a5cde6eaca3a0723e77fb6fba706616975/lib/rucio/web/rest/flaskapi/v1/replicas.py /usr/local/lib/python3.6/site-packages/rucio/web/rest/flaskapi/v1/replicas.py
+RUN chmod 755  /usr/local/lib/python3.6/site-packages/rucio/web/rest/flaskapi/v1/*
+RUN python3 -m compileall  /usr/local/lib/python3.6/site-packages/rucio/web/rest/flaskapi/v1
+
 ENTRYPOINT ["/cms-entrypoint.sh"]
