@@ -91,6 +91,11 @@ ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_check_expired_lo
 # ADD https://raw.githubusercontent.com/rucio/probes/master/common/utils/__init__.py /probes/common/utils
 # ADD https://raw.githubusercontent.com/rucio/probes/master/cms/utils.py /probes/cms
 
+# PR 97 
+# 2022-05-05, not merged yet
+# Fix minor change in prometheus_client format.
+ADD https://raw.githubusercontent.com/FernandoGarzon/probes/check_transfer_queues_status_BUG/common/check_transfer_queues_status /probes/common
+
 # PR 98
 
 ADD https://raw.githubusercontent.com/FernandoGarzon/probes/check_rules_counts_vs_time/cms/check_rule_counts /probes/cms
