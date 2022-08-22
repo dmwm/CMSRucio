@@ -50,7 +50,10 @@ RUN yum install -y python3 python3-pip git \
     && yum clean all \
     && rm -rf /var/cache/yum
 
+RUN pip3 install --upgrade pip
+RUN pip3 install --upgrade setuptools
 RUN pip3 --no-cache-dir install SQLAlchemy pyyaml pythreader cx_Oracle j2cli
+RUN pip3 install rucio-clients
 
 RUN mkdir -p /consistency
 RUN mkdir /root/RAL
