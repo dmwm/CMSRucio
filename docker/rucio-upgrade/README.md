@@ -1,6 +1,6 @@
 Steps to create image and push to docker hub
 
-* docker login
-* export RUCIO_VERSION=1.21.3
-* docker build  --build-arg RUCIO_VERSION=$RUCIO_VERSION -t ericvaandering/rucio-upgrade:release-$RUCIO_VERSION .
-* docker push ericvaandering/rucio-upgrade:release-$RUCIO_VERSION
+* podman login registry.cern.ch
+* export RUCIO_VERSION=1.29.2.post1
+* podman build   --build-arg RUCIO_VERSION=$RUCIO_VERSION -t registry.cern.ch/cmsrucio/rucio-upgrade:release-$RUCIO_VERSION . 
+* podman push registry.cern.ch/cmsrucio/rucio-upgrade:release-$RUCIO_VERSION

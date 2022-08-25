@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rucio-upgrade
+  labels:
+    app: rucio-upgrade
+spec:
+  minReadySeconds: 5
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: rucio-upgrade
+      release: cms-upgrade-int
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: rucio-upgrade
+        release: cms-upgrade-int
+    spec:
+      containers:
+      - env:
+        - name: RUCIO_CFG_COMMON_LOGLEVEL
+          value: INFO
+        - name: RUCIO_CFG_DATABASE_DEFAULT
+          valueFrom:
+            secretKeyRef:
+              key: db_string
+              name: rucio-secrets
+        image: registry.cern.ch/cmsrucio/rucio-upgrade:release-1.29.2.post1
+        imagePullPolicy: Always
+        name: cms-rucio-upgrade
+        resources:
+          limits:
+            memory: 3000Mi
+          requests:
+            memory: 2000Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /opt/proxy
+          name: proxy-volume
+        - mountPath: /opt/certs
+          name: ca-volume
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: proxy-volume
+        secret:
+          defaultMode: 420
+          secretName: daemons-rucio-x509up
+      - name: ca-volume
+        secret:
+          defaultMode: 420
+          secretName: daemons-rucio-ca-bundle
