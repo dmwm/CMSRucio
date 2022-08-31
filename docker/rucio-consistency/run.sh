@@ -44,6 +44,7 @@ if [ ! -f /etc/jobber-config/dot-jobber.yaml ]; then
 fi
 
 cp /etc/jobber-config/dot-jobber.yaml /root/.jobber
+cp /config/config.yaml /consistency/config.yaml
 
 cd /consistency/cms_consistency
 git pull				# make sure to pick up the latest version
