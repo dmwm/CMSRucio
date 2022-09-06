@@ -78,17 +78,17 @@ data:
 {{- end }}
 {{- end }}
 {{- if or $config.minagedark $config.maxdarkfraction }}
-          dark_action:
+        dark_action:
 {{- if  ($config.minagedark) }}
-            min_age_first_run: {{ $config.minagedark }}
+          min_age_first_run: {{ $config.minagedark }}
 {{- end }}
 {{- if  ($config.maxdarkfraction) }}
-            max_fraction: {{ $config.maxdarkfraction }}
+          max_fraction: {{ $config.maxdarkfraction }}
 {{- end }}
 {{- end }}
 {{- if  ($config.maxmissfraction) }}
-          missing_action:
-            max_fraction: {{ $config.maxmissfraction }}
+        missing_action:
+          max_fraction: {{ $config.maxmissfraction }}
 {{- end }}
 {{- end }}
 {{- end }}
