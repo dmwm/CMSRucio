@@ -35,9 +35,4 @@ ADD cms-entrypoint.sh /
 
 #ADD https://raw.githubusercontent.com/ericvaandering/containers/add_preparer/daemons/rucio.cfg.j2 /tmp/rucio.cfg.j2
 
-# Debugging patch for overwrite issue
-
-ADD https://raw.githubusercontent.com/ericvaandering/rucio/$CMS_TAG/lib/rucio/transfertool/fts3.py /usr/local/lib/python3.6/site-packages/rucio/transfertool/fts3.py
-RUN python3 -m compileall /usr/local/lib/python3.6/site-packages/rucio/transfertool
-
 ENTRYPOINT ["/cms-entrypoint.sh"]

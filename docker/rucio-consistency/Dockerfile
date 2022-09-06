@@ -62,6 +62,8 @@ COPY cleanup.sh run.sh site.sh unmerged_site.sh RAL_Disk_pre.sh RAL_Disk_post.sh
 
 ADD rucio.cfg.j2 /tmp
 
+ADD rucio-client.cfg /consistency/rucio-client.cfg
+
 WORKDIR /consistency
 RUN chmod +x *.sh
 

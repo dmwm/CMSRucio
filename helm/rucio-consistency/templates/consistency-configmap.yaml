@@ -41,6 +41,15 @@ data:
         #  lfn_to_path:
         #  - path: "^/+store/(.*)"
         #    out: "/$1"
+        dark_action:
+          max_fraction: 0.01
+          max_age_last_run: 1
+          confirmation_window: 35
+          min_age_first_run: 25
+          min_runs: 3
+        missing_action:
+          max_fraction: 0.01
+          max_age_last_run: 1
 
 
       # Individual sites are configure thus where values differ (scanner is omitted in the helm values)
@@ -67,6 +76,19 @@ data:
 {{- if (hasKey $config "is_redirector") }}
           is_redirector: {{ $config.is_redirector }}
 {{- end }}
+{{- end }}
+{{- if or $config.minagedark $config.maxdarkfraction }}
+          dark_action:
+{{- if  ($config.minagedark) }}
+            min_age_first_run: {{ $config.minagedark }}
+{{- end }}
+{{- if  ($config.maxdarkfraction) }}
+            max_fraction: {{ $config.maxdarkfraction }}
+{{- end }}
+{{- end }}
+{{- if  ($config.maxmissfraction) }}
+          missing_action:
+            max_fraction: {{ $config.maxmissfraction }}
 {{- end }}
 {{- end }}
 {{- end }}
