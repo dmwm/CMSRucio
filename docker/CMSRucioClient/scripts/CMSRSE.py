@@ -33,7 +33,7 @@ DOMAINS_BY_TYPE = {
 }
 RUCIO_PROTOS = ['SRMv2', 'XRootD', 'WebDAV']
 PROTO_WEIGHT_TPC = {'WebDAV': 1, 'XRootD': 3, 'SRMv2': 2}
-PROTO_WEIGHT_RWD = {'WebDAV': 2, 'XRootD': 3, 'SRMv2': 1}
+PROTO_WEIGHT_RWD = {'WebDAV': 1, 'XRootD': 3, 'SRMv2': 2}
 
 IMPL_MAP = {'SRMv2': 'rucio.rse.protocols.gfal.Default',
             'XRootD': 'rucio.rse.protocols.gfal.Default',
