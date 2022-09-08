@@ -15,19 +15,19 @@ from rucio.common.exception import RSEProtocolNotSupported, RSENotFound
 APPROVAL_REQUIRED = ['T1_DE_KIT_Tape', 'T1_ES_PIC_Tape', 'T1_RU_JINR_Tape', 'T1_UK_RAL_Tape', 'T1_US_FNAL_Tape']
 DOMAINS_BY_TYPE = {
     'prod-real': {
-        'wan': {'read': 1, 'write': 1, 'third_party_copy': 1, 'third_party_copy_write': 1, 'third_party_copy_read': 1,
+        'wan': {'read': 1, 'write': 1, 'third_party_copy_write': 1, 'third_party_copy_read': 1,
                 'delete': 1},
         'lan': {'read': 0, 'write': 0, 'delete': 0}},
     'int-real': {
-        'wan': {'read': 1, 'write': 0, 'third_party_copy': 1, 'third_party_copy_write': 1, 'third_party_copy_read': 1,
+        'wan': {'read': 1, 'write': 0, 'third_party_copy_write': 1, 'third_party_copy_read': 1,
                 'delete': 0},
         'lan': {'read': 0, 'write': 0, 'delete': 0}},
     'test': {
-        'wan': {'read': 1, 'write': 1, 'third_party_copy': 1, 'third_party_copy_write': 1, 'third_party_copy_read': 1,
+        'wan': {'read': 1, 'write': 1, 'third_party_copy_write': 1, 'third_party_copy_read': 1,
                 'delete': 1},
         'lan': {'read': 0, 'write': 0, 'delete': 0}},
     'temp': {
-        'wan': {'read': 1, 'write': 1, 'third_party_copy': 1, 'third_party_copy_write': 1, 'third_party_copy_read': 1,
+        'wan': {'read': 1, 'write': 1, 'third_party_copy_write': 1, 'third_party_copy_read': 1,
                 'delete': 1},
         'lan': {'read': 0, 'write': 0, 'delete': 0}},
 }
