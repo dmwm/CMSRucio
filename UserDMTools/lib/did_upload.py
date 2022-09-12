@@ -122,7 +122,6 @@ def attach_files_to_dataset(rucio_client, dataset_name, filenames):
 def upload_dataset_and_create_rule(rucio_client, dataset_path, dataset_name, rule_params, upload_params):
     from os import listdir, stat
     from os.path import join, isfile
-    from utils.utils import get_pfns_temp
 
     DEFAULT_TEMP_UPLOAD_RSE = "T2_CH_CERN_Temp"
 
