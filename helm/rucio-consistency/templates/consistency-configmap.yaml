@@ -43,13 +43,13 @@ data:
         #    out: "/$1"
         dark_action:
           max_fraction: 0.01
-          max_age_last_run: 1
+          max_age_last_run: 3
           confirmation_window: 35
           min_age_first_run: 25
           min_runs: 3
         missing_action:
           max_fraction: 0.01
-          max_age_last_run: 1
+          max_age_last_run: 3
 
 
       # Individual sites are configure thus where values differ (scanner is omitted in the helm values)
