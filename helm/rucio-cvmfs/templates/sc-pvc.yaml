@@ -1,0 +1,19 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: csi-cvmfs-grid
+provisioner: cvmfs.csi.cern.ch
+parameters:
+  repository: grid.cern.ch
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: csi-cvmfs-grid-pvc
+spec:
+  accessModes:
+  - ReadOnlyMany
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: csi-cvmfs-grid
