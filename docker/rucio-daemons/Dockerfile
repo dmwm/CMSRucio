@@ -30,6 +30,8 @@ ADD globus-config.yml.j2 /tmp
 ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/docker/CMSRucioClient/scripts/cmstfc.py /usr/local/lib/python3.6/site-packages/cmstfc.py
 RUN chmod 755 /usr/local/lib/python3.6/site-packages/cmstfc.py
 
+RUN mkdir -p /etc/grid-security && ln -s /cvmfs/grid.cern.ch/etc/grid-security/certificates /etc/grid-security/
+
 ADD cms-entrypoint.sh /
 
 # Eric patch for cache-consumer (revisit if ever comes up again)

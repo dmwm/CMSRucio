@@ -25,6 +25,9 @@ ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/docker/CMSRucioClient
 
 RUN chmod 755 /usr/local/lib/python3.6/site-packages/cmstfc.py
 
+
+# FIXME: Probably don't need these anymore either
+
 RUN yum -y install http://linuxsoft.cern.ch/wlcg/centos7/x86_64/wlcg-repo-1.0.0-1.el7.noarch.rpm && \
     yum clean all && \
     rm -rf /var/cache/yum
@@ -36,12 +39,14 @@ RUN yum update  -y && \
 # We need to install all the certificates and set up the revocation list.
 # This is necessary for Go to be able to access the auth server with X509
 
-RUN yum -y install ca-policy-egi-core ca-certificates.noarch fetch-crl cronie psmisc && \
-    yum clean all && \
-    rm -rf /var/cache/yum
-ENV RUCIO_CA_PATH="/etc/grid-security/certificates"
+#RUN yum -y install ca-policy-egi-core ca-certificates.noarch fetch-crl cronie psmisc && \
+#    yum clean all && \
+#    rm -rf /var/cache/yum
+
+RUN mkdir -p /etc/grid-security && ln -s /cvmfs/grid.cern.ch/etc/grid-security/certificates /etc/grid-security/
+ENV RUCIO_CA_PATH="/cvmfs/grid.cern.ch/etc/grid-security/certificates"
 ADD cms-entrypoint.sh /
-RUN echo "32 */6 * * * root ! /usr/sbin/fetch-crl -q -r 360 ; killall -HUP httpd" > /etc/cron.d/fetch-crl-docker
+#RUN echo "32 */6 * * * root ! /usr/sbin/fetch-crl -q -r 360 ; killall -HUP httpd" > /etc/cron.d/fetch-crl-docker
 
 # Install what's needed out of dmwm/rucio/CMS branch
 ADD install_mail_templates.sh /tmp/

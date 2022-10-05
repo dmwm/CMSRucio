@@ -19,6 +19,7 @@ ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/permission
 RUN chmod 755 /opt/rucio/policy/cms/*
 # FIXME: Relocate cmstfc?
 
+# FIXME: Probably don't need this anymore
 RUN yum -y install http://linuxsoft.cern.ch/wlcg/centos7/x86_64/wlcg-repo-1.0.0-1.el7.noarch.rpm \
     && yum clean all \
     && rm -rf /var/cache/yum
@@ -31,12 +32,14 @@ RUN yum update  -y \
 # We need to install all the certificates and set up the revocation list.
 # This is necessary for Go to be able to access the auth server with X509
 
-RUN yum -y install ca-policy-egi-core \
-    && yum clean all \
-    && rm -rf /var/cache/yum
-RUN yum -y install ca-certificates.noarch   \
-    && yum clean all \
-    && rm -rf /var/cache/yum
+#RUN yum -y install ca-policy-egi-core \
+#    && yum clean all \
+#    && rm -rf /var/cache/yum
+#RUN yum -y install ca-certificates.noarch   \
+#    && yum clean all \
+#    && rm -rf /var/cache/yum
+
+RUN mkdir -p /etc/grid-security && ln -s /cvmfs/grid.cern.ch/etc/grid-security/certificates /etc/grid-security/
 
 ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/docker/CMSRucioClient/scripts/cmstfc.py  /usr/local/lib/python3.6/site-packages/cmstfc.py
 
