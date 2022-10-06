@@ -68,7 +68,8 @@ WORKDIR /consistency
 RUN chmod +x *.sh
 
 RUN git clone https://github.com/ivmfnal/cms_consistency.git
-
+ADD https://raw.githubusercontent.com/rucio/rucio/234f2a22d790843e50c32fbe78d2f77c8458c861/lib/rucio/client/replicaclient.py /usr/local/lib/python3.6/site-packages/rucio/client/
+RUN rm -rf /usr/local/lib/python3.6/site-packages/rucio/client/__pycache__
 CMD /bin/bash
 
 
