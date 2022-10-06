@@ -38,3 +38,5 @@ RUN chmod 755 /usr/local/lib/python3.6/site-packages/cmstfc.py
 RUN rm -f /etc/httpd/conf.d/welcome.conf /etc/httpd/conf.d/userdir.conf /etc/httpd/conf.d/ssl.conf
 
 ENV RUCIO_CA_PATH="/etc/grid-security/certificates"
+
+ENTRYPOINT ["/cms-entrypoint.sh"]
