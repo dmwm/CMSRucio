@@ -47,4 +47,5 @@ RUN rm -f /etc/httpd/conf.d/welcome.conf /etc/httpd/conf.d/userdir.conf /etc/htt
 
 ENV RUCIO_CA_PATH="/etc/grid-security/certificates"
 
+ADD cms-entrypoint.sh /
 ENTRYPOINT ["/cms-entrypoint.sh"]
