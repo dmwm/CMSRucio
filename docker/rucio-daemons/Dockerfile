@@ -12,11 +12,11 @@ FROM rucio/rucio-daemons:release-$RUCIO_VERSION
 ARG CMS_TAG
 
 # Add CMS policy package
-RUN mkdir -p /opt/rucio/policy
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/__init__.py /opt/rucio/policy/
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/schema.py /opt/rucio/policy/
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/permission.py /opt/rucio/policy/
-RUN chmod 755 /opt/rucio/policy/*
+RUN mkdir -p /opt/rucio/policy/cms
+ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/__init__.py /opt/rucio/policy/cms/
+ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/schema.py /opt/rucio/policy/cms/
+ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/permission.py /opt/rucio/policy/cms/
+RUN chmod 755 /opt/rucio/policy/cms/*
 # FIXME: Relocate cmstfc?
 
 # Install what's needed out of dmwm/rucio/CMS branch
