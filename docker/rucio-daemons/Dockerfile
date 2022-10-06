@@ -11,6 +11,14 @@ ARG RUCIO_VERSION
 FROM rucio/rucio-daemons:release-$RUCIO_VERSION
 ARG CMS_TAG
 
+# Add CMS policy package
+RUN mkdir -p /opt/rucio/policy
+ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/__init__.py /opt/rucio/policy/
+ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/schema.py /opt/rucio/policy/
+ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/permission.py /opt/rucio/policy/
+RUN chmod 755 /opt/rucio/policy/*
+# FIXME: Relocate cmstfc?
+
 # Install what's needed out of dmwm/rucio/CMS branch
 ADD install_mail_templates.sh /tmp/
 RUN /tmp/install_mail_templates.sh

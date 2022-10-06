@@ -13,6 +13,14 @@ FROM rucio/rucio-server:release-$RUCIO_VERSION
 
 ARG CMS_TAG
 
+# Add CMS policy package
+RUN mkdir -p /opt/rucio/policy
+ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/__init__.py /opt/rucio/policy/
+ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/schema.py /opt/rucio/policy/
+ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/permission.py /opt/rucio/policy/
+RUN chmod 755 /opt/rucio/policy/*
+# FIXME: Relocate cmstfc?
+
 ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/docker/CMSRucioClient/scripts/cmstfc.py  /usr/local/lib/python3.6/site-packages/cmstfc.py
 
 RUN chmod 755 /usr/local/lib/python3.6/site-packages/cmstfc.py
