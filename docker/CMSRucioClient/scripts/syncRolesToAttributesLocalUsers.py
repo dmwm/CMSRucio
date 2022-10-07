@@ -56,9 +56,9 @@ def set_rse_manager(client, rse_name, site_managers, alt_rse=None):
             pass
 
 
-def set_local_identities(client, site, dns=None, user_map=None, site_map=None):
+def set_local_identities(client, site, dns=None, user_email_map=None, site_map=None):
     dns = dns or set()
-    user_map = user_map or {}
+    user_email_map = user_email_map or {}
 
     account = site + '_local_users'
     if len(account) > 25:
@@ -83,8 +83,8 @@ def set_local_identities(client, site, dns=None, user_map=None, site_map=None):
     del_identities = current_identities - target_identities
 
     for identity in add_identities:
-        print('Adding %s to %s with %s' % (identity, account, user_map[identity]))
-        client.add_identity(account=account, identity=identity, authtype='X509', email=user_map[identity])
+        print('Adding %s to %s with %s' % (identity, account, user_email_map[identity]))
+        client.add_identity(account=account, identity=identity, authtype='X509', email=user_email_map[identity])
     for identity in del_identities:
         if identity.startswith("SUB="):
             print('OIDC identity, skipping delete')
@@ -97,13 +97,16 @@ def sync_roles_to_rses():
     result = requests.get(CRIC_USERS_API, cert=PROXY, verify=False)  # Pods don't like the CRIC certificate
     all_cric_users = json.loads(result.text)
     site_map = build_site_facility_map()
-
+    
     site_managers = defaultdict(set)
     local_users = defaultdict(set)
-    dn_account_map = {}
+    dn_email_map = {}
+
     for user in all_cric_users:
         roles = user['ROLES']
         username = user['LOGIN']
+        email = user['EMAIL']
+
         dn = user['DN']
         if 'data-manager' in roles:
             for thing in roles['data-manager']:
@@ -113,14 +116,14 @@ def sync_roles_to_rses():
                     # Add data managers to local users as well
                     user_site = (thing.replace('site:', '', 1))
                     local_users[user_site].add(dn)
-                    dn_account_map[dn] = username
+                    dn_email_map[dn] = email
 
         if 'local-data-manager' in roles:
             for thing in roles['local-data-manager']:
                 if thing.startswith('site:'):
                     site = (thing.replace('site:', '', 1))
                     local_users[site].add(dn)
-                    dn_account_map[dn] = username
+                    dn_email_map[dn] = email
 
     client = Client()
     all_rses = client.list_rses()
@@ -144,7 +147,7 @@ def sync_roles_to_rses():
 
     for site, dns in local_users.items():
         try:
-            set_local_identities(client=client, site=site, dns=dns, user_map=dn_account_map, site_map=site_map)
+            set_local_identities(client=client, site=site, dns=dns, user_email_map=dn_email_map, site_map=site_map)
         except (KeyError, InvalidObject):
             print("Could not make account for %s. Perhaps the facility is not defined or the name is too long." % site)
 
