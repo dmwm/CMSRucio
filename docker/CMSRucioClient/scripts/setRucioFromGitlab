@@ -56,6 +56,9 @@ for project in projects:
         f = full_project.files.get('storage.json', 'master')
         sites = json.loads(base64.b64decode(f.content))
         for site in sites:
+            if 'rse' not in site:
+                print(f"Error: No RSE entry found for {site['site']}. Skipping.")
+                continue
             print('Checking %s and type %s' % (site['rse'], options.cms_type))
             if site['rse'] and options.cms_type in ['test', 'temp']:
                 # For these, query the actual site and construct a JSON
