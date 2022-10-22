@@ -25,8 +25,8 @@ cd docker/CMSRucioClient/scripts/
 
 if [ "$RUCIO_HOME" = "/opt/rucio-prod" ]
   then
-  echo "Syncing Roles to RSE attributes"
-  ./syncRolesToAttributesLocalUsers.py
+  echo "Syncing User Roles to RSE Attributes and Group Accounts"
+  ./syncUserRoles.py
   echo "Creating user accounts and setting quotas"
   ./user_to_site_mapping.py
 fi

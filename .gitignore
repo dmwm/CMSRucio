@@ -1,3 +1,4 @@
 /docker/CMSRucioClient/sqlcl/
 *.pyc
 venv/
+dist
