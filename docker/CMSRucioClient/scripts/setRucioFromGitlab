@@ -58,7 +58,7 @@ for project in projects:
             if 'rse' not in site:
                 print(f"Error: No RSE entry found for {site['site']}. Skipping.")
                 continue
-            print('Checking %s and type %s' % (site['rse'], options.cms_type))
+            print(f'Checking {site["rse"]} and type {options.cms_type}')
             if site['rse'] and options.cms_type in ['test', 'temp']:
                 # For these, query the actual site and construct a JSON
                 if options.cms_type == 'test':
@@ -68,6 +68,7 @@ for project in projects:
                     rse_name = site['rse'] + '_Temp'
                     deterministic = False
                 if rse_name in SKIP_SITES or not DO_SITES or rse_name not in DO_SITES:
+                    print(' Skipping.')
                     continue
                     
                 if 'fts' not in site:
@@ -75,24 +76,29 @@ for project in projects:
                 rse = CMSRSE(site, dry=options.dry_run, cms_type=options.cms_type, deterministic=deterministic)
                 try:
                     if rse.update():
-                        print('RSE %s and type %s changed' % (rse.rse_name, rse.rucio_rse_type))
+                        print(f'RSE {rse.rse_name} and type {rse.rucio_rse_type} changed')
                     else:
-                        print('RSE %s and type %s unchanged' % (rse.rse_name, rse.rucio_rse_type))
+                        print(f'RSE {rse.rse_name} and type {rse.rucio_rse_type} unchanged')
                 except Exception:
                     print(f'Could not update RSE {rse.rse_name}. Traceback:')
                     print(traceback.format_exc())
             elif options.cms_type in ['prod-real', 'int-real']:
                 if site['rse'] in SKIP_SITES or not DO_SITES or site['rse'] not in DO_SITES:
+                    print(' Skipping.')
                     continue
 
                 if 'fts' not in site:
                   site.update({'fts': [ "https://fts3-cms.cern.ch:8446", "https://lcgfts3.gridpp.rl.ac.uk:8446" ] })
                 rse = CMSRSE(site, dry=options.dry_run, cms_type=options.cms_type)
-                if rse.update():
-                    print('RSE %s and type %s changed' % (rse.rse_name, rse.rucio_rse_type))
-                else:
-                    print('RSE %s and type %s unchanged' % (rse.rse_name, rse.rucio_rse_type))
+                try:
+                    if rse.update():
+                        print(f'RSE {rse.rse_name} and type {rse.rucio_rse_type} changed')
+                    else:
+                        print(f'RSE {rse.rse_name} and type {rse.rucio_rse_type} unchanged')
+                except Exception:
+                    print(f'Could not update RSE {rse.rse_name}. Traceback:')
+                    print(traceback.format_exc())
             elif not site['rse']:
-                print('No RSE defined in JSON %s' % site)
+                print(f'No RSE defined in JSON {site}')
     except (gitlab.exceptions.GitlabGetError, json.decoder.JSONDecodeError):
-        print("Unable to download or decode storage.json for %s" % project.name)
+        print(f"Unable to download or decode storage.json for {project.name}")
