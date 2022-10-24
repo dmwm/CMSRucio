@@ -1,15 +1,14 @@
 #! /usr/bin/env python3
 
-from __future__ import print_function, division, absolute_import
-
 import base64
 import json
+import logging
 import os
+import traceback
 from argparse import ArgumentParser
-from rucio.client import Client
 
 import gitlab
-import logging
+from rucio.client import Client
 
 from CMSRSE import CMSRSE
 
@@ -74,10 +73,14 @@ for project in projects:
                 if 'fts' not in site:
                   site.update({'fts': [ "https://fts3-cms.cern.ch:8446", "https://lcgfts3.gridpp.rl.ac.uk:8446" ] })
                 rse = CMSRSE(site, dry=options.dry_run, cms_type=options.cms_type, deterministic=deterministic)
-                if rse.update():
-                    print('RSE %s and type %s changed' % (rse.rse_name, rse.rucio_rse_type))
-                else:
-                    print('RSE %s and type %s unchanged' % (rse.rse_name, rse.rucio_rse_type))
+                try:
+                    if rse.update():
+                        print('RSE %s and type %s changed' % (rse.rse_name, rse.rucio_rse_type))
+                    else:
+                        print('RSE %s and type %s unchanged' % (rse.rse_name, rse.rucio_rse_type))
+                except Exception:
+                    print(f'Could not update RSE {rse.rse_name}. Traceback:')
+                    print(traceback.format_exc())
             elif options.cms_type in ['prod-real', 'int-real']:
                 if site['rse'] in SKIP_SITES or not DO_SITES or site['rse'] not in DO_SITES:
                     continue
