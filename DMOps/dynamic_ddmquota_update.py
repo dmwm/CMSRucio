@@ -54,6 +54,8 @@ for rse in rse_names:
         ddm_quota = 0
     if rse == "T2_EE_Estonia":   # ggus-ticket 158850 2022-09-20: REMOVE once the Storage System migration is completed. 
         ddm_quota = 0
+    if rse == "T2_FR_GRIF":   # ggus-ticket 57739: Commissioning new site. CRAB Issuers. Remove once the site is OK 
+        ddm_quota = 0        
 
     result = client.add_rse_attribute(rse, "ddm_quota", ddm_quota)
     print(rse, ", ddmquota ", ddm_quota, "updated:", result)
