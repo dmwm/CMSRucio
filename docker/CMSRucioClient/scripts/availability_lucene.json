@@ -14,7 +14,7 @@
         },
         {
           "match_phrase": {
-            "metadata.path": "sts15min"
+            "metadata.monit_hdfs_path": "sts15min"
           }
         }
       ],
