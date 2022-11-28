@@ -27,6 +27,9 @@ data:
             ignore:
               - tier0_harvest
           - path: mc
+            ignore:
+              - SAM
+              - HC
           - path: data
           - path: generator
           - path: results
