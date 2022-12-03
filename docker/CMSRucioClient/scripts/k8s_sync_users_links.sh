@@ -29,6 +29,8 @@ if [ "$RUCIO_HOME" = "/opt/rucio-prod" ]
   ./syncUserRoles.py
   echo "Creating user accounts and setting quotas"
   ./user_to_site_mapping.py
+  echo "Adding group account scopes"
+  ./account_to_scope_mapping.py --only-include-accounts-with-group-suffix 
 fi
 
 echo "Creating links"
