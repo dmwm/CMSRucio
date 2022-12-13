@@ -3,7 +3,7 @@
 
 set -e
 
-export CONSISTENCY_VERSION=3.2.1
+export CONSISTENCY_VERSION=3.2.3
 export HARBOR=registry.cern.ch/cmsrucio
 
 # Globus Online (need to revisit in 1.26)
@@ -16,5 +16,5 @@ export HARBOR=registry.cern.ch/cmsrucio
 
 
 
-docker build -t $HARBOR/rucio-consistency:release-$CONSISTENCY_VERSION .
-docker push $HARBOR/rucio-consistency:release-$CONSISTENCY_VERSION 
+podman build -t $HARBOR/rucio-consistency:release-$CONSISTENCY_VERSION .
+podman push $HARBOR/rucio-consistency:release-$CONSISTENCY_VERSION
