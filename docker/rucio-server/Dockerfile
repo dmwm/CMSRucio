@@ -61,4 +61,8 @@ RUN rm -f /etc/httpd/conf.d/welcome.conf /etc/httpd/conf.d/userdir.conf /etc/htt
 # Igor's patch for forcing bad replicas No longer needed in 1.29.8
 #ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/5864.patch /patch/5864.patch
 
+# Patch for Rahul. New schema file also to legacy location
+ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/schema.py  /usr/local/lib/python3.6/site-packages/rucio/common/schema/cms.py
+RUN python3 -m compileall /usr/local/lib/python3.6/site-packages/rucio/common/schema/
+
 ENTRYPOINT ["/cms-entrypoint.sh"]
