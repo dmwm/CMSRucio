@@ -47,7 +47,7 @@ SCOPE_LENGTH = 25
 
 SCOPE = {"description": "Scope name",
          "type": "string",
-         "pattern": r"^(cms)|(logs)|(user\.[a-z0-9-_]{1,%s})$" % (SCOPE_LENGTH - len('user.'))}
+         "pattern": r"^(cms)|(logs)|(user\.[a-z0-9-_]{1,%s})$|(group\.[a-z0-9-_]{1,%s})$" % (SCOPE_LENGTH - len('user.'), SCOPE_LENGTH - len('group.'))}
 
 R_SCOPE = {"description": "Scope name",
            "type": "string",
