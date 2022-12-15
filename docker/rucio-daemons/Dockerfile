@@ -47,6 +47,7 @@ ADD cms-entrypoint.sh /
 
 # Patch for Rahul. New schema file also to legacy location
 ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/schema.py  /usr/local/lib/python3.6/site-packages/rucio/common/schema/cms.py
+RUN chmod +x /usr/local/lib/python3.6/site-packages/rucio/common/schema/cms.py
 RUN python3 -m compileall /usr/local/lib/python3.6/site-packages/rucio/common/schema/
 
 ENTRYPOINT ["/cms-entrypoint.sh"]
