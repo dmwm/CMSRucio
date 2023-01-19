@@ -70,7 +70,7 @@ RUN git clone https://github.com/dmwm/CMSRucio.git
 # Install oidc-agent to renew token for SCIM user info retrieval
 RUN cd /etc/yum.repos.d; wget https://repo.data.kit.edu/data-kit-edu-centos7.repo
 RUN yum install -y oidc-agent
-RUN mkdir -p /etc/grid-security && ln -s /cvmfs/grid.cern.ch/etc/grid-security/certificates /etc/grid-security/
+RUN mkdir -p /etc/grid-security ; ln -s /cvmfs/grid.cern.ch/etc/grid-security/certificates /etc/grid-security/
 
 # Overwrite what's there for testing
 # COPY scripts /root/CMSRucio/docker/CMSRucioClient/scripts
