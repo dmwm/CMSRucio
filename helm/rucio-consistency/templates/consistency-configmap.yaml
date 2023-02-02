@@ -21,15 +21,10 @@ data:
 {{- end }}
           server_root: {{.Values.consistency.defaultRoot }}
           remove_prefix: /
-          add_prefix: /store/
+          add_prefix: /
           roots:
           - path: express
-            ignore:
-              - tier0_harvest
           - path: mc
-            ignore:
-              - SAM
-              - HC
           - path: data
           - path: generator
           - path: results
@@ -41,9 +36,6 @@ data:
           filter: {{ .Values.consistency.filter }}
 {{- end }}
           path_root:   /
-        #  lfn_to_path:
-        #  - path: "^/+store/(.*)"
-        #    out: "/$1"
         dark_action:
           max_fraction: 0.01
           max_age_last_run: 3
@@ -54,13 +46,6 @@ data:
           max_fraction: 0.01
           max_age_last_run: 3
 
-
-      # Individual sites are configure thus where values differ (scanner is omitted in the helm values)
-      # T2_BR_UERJ_Test:
-      #   scanner:
-      #     server: xrootd.hepgrid.uerj.br
-      #     server_root: /store/test/rucio/int/cms/store
-      #     timeout: 120
 
 {{ range $site, $config := .Values.consistency.sites }}
       {{ $site }}:

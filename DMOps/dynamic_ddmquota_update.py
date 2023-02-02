@@ -56,6 +56,9 @@ for rse in rse_names:
         ddm_quota = 0
     if rse == "T2_FR_GRIF":   # ggus-ticket 57739: Commissioning new site. CRAB Issuers. Remove once the site is OK 
         ddm_quota = 0        
-
+    if rse == "T2_US_Florida": # COnsistency Check incident 2023-01-17
+        ddm_quota = 0
+        
+        
     result = client.add_rse_attribute(rse, "ddm_quota", ddm_quota)
     print(rse, ", ddmquota ", ddm_quota, "updated:", result)
