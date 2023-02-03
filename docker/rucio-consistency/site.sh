@@ -8,8 +8,16 @@ export X509_USER_PROXY=/tmp/x509up
 export RUCIO_CONFIG=/consistency/rucio-client.cfg
 export PYTHON=python3
 
+cfg_src=/config/config.yaml
+cfg_copy=/consistency/config.yaml
+
+if [ ! -f $cfg_copy ]; then
+    cp $cfg_src $cfg_copy    # to make it editable
+    echo Config file $cfg_src copied to $cfg_copy
+fi
+
 ./site_cmp3.sh \
-  /config/config.yaml \
+  $cfg_copy \
   /opt/rucio/etc/rucio.cfg \
   $1 \
   /var/cache/consistency-temp \
