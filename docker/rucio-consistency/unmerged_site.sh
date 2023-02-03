@@ -8,4 +8,12 @@ export X509_USER_PROXY=/tmp/x509up
 
 export PYTHON=python3
 
-./wm_scan.sh /unmerged-config/config.yaml $1  /var/cache/consistency-dump/unmerged
+cfg_src=/unmerged-config/config.yaml
+cfg_copy=/consistency/unmerged_config.yaml
+
+if [ ! -f $cfg_copy ]; then
+    cp $cfg_src $cfg_copy    # to make it editable
+    echo Config file $cfg_src copied to $cfg_copy
+fi
+
+./wm_scan.sh $cfg_copy $1  /var/cache/consistency-dump/unmerged

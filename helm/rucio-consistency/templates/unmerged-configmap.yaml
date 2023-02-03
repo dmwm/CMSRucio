@@ -6,6 +6,9 @@ data:
   config.yaml: |+
     rses:
       "*": # default
+        ignore_list:
+          - /store/unmerged/logs
+          - /store/unmerged/SAM/testSRM
         preprocess:
           filter:     "/store/unmerged/"
         scanner:
@@ -17,12 +20,9 @@ data:
 {{- end }}
           server_root: {{.Values.consistency.defaultRoot }}
           remove_prefix: /
-          add_prefix: /store/
+          add_prefix: /
           roots: 
-          - path: unmerged
-            ignore:
-              - logs
-              - SAM/testSRM
+          - path: /store/unmerged
 
 {{ range $site, $config := .Values.consistency.sites }}
       {{ $site }}:
