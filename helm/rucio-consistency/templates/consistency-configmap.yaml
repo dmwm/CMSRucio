@@ -23,14 +23,14 @@ data:
           remove_prefix: /
           add_prefix: /
           roots:
-          - path: express
-          - path: mc
-          - path: data
-          - path: generator
-          - path: results
-          - path: hidata
-          - path: himc
-          - path: relval
+          - path: /store/express
+          - path: /store/mc
+          - path: /store/data
+          - path: /store/generator
+          - path: /store/results
+          - path: /store/hidata
+          - path: /store/himc
+          - path: /store/relval
         dbdump:
 {{- if  (.Values.consistency.filter) }}
           filter: {{ .Values.consistency.filter }}
