@@ -56,10 +56,10 @@ RUN /tmp/install_mail_templates.sh
 RUN rm -f /etc/httpd/conf.d/welcome.conf /etc/httpd/conf.d/userdir.conf /etc/httpd/conf.d/ssl.conf
 
 # Cannot make patch directory unless there are patches
-# RUN mkdir -p /patch
+RUN mkdir -p /patch
 
-# Igor's patch for forcing bad replicas No longer needed in 1.29.8
-#ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/5864.patch /patch/5864.patch
+# My patch for FNAL URL problem
+ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6096.patch /patch/6096.patch
 
 # Patch for Rahul. New schema file also to legacy location
 ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/schema.py  /usr/local/lib/python3.6/site-packages/rucio/common/schema/cms.py
