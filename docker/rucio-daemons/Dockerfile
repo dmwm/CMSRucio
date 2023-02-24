@@ -34,6 +34,12 @@ RUN mkdir -p /etc/grid-security && ln -s /cvmfs/grid.cern.ch/etc/grid-security/c
 
 ADD cms-entrypoint.sh /
 
+# Cannot make patch directory unless there are patches
+RUN mkdir -p /patch
+
+# My patch for FNAL URL problem
+ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6096.patch /patch/6096.patch
+
 # Eric patch for cache-consumer (revisit if ever comes up again)
 
 # ADD https://raw.githubusercontent.com/ericvaandering/rucio/fix_cache_consumer/lib/rucio/daemons/cache/consumer.py /usr/local/lib/python3.6/site-packages/rucio/daemons/cache/consumer.py
