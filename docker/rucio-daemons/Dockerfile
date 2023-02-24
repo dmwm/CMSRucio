@@ -38,7 +38,7 @@ ADD cms-entrypoint.sh /
 RUN mkdir -p /patch
 
 # My patch for FNAL URL problem
-ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6096.patch /patch/6096.patch
+ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6097.patch /patch/6097.patch
 
 # Eric patch for cache-consumer (revisit if ever comes up again)
 

@@ -54,7 +54,7 @@ ENV RUCIO_CA_PATH="/cvmfs/grid.cern.ch/etc/grid-security/certificates"
 RUN mkdir -p /patch
 
 # My patch for FNAL URL problem
-ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6096.patch /patch/6096.patch
+ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6097.patch /patch/6097.patch
 
 ADD cms-entrypoint.sh /
 ENTRYPOINT ["/cms-entrypoint.sh"]

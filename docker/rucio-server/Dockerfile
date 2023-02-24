@@ -59,7 +59,7 @@ RUN rm -f /etc/httpd/conf.d/welcome.conf /etc/httpd/conf.d/userdir.conf /etc/htt
 RUN mkdir -p /patch
 
 # My patch for FNAL URL problem
-ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6096.patch /patch/6096.patch
+ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6097.patch /patch/6097.patch
 
 # Patch for Rahul. New schema file also to legacy location
 ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/schema.py  /usr/local/lib/python3.6/site-packages/rucio/common/schema/cms.py
