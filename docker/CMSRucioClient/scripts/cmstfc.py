@@ -44,7 +44,10 @@ def cmstfc(scope, name, rse, rse_attrs, proto_attrs):
             proto_pfn += proto_attrs['prefix']
 
             proto_less = pfn.replace(proto_pfn, "")
-            return re.sub('/+', '/', proto_less)  # Remove unnecessary double slashes
+            path = proto_less
+            if proto_attrs['scheme'] != 'root':
+                path = re.sub('/+', '/', proto_less)  # Remove unnecessary double slashes
+            return path
         else:
             path = '/' + name
             path = re.sub('/+', '/', path)
