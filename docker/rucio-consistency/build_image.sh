@@ -3,7 +3,7 @@
 
 set -e
 
-export CONSISTENCY_VERSION=4.0.2
+export CONSISTENCY_VERSION=4.0.3
 export HARBOR=registry.cern.ch/cmsrucio
 
 # Globus Online (need to revisit in 1.26)
