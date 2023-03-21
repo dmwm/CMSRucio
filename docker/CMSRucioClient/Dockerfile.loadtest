@@ -1,6 +1,4 @@
-# No need for this file, just need to give the right entry point to the normal client
-
-FROM cmssw/rucio_client
+FROM registry.cern.ch/cmsrucio/rucio_client:latest
 
 COPY loadtest /loadtest
 
