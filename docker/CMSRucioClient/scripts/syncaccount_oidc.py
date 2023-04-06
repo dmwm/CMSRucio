@@ -97,7 +97,7 @@ if __name__ == '__main__':
         r = requests.post(iam_server+"token", data=request_data)
         response = json.loads(r.text)
 
-        print(response)
+        print(iam_client_id, iam_client_secret, response)
         token = response['access_token']
     except Exception as e:
         raise RuntimeError("ERROR oidc get token: {}".format(e))
