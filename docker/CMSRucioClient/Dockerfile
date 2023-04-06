@@ -29,7 +29,9 @@ RUN yum -y install http://linuxsoft.cern.ch/wlcg/centos7/x86_64/wlcg-repo-1.0.0-
 
 # Install sets of RPM
 # FIXME: This overlaps with above
-RUN yum install -y which krb5-devel gridsite \
+
+RUN yum-config-manager --save --setopt=wlcg.skip_if_unavailable=true \
+        && yum install -y which krb5-devel gridsite \
                    lcg-CA globus-proxy-utils voms-clients-java voms-clients-cpp wlcg-voms-cms \
                    gfal2-python gfal2-all gfal2-util gfal2-python3 \
                    nordugrid-arc-client nordugrid-arc-plugins-gfal \
@@ -67,9 +69,6 @@ COPY rucio-prod.cfg /opt/rucio-prod/etc/rucio.cfg
 WORKDIR /root
 RUN git clone https://github.com/dmwm/CMSRucio.git
 
-# Install oidc-agent to renew token for SCIM user info retrieval
-RUN cd /etc/yum.repos.d; wget https://repo.data.kit.edu/data-kit-edu-centos7.repo
-RUN yum install -y oidc-agent
 RUN mkdir -p /etc/grid-security ; ln -s /cvmfs/grid.cern.ch/etc/grid-security/certificates /etc/grid-security/
 
 # Overwrite what's there for testing

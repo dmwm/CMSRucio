@@ -113,11 +113,5 @@ spec:
                       name: "rucio-secrets"
                       key: oidc_iam_client_secret
                       optional: true
-                - name: REFRESH_TOKEN
-                  valueFrom:
-                    secretKeyRef:
-                      name: "rucio-secrets"
-                      key: oidc_iam_refresh_token
-                      optional: true
               command: ['/root/CMSRucio/docker/CMSRucioClient/scripts/k8s_sync_users_links.sh']
           restartPolicy: OnFailure

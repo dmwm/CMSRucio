@@ -16,20 +16,7 @@ page_length = 100
 
 iam_server = "https://cms-auth.web.cern.ch/"
 
-def  get_oidc_identities(n_iteration, headers, oidc_agent_name):
-    token = None
-    try:
-        token = agent.get_access_token(oidc_agent_name,scope="scim:read")
-        #print(token)
-    except agent.OidcAgentError as e:
-        print("ERROR oidc-agent: {}".format(e))
-        return [], [], []
-
-    if not token:
-        print("Sync OIDC failed: no valid token retrieved")
-
-    params = {}
-    headers = {'Authorization': 'Bearer %s' % token, 'Content-type': 'application/json' }
+def  get_oidc_identities(n_iteration, headers):
 
     params = { 'startIndex': n_iteration*page_length + 1 }
     r = requests.get(iam_server+"scim/Users", headers=headers, params=params)
@@ -89,21 +76,36 @@ if __name__ == '__main__':
     """
 
     try:
-        iam_server = os.environ.get("IAM_SERVER", "https://cms-auth.web.cern.ch/")
-        oidc_agent_name = os.environ.get("OIDC_AGENT_NAME", "cms")
+        iam_server = os.environ.get(
+            "IAM_SERVER", "https://cms-auth.web.cern.ch/")
+        iam_client_id = os.environ.get("IAM_CLIENT_ID")
+        iam_client_secret = os.environ.get("IAM_CLIENT_SECRET")
     except Exception as ex:
         print(ex)
         exit(1)
 
+    token = None
     try:
-        token = agent.get_access_token(oidc_agent_name,scope="scim:read")
-        #print(token)
-    except agent.OidcAgentError as e:
-        print("ERROR oidc-agent: {}".format(e))
+        request_data = {
+            "client_id": iam_client_id,
+            "client_secret": iam_client_secret,
+            "grant_type": "client_credentials",
+            "username": "not_needed",
+            "password": "not_needed",
+            "scope": "scim:read"
+        }
+        r = requests.post(iam_server+"token", data=request_data)
+        response = json.loads(r.text)
+
+        token = response['access_token']
+    except Exception as e:
+        raise RuntimeError("ERROR oidc get token: {}".format(e))
 
     params = {}
-    headers = {'Authorization': 'Bearer %s' % token, 'Content-type': 'application/json' }
+    headers = {'Authorization': 'Bearer %s' % token,
+               'Content-type': 'application/json'}
     r = requests.get(iam_server+"scim/Users", headers=headers, params=params)
+
 
     #print(r.text)
     n_results = json.loads(r.text)['totalResults']
@@ -115,7 +117,7 @@ if __name__ == '__main__':
 
     while (n_iteration*page_length) < n_results:
 
-        tids, usernames, emails = get_oidc_identities(n_iteration, headers, oidc_agent_name)
+        tids, usernames, emails = get_oidc_identities(n_iteration, headers)
 
         tids_list += tids
         usernames_list += usernames
