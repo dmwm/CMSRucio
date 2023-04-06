@@ -60,6 +60,7 @@ RUN git clone https://github.com/rucio/rucio.git
 COPY scripts /scripts
 COPY loadtest /loadtest
 
+ENV test=test
 COPY rucio-testbed.cfg /opt/rucio-testbed/etc/rucio.cfg
 COPY rucio-dev.cfg /opt/rucio-dev/etc/rucio.cfg
 COPY rucio-int.cfg /opt/rucio-int/etc/rucio.cfg
@@ -67,7 +68,6 @@ COPY rucio-prod.cfg /opt/rucio-prod/etc/rucio.cfg
 
 # Pull some useful stuff out of git
 WORKDIR /root
-
 #RUN git clone https://github.com/dmwm/CMSRucio.git
 RUN git clone -b fix_oidc https://github.com/dciangot/CMSRucio.git
 
