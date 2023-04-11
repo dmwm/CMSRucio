@@ -294,12 +294,13 @@ class CMSRSE:
         """
 
         protocol_name = proto_json['protocol']
+        access = proto_json['access']
         algorithm = None
         proto = {}
 
         if protocol_name not in RUCIO_PROTOS:
             return algorithm, proto
-        if proto_json['access'] != 'global-rw':
+        if access not in ['global-rw', 'global-ro']:
             return algorithm, proto
 
         domains = copy.deepcopy(DOMAINS_BY_TYPE[self.cms_type])
@@ -310,9 +311,16 @@ class CMSRSE:
             for method, weight in domains['wan'].items():
                 if weight and protocol_name in PROTO_WEIGHT_TPC:
                     if method.startswith("third_party_copy"):
-                        domains['wan'][method] = PROTO_WEIGHT_TPC[protocol_name]
+                        if access == 'global-ro' and method != 'third_party_copy_read':
+                            domains['wan'][method] = 0
+                        else:
+                            domains['wan'][method] = PROTO_WEIGHT_TPC[protocol_name]
+                            
                     else:
-                        domains['wan'][method] = PROTO_WEIGHT_RWD[protocol_name]
+                        if access == 'global-ro' and method != 'read':
+                            domains['wan'][method] = 0
+                        else:
+                            domains['wan'][method] = PROTO_WEIGHT_RWD[protocol_name]
         except KeyError:
             pass  # We're trying to modify an unknown protocol somehow
         # TODO: Make sure global-rw is set
