@@ -299,8 +299,10 @@ class CMSRSE:
         proto = {}
 
         if protocol_name not in RUCIO_PROTOS:
+            logging.debug("Not adding unsupported rucio protocol: "+protocol_name)
             return algorithm, proto
         if access not in ['global-rw', 'global-ro']:
+            logging.debug("Only global-rw and global-ro access are supported. Not adding protocol: "+protocol_name+" with access: "+access)
             return algorithm, proto
 
         domains = copy.deepcopy(DOMAINS_BY_TYPE[self.cms_type])
@@ -322,8 +324,9 @@ class CMSRSE:
                         else:
                             domains['wan'][method] = PROTO_WEIGHT_RWD[protocol_name]
         except KeyError:
-            pass  # We're trying to modify an unknown protocol somehow
-        # TODO: Make sure global-rw is set
+            # We're trying to modify an unknown protocol somehow
+            logging.error("Unknown protocol: "+protocol_name)
+
         if proto_json.get('prefix', None):
             """
             The simple case where all we have is a prefix. This just triggers the identity algorithm 
@@ -469,6 +472,7 @@ class CMSRSE:
         except (RSEProtocolNotSupported, RSENotFound):
             current_protocols = []
 
+        new_changes = False
         # We need to get the new protocols sorted, so that the one
         # with the highest priority goes first, otherwise the priorites
         # get messed up.
@@ -500,10 +504,30 @@ class CMSRSE:
             if new_proto['scheme'] in ['srm', 'srmv2', 'gsiftp', 'root', 'davs'] and not protocol_unchanged:
                 if self.dry:
                     logging.info('Adding %s to %s (Dry run, skipping)', new_proto['scheme'], self.rse_name)
+                    new_changes = True
                 else:
                     logging.info('Adding %s to %s', new_proto['scheme'], self.rse_name)
                     self.rcli.add_protocol(rse=self.rse_name, params=new_proto)
-        return
+                    new_changes = True
+
+        #delete protocols that are not in the new list
+        updated_current_protocols = self.rcli.get_protocols(rse=self.rse_name)
+        updated_protocols_set = set([proto['scheme'] for proto in updated_current_protocols])
+        gitlab_protocols_set = set([proto['scheme'] for proto in self.protocols])
+
+        if updated_protocols_set != gitlab_protocols_set:
+            for proto in updated_current_protocols:
+                if proto['scheme'] not in gitlab_protocols_set:
+                    if self.dry:
+                        logging.info('Deleting %s from %s (Dry run, skipping)', proto['scheme'], self.rse_name)
+                        new_changes = True
+                    else:
+                        logging.info('Deleting %s from %s', proto['scheme'], self.rse_name)
+                        self.rcli.delete_protocols(rse=self.rse_name, scheme=proto['scheme'])
+                        new_changes = True
+
+
+        return new_changes
 
     def _create_rse(self):
 
