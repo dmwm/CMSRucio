@@ -40,7 +40,9 @@ RUN mkdir -p /patch
 # My patch for FNAL URL problem
 ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6097.patch /patch/6097.patch
 # Rahul patch for account name problem
-ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6102.patch /patch/6102.patch
+#ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6102.patch /patch/6102.patch
+# Patch for kronos
+ADD https://patch-diff.githubusercontent.com/raw/ericvaandering/rucio/pull/7.patch /patch/7.patch
 
 # Eric patch for cache-consumer (revisit if ever comes up again)
 
