@@ -1,0 +1,130 @@
+#! /usr/bin/env python3
+
+# This script updates the rucio static usage for a given site reading values from 
+# scap15min index in CMSMONIT Opensearch
+# It is meant to be run as a cronjob
+# Site admins can modify the values from https://cmssst.web.cern.ch/cgi-bin/set/SiteCapacity
+# For more information on what the values mean, refer https://twiki.cern.ch/twiki/bin/view/CMS/SiteSupportDiskSpace
+
+
+import json
+import io
+import logging
+import requests
+import os
+import traceback
+
+from datetime import datetime
+from rucio.client import Client
+
+# configure logging with a custom format
+logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
+
+logger = logging.getLogger(__name__)
+
+# Set dry_run to True to test the script without updating the static usage
+dry_run = False
+
+SKIP_SITES = []
+# Build the opensearch get request
+QUERY_HEADER = '{"search_type":"query_then_fetch","ignore_unavailable":true,"index":["monit_prod_cmssst_*"]}'
+
+try:
+    path = os.path.dirname(os.path.realpath(__file__))
+    with open(f'{path}/capacity_lucene.json', 'r') as lucene_json:
+        lucene = json.load(lucene_json)
+except FileNotFoundError as e:
+    logger.error(f'Failed to load lucene query: {e}')
+
+# The metric is updated periodically at an interval of 24 hours, and also additionaly on a 30 min interval in case of updates
+time_now = int(datetime.utcnow().timestamp())
+lucene["query"]["bool"]["filter"]["range"]["metadata.timestamp"]["gte"] =  time_now - 24 * 60 * 60
+lucene["query"]["bool"]["filter"]["range"]["metadata.timestamp"]["lt"] = time_now
+
+query = io.StringIO(QUERY_HEADER + '\n' + json.dumps(lucene) + '\n')
+headers = {'Authorization': 'Bearer %s' % os.environ['MONIT_TOKEN'],
+           'Content-Type': 'application/json'}
+
+# Get the data from opensearch
+try:
+    logger.debug('Querying opensearch')
+    r = requests.post('https://monit-grafana.cern.ch/api/datasources/proxy/9475/_msearch', data=query, headers=headers)
+    j = json.loads(r.text)
+except Exception as e:
+    logger.error(f'Failed to query opensearch: {e}')
+
+if r.status_code != 200:
+    logger.error(f'Failed to query opensearch: {r.status_code} {r.text}')
+if j['responses'][0]['hits']['total'] == 0 or len(j['responses'][0]['hits']['hits']) == 0:
+    logger.error(f'No data found in opensearch')
+
+# Filter responses to keep records with highest (latest) metadata.timestamp
+sites = []
+for record in j['responses'][0]['hits']['hits']:
+    if record['_source']['data']['name'] not in [site['name'] for site in sites]:
+        new_site = record['_source']['data']
+        new_site['timestamp'] = record['_source']['metadata']['timestamp']
+        sites.append(new_site)
+    else:
+        for site in sites:
+            if site['name'] == record['_source']['data']['name']:
+                if site['timestamp'] < record['_source']['metadata']['timestamp']:
+                    sites.remove(site)
+                    new_site = record['_source']['data']
+                    new_site['timestamp'] = record['_source']['metadata']['timestamp']
+                    sites.append(new_site)
+
+
+# Update the rucio static usage
+try:
+    rclient = Client()
+    rses = [rse['rse'] for rse in rclient.list_rses('cms_type=real&rse_type=DISK')]
+    for site in sites :
+        if site['name'] in SKIP_SITES or f"{site}_Disk" in SKIP_SITES:
+            continue
+       
+        if site['name'] in rses:
+            rse = site['name']
+        elif f"{site['name']}_Disk" in rses:
+            rse = f"{site['name']}_Disk"
+        else:
+            logger.debug(f"RSE {site['name']} or {site['name']}_Disk not a valid RSE")
+            continue
+        
+        logger.debug(f"Updating static usage for {rse}")
+        disk_experiment_use_bytes = site['disk_experiment_use'] * 1e12 #total space used by CMS experiment data
+        disk_local_use_bytes = site['disk_local_use'] * 1e12 #additional quota for local rse_local_users account
+        rse_available_bytes = disk_experiment_use_bytes + disk_local_use_bytes
+
+        try:
+            # Static usage is 0 for many T3s - These are managed as quasi-static
+            if disk_experiment_use_bytes == 0:
+                logger.debug(f"Static usage for {rse} is 0, skipping")
+                continue
+
+            current_static_usage = list(rclient.get_rse_usage(rse=rse, filters={'source':'static'}))
+            # Taking into account the case where the static usage is not yet set but the site wishes to change from quasi-static to static
+            if len(current_static_usage) == 0:
+                current_static_usage = 0
+            else:
+                current_static_usage = current_static_usage[0]['used']
+
+            if current_static_usage == rse_available_bytes:
+                logger.debug(f"Static usage for {rse} already up to date")
+                continue
+
+            if dry_run:
+                logger.info(f"Updating static usage, from {current_static_usage*1e-12:.2f}TB to {rse_available_bytes*1e-12:.2f}TB, for {rse}, dry_run=True")
+            else:
+                rclient.set_rse_usage(rse=rse, source='static', used=rse_available_bytes, free=None)
+                logger.info(f"Updating static usage, from {current_static_usage*1e-12:.2f}TB to {rse_available_bytes*1e-12:.2f}TB, for {rse}")
+        except Exception as e:
+            logger.error(f"Failed to update static usage for {rse}: {e}")
+            traceback.print_exc()
+
+        
+except Exception as e:
+    logger.error(f'Failed to connect to rucio: {e}')
+    traceback.print_exc()
+
+
