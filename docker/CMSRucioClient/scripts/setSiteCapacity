@@ -25,9 +25,7 @@ logger = logging.getLogger(__name__)
 # Set dry_run to True to test the script without updating the static usage
 dry_run = False
 
-# Exempt CERN Disks from automatic updates
-SKIP_SITES = ["T0_CH_CERN_Disk", "T2_CH_CERN"]
-
+SKIP_SITES = []
 # Build the opensearch get request
 QUERY_HEADER = '{"search_type":"query_then_fetch","ignore_unavailable":true,"index":["monit_prod_cmssst_*"]}'
 
