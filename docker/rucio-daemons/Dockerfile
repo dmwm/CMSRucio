@@ -37,6 +37,9 @@ ADD cms-entrypoint.sh /
 # Cannot make patch directory unless there are patches
 RUN mkdir -p /patch
 
+# Add Kronos patch to stop resubmission
+ADD https://patch-diff.githubusercontent.com/raw/yuyiguo/rucio/pull/4.patch /patch/4.patch
+
 # My patch for FNAL URL problem
 ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6097.patch /patch/6097.patch
 # Rahul patch for account name problem
