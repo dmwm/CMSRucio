@@ -115,9 +115,12 @@ try:
 
             if dry_run:
                 logger.info(f"Updating static usage, from {current_static_usage*1e-12:.2f}TB to {rse_available_bytes*1e-12:.2f}TB, for {rse}, dry_run=True")
+                logger.info(f"Updating MinFreeSpace, from {current_static_usage*1e-13:.2f}TB to {rse_available_bytes*1e-13:.2f}TB, for {rse}, dry_run=True")
             else:
                 rclient.set_rse_usage(rse=rse, source='static', used=rse_available_bytes, free=None)
+                rclient.set_rse_limits(rse=rse, name='MinFreeSpace', value=rse_available_bytes//10)
                 logger.info(f"Updating static usage, from {current_static_usage*1e-12:.2f}TB to {rse_available_bytes*1e-12:.2f}TB, for {rse}")
+                logger.info(f"Updating MinFreeSpace, from {current_static_usage*1e-13:.2f}TB to {rse_available_bytes*1e-13:.2f}TB, for {rse}")
         except Exception as e:
             logger.error(f"Failed to update static usage for {rse}: {e}")
             traceback.print_exc()
