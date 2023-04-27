@@ -12,7 +12,7 @@ import requests
 from rucio.client.client import Client
 from rucio.common.exception import RSENotFound
 
-SKIP_SITES = ['T3_US_NERSC', 'T2_US_Caltech_Ceph', 'T2_FR_GRIF_LLR', 'T2_FR_GRIF_IRFU']
+SKIP_SITES = ['T3_US_NERSC', 'T2_US_Caltech_Ceph', 'T2_FR_GRIF_LLR', 'T2_FR_GRIF_IRFU', 'T2_GR_Ioannina']
 QUERY_HEADER = '{"search_type":"query_then_fetch","ignore_unavailable":true,"index":["monit_prod_cmssst_*"]}'
 
 with open('availability_lucene.json', 'r') as lucene_json:
