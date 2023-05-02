@@ -1,0 +1,33 @@
+name: Loadtest Docker Image CI
+
+on:
+  push:
+    tags:
+      - 'loadtest-*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Get tag name
+        id: tagname
+        run: echo "::set-output name=tagname::${GITHUB_REF#refs/tags/}"
+        
+      - name: Login to CERN Harbour
+        run: docker login -u ${{ secrets.HARBOR_USERNAME }} -p ${{ secrets.HARBOR_TOKEN }}
+
+      - name: Build the Docker Image
+        run: |
+          docker build . \
+          --file docker/CMSRucioClient/Dockerfile.loadtest \
+          --tag registry.cern.ch/${{ secrets.HARBOR_USERNAME }}/rucio-loadtest-client:$${{ steps.tagname.outputs.tagname#loadtest- }}
+      
+      - name: Push Image to CERN Harbour
+        run: docker push registry.cern.ch/${{ secrets.HARBOR_USERNAME }}/rucio-loadtest-client:$${{ steps.tagname.outputs.tagname#loadtest- }} 
+          
+          
+          
+
