@@ -72,12 +72,14 @@ spec:
               name: jobber-config
             - mountPath: /opt/proxy
               name: proxy-volume
-            - mountPath: /opt/certs
-              name: ca-volume
             - mountPath: /var/cache/consistency-dump
               name: consistency-dump
             - mountPath: /var/cache/consistency-temp
               name: csi-data-cinderplugin
+          {{- range $key, $val := .Values.persistentVolumes }}
+            - name: {{ $key }}
+              mountPath: {{ $val.mountPath }}
+          {{- end }}
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
@@ -95,10 +97,6 @@ spec:
         secret:
           defaultMode: 420
           secretName: daemons-rucio-x509up
-      - name: ca-volume
-        secret:
-          defaultMode: 420
-          secretName: daemons-rucio-ca-bundle
       - name: jobber-config
         configMap:
           defaultMode: 0644
@@ -111,6 +109,11 @@ spec:
         configMap:
           defaultMode: 0644
           name: {{ include "rucio-consistency.fullname" . }}-unmerged-config
+      {{- range $key, $val := .Values.persistentVolumes }}
+      - name: {{ $key }}
+        persistentVolumeClaim:
+          claimName: {{ $val.name }}
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
