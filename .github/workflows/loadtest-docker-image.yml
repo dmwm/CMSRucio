@@ -3,7 +3,7 @@ name: Loadtest Docker Image CI
 on:
   push:
     tags:
-      - loadtest.v*
+      - 'loadtest-*'
 
 jobs:
   build:
