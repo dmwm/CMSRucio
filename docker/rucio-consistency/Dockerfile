@@ -24,10 +24,10 @@ RUN rpm -i http://mirror.grid.uchicago.edu/pub/osg/3.5/el7/release/x86_64/voms-c
     && yum clean all \
     && rm -rf /var/cache/yum
 
+# this will install /etc/grid-security/certificates
 RUN yum install -y osg-ca-certs\
     && yum clean all \
     && rm -rf /var/cache/yum
-
 
 # Oracle client
 RUN yum install -y libaio\
