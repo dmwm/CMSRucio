@@ -17,17 +17,18 @@ jobs:
         run: echo "tag=${GITHUB_REF#refs/tags/loadtest-}" >> "$GITHUB_ENV"
         
       - name: Login to CERN Harbour
-        run: docker login -u ${{ secrets.HARBOR_USERNAME }} -p ${{ secrets.HARBOR_TOKEN }}
+        uses: docker/login-action@v2
+        with:
+          registry: registry.cern.ch
+          username: ${{ secrets.HARBOR_USERNAME }}
+          password: ${{ secrets.HARBOR_PASSWORD }}
 
       - name: Build the Docker Image
         run: |
-          docker build . \
-          --file docker/CMSRucioClient/Dockerfile.loadtest \
+          cd docker/CMSRucioClient && docker build . \
+          --file Dockerfile.loadtest \
           --tag registry.cern.ch/${{ secrets.HARBOR_USERNAME }}/rucio-loadtest-client:${{ env.tag }}
       
       - name: Push Image to CERN Harbour
         run: docker push registry.cern.ch/${{ secrets.HARBOR_USERNAME }}/rucio-loadtest-client:${{ env.tag }}
-          
-          
-          
 
