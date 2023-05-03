@@ -110,6 +110,7 @@ ADD https://raw.githubusercontent.com/FernandoGarzon/probes/check_rules_counts_v
 
 # PR 110
 ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-ruciorucio5804-1/cms/check_report_used_space /probes/cms
+ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-ruciorucio5804-1/common/utils/common.py /probes/common/utils/common.py
 
 
 # CMS Specific probes
