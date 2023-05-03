@@ -27,8 +27,8 @@ jobs:
         run: |
           cd docker/CMSRucioClient && docker build . \
           --file Dockerfile.loadtest \
-          --tag registry.cern.ch/${{ secrets.HARBOR_USERNAME }}/rucio-loadtest-client:${{ env.tag }}
+          --tag registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/rucio-loadtest-client:${{ env.tag }}
       
       - name: Push Image to CERN Harbour
-        run: docker push registry.cern.ch/${{ secrets.HARBOR_USERNAME }}/rucio-loadtest-client:${{ env.tag }}
+        run: docker push registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/rucio-loadtest-client:${{ env.tag }}
 
