@@ -126,7 +126,7 @@ def ensure_rse_self_expression(client, rse):
 def next_available_filenumber(client, rse, filesize):
     did_search = FILENUMBER_SEARCH.format(rse=rse, filesize=filesize)
     max_fn = -1
-    for did in client.list_dids("cms", {"name": did_search}, type="file"):
+    for did in client.list_dids("cms", {"name": did_search}, did_type="file"):
         m = FILENUMBER_RE.match(did)
         if m:
             max_fn = max(max_fn, int(m.groups()[0]))
