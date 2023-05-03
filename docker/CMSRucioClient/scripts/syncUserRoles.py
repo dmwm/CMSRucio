@@ -16,7 +16,6 @@ PROXY = os.getenv('X509_USER_PROXY')
 
 
 def make_request(api_endpoint, cert=PROXY, verify=False):
-
     # Pods don't like the CRIC certificate
     result = requests.get(api_endpoint, cert=cert, verify=verify)
     return json.loads(result.text)
@@ -99,7 +98,6 @@ def set_rse_manager(client, rse_name, site_managers, alt_rse=None):
 
 
 def get_egroup_map(all_groups, tag_relation="facility", role="local-data-manager"):
-    all_groups = make_request(CRIC_GROUP_API)
     egroup_map = defaultdict(set)
     for _, values in all_groups.items():
         if values['tag_relation'] == tag_relation and values['role'] == role:

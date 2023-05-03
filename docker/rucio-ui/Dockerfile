@@ -48,7 +48,13 @@ RUN chmod 755 /usr/local/lib/python3.6/site-packages/cmstfc.py
 # Might get recreated if apache was upgraded
 RUN rm -f /etc/httpd/conf.d/welcome.conf /etc/httpd/conf.d/userdir.conf /etc/httpd/conf.d/ssl.conf
 
-ENV RUCIO_CA_PATH="/etc/grid-security/certificates"
+ENV RUCIO_CA_PATH="/cvmfs/grid.cern.ch/etc/grid-security/certificates"
+
+# Cannot make patch directory unless there are patches
+RUN mkdir -p /patch
+
+# My patch for FNAL URL problem
+ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6097.patch /patch/6097.patch
 
 ADD cms-entrypoint.sh /
 ENTRYPOINT ["/cms-entrypoint.sh"]
