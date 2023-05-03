@@ -108,6 +108,10 @@ ADD https://raw.githubusercontent.com/FernandoGarzon/probes/check_transfer_queue
 
 ADD https://raw.githubusercontent.com/FernandoGarzon/probes/check_rules_counts_vs_time/cms/check_rule_counts /probes/cms
 
+# PR 110
+ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-ruciorucio5804-1/cms/check_report_used_space /probes/cms
+
+
 # CMS Specific probes
 # Removed 3/17 presumably no longer needed
 # ADD https://raw.githubusercontent.com/FernandoGarzon/CMSRucio/cms-only-probes/probes/common/check_space_uniquely_used_by_rucio /probes/common
