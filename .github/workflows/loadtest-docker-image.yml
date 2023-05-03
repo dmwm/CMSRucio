@@ -21,7 +21,7 @@ jobs:
         with:
           registry: registry.cern.ch
           username: ${{ secrets.HARBOR_USERNAME }}
-          password: ${{ secrets.HARBOR_PASSWORD }}
+          password: ${{ secrets.HARBOR_TOKEN }}
 
       - name: Build the Docker Image
         run: |
