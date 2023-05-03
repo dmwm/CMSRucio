@@ -34,6 +34,7 @@ from rucio.common.exception import (
     RSEWriteBlocked,
     ServiceUnavailable,
     SourceNotFound,
+    ReplicationRuleCreationTemporaryFailed,
 )
 from rucio.rse import rsemanager
 
@@ -125,7 +126,7 @@ def ensure_rse_self_expression(client, rse):
 def next_available_filenumber(client, rse, filesize):
     did_search = FILENUMBER_SEARCH.format(rse=rse, filesize=filesize)
     max_fn = -1
-    for did in client.list_dids("cms", {"name": did_search}, type="file"):
+    for did in client.list_dids("cms", {"name": did_search}, did_type="file"):
         m = FILENUMBER_RE.match(did)
         if m:
             max_fn = max(max_fn, int(m.groups()[0]))
@@ -136,12 +137,10 @@ def next_available_filenumber(client, rse, filesize):
 
 
 def upload_source_data(client, uploader, rse, filesize, filenumber):
-    if not client.get_rse(rse)["availability_write"]:
-        # this is *sometimes* ignored in uploader.upload (?!) so we check it here explicitly
-        return False
     item = prepare_upload_item(rse, filesize, filenumber)
     try:
-        uploader.upload([item])
+        # Load test operations should be independent of site availability
+        uploader.upload([item], ignore_availability=True)
         return True
     except InvalidRSEExpression:
         logger.error(f"RSE {rse} is missing self-expression")
@@ -153,6 +152,9 @@ def upload_source_data(client, uploader, rse, filesize, filenumber):
         logger.error(f"RSE {rse} has permission issues")
     except ServiceUnavailable:
         logger.error(f"RSE {rse} host appears down")
+    except ReplicationRuleCreationTemporaryFailed:
+        # TODO: will return to this and probably prefer creating rules on the existing replica
+        logger.error(f"RSE {rse} already has a LoadTest replica")
     return False
 
 

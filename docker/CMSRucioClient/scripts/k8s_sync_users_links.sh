@@ -31,6 +31,8 @@ if [ "$RUCIO_HOME" = "/opt/rucio-prod" ]
   ./user_to_site_mapping.py
   echo "Adding group account scopes"
   ./account_to_scope_mapping.py --only-include-accounts-with-group-suffix 
+  echo "Syncing custom RSE Roles"
+  ./syncCustomRoles.py
 fi
 
 echo "Creating links"

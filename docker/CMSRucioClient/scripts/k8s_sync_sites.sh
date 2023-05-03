@@ -35,6 +35,8 @@ fi
 ./setRucioFromGitlab --type test
 ./setRucioFromGitlab --type temp
 
+echo "Set site capacity"
+./setSiteCapacity
 echo "Setting quotas"
 ./setSiteQuotas
 echo "Setting availability"

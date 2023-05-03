@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 """
 LFN-to-path algorithms for TFC
@@ -37,6 +37,9 @@ def cmstfc(scope, name, rse, rse_attrs, proto_attrs):
             # matching the lfn into a pfn
             pfn = tfc_lfn2pfn(name, tfc, tfc_proto)
 
+            if re.match(r'^\w+://', pfn):  # This is already a URL
+                return pfn
+
             # now we have to remove the protocol part of the pfn
             proto_pfn = proto_attrs['scheme'] + '://' + proto_attrs['hostname'] + ':' + str(proto_attrs['port'])
             if 'web_service_path' in proto_attrs['extended_attributes']:
@@ -44,7 +47,10 @@ def cmstfc(scope, name, rse, rse_attrs, proto_attrs):
             proto_pfn += proto_attrs['prefix']
 
             proto_less = pfn.replace(proto_pfn, "")
-            return re.sub('/+', '/', proto_less)  # Remove unnecessary double slashes
+            path = proto_less
+            if proto_attrs['scheme'] != 'root':
+                path = re.sub('/+', '/', proto_less)  # Remove unnecessary double slashes
+            return path
         else:
             path = '/' + name
             path = re.sub('/+', '/', path)
@@ -131,6 +137,28 @@ if __name__ == '__main__':
         'port': '2811'
     }
 
+    PROTO_ATTR_FNAL = {'domains': {'lan': {'delete': 0, 'read': 0, 'write': 0},
+                                   'wan': {'delete': 2,
+                                           'read': 2,
+                                           'third_party_copy_read': 2,
+                                           'third_party_copy_write': 2,
+                                           'write': 2}},
+                       'extended_attributes': {
+                           'tfc': [{'out': 'gsiftp://cmseos-gridftp.fnal.gov//eos/uscms/store/temp/user/$1',
+                                    'path': '/+store/temp/user/(.*)',
+                                    'proto': 'srmv2'},
+                                   {
+                                       'out': 'srm://cmsdcadisk.fnal.gov:8443/srm/managerv2?SFN=/dcache/uscmsdisk/store/$1',
+                                       'path': '/+store/(.*)',
+                                       'proto': 'srmv2'}],
+                           'tfc_proto': 'srmv2',
+                           'web_service_path': '/srm/managerv2?SFN='},
+                       'hostname': 'cmsdcadisk.fnal.gov',
+                       'impl': 'rucio.rse.protocols.gfal.Default',
+                       'port': 8443,
+                       'prefix': '/',
+                       'scheme': 'srm'}
+
 
     def test_tfc_mapping(name, proto_attrs, pfn, scope="cms"):
         """
@@ -183,3 +211,6 @@ if __name__ == '__main__':
         PROTO_ATTRS4,
         "/store/user/rucio/ewv/some/path/file.root"
     )
+
+    test_tfc_mapping("/store/temp/user/ewv", PROTO_ATTR_FNAL,
+                     "gsiftp://cmseos-gridftp.fnal.gov//eos/uscms/store/temp/user/ewv")
