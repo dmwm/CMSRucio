@@ -118,6 +118,7 @@ ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-
 ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-ruciorucio5804-1/cms/check_rule_counts /probes/cms
 ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-ruciorucio5804-1/cms/check_rules_with_0_completion_volume /probes/cms
 ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-ruciorucio5804-1/cms/check_unlocked_replicas_per_rse /probes/cms
+ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-ruciorucio5804-1/common/utils/common.py /probes/common/utils/
 
 # CMS Specific probes
 # Removed 3/17 presumably no longer needed
