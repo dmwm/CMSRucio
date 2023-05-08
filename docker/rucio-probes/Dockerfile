@@ -110,6 +110,7 @@ ADD https://raw.githubusercontent.com/FernandoGarzon/probes/check_rules_counts_v
 
 # PR 110
 ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-ruciorucio5804-1/cms/check_expected_total_number_of_files_per_rse_expression /probes/cms
+ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-ruciorucio5804-1/cms/check_expected_total_number_of_files_per_rse /probes/cms
 ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-ruciorucio5804-1/cms/check_missing_data_at_rse /probes/cms
 ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-ruciorucio5804-1/cms/check_not_OK_rules_per_rse /probes/cms
 ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-ruciorucio5804-1/cms/check_number_of_missing_files_per_rse /probes/cms
