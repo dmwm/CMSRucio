@@ -120,6 +120,9 @@ ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-
 ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-ruciorucio5804-1/cms/check_unlocked_replicas_per_rse /probes/cms
 ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-ruciorucio5804-1/common/utils/common.py /probes/common/utils/
 
+# PR 111
+ADD https://raw.githubusercontent.com/ericvaandering/probes/check_rules_state_PROBE_2/cms/check_rules_states_by_account /probes/cms
+
 # Need to bring PR72 forward
 
 # CMS Specific probes
