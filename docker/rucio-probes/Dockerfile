@@ -138,6 +138,8 @@ ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-
 ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-rucio5804-2/common/check_updated_dids /probes/common/
 ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-rucio5804-2/common/check_transfer_queues_status /probes/common/
 ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-rucio5804-2/common/check_stuck_rules /probes/common/
+ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-rucio5804-2/common/check_oracle /probes/common/
+ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-rucio5804-2/common/check_fts_backlog /probes/common/
 
 
 RUN chmod +x /probes/common/check_*
