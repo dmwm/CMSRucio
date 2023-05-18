@@ -86,7 +86,6 @@ ADD https://raw.githubusercontent.com/ericvaandering/probes/127_cms_fixes/cms/ch
 ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_check_expired_rules/common/check_expired_rules /probes/common
 ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_check_expired_locked/common/check_expired_locked_rules /probes/common
 
-# PR 74 ADD https://raw.githubusercontent.com/rucio/probes/new_dids_127/common/check_new_dids /probes/common
 # PR 70 ADD https://raw.githubusercontent.com/rucio/probes/expired_dids_127/common/check_expired_dids /probes/common
 # PR 76 ADD https://raw.githubusercontent.com/rucio/probes/stuck_rules_127/common/check_stuck_rules /probes/common
 # PR 78 ADD https://raw.githubusercontent.com/rucio/probes/updated_dids_127/common/check_updated_dids /probes/common
@@ -135,6 +134,10 @@ RUN pip3 install cx-oracle --upgrade
 
 # PR next
 ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-rucio5804-2/common/check_expired_dids /probes/common/
+ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-rucio5804-2/common/check_new_dids /probes/common/
+ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-rucio5804-2/common/check_updated_dids /probes/common/
+ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-rucio5804-2/common/check_transfer_queues_status /probes/common/
+ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-rucio5804-2/common/check_stuck_rules /probes/common/
 
 
 RUN chmod +x /probes/common/check_*
