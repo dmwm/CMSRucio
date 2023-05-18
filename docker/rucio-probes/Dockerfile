@@ -10,8 +10,8 @@
 ARG RUCIO_VERSION
 
 # For now CMS versions use python3 explicitly. Can be removed when main container goes to python3
-FROM rucio/probes:latest
-#FROM rucio/probes:py3
+#FROM rucio/probes:latest
+FROM rucio/probes:1.31.3
 RUN ln -s /usr/bin/python3 /usr/local/bin/python
 
 # Add CMS policy package
