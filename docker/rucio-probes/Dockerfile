@@ -130,6 +130,13 @@ ADD https://raw.githubusercontent.com/ericvaandering/probes/check_rules_state_PR
 # ADD https://raw.githubusercontent.com/FernandoGarzon/CMSRucio/cms-only-probes/probes/common/check_space_uniquely_used_by_rucio /probes/common
 # FIXME: Remove this from the ones to run
 
+# https://github.com/rucio/containers/pull/248
+RUN pip3 install cx-oracle --upgrade
+
+# PR next
+ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-rucio5804-2/common/check_expired_dids /probes/common/
+
+
 RUN chmod +x /probes/common/check_*
 RUN chmod +x /probes/cms/check_*
 
