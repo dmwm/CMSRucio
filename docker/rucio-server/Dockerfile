@@ -50,6 +50,6 @@ RUN mkdir -p /patch
 ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6097.patch /patch/6097.patch
 
 # Patch for kronos
-ADD https://patch-diff.githubusercontent.com/raw/ericvaandering/rucio/pull/7.patch /patch/7.patch
+#ADD https://patch-diff.githubusercontent.com/raw/ericvaandering/rucio/pull/7.patch /patch/7.patch
 
 ENTRYPOINT ["/cms-entrypoint.sh"]

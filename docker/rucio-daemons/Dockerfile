@@ -29,14 +29,14 @@ ADD docker/rucio-daemons/cms-entrypoint.sh /
 # Cannot make patch directory unless there are patches
 RUN mkdir -p /patch
 
-# Add Kronos patch to stop resubmission
-ADD https://patch-diff.githubusercontent.com/raw/yuyiguo/rucio/pull/4.patch /patch/4.patch
 
 # My patch for FNAL URL problem
 ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6097.patch /patch/6097.patch
 
 # Patch for kronos
-ADD https://patch-diff.githubusercontent.com/raw/ericvaandering/rucio/pull/7.patch /patch/7.patch
+#ADD https://patch-diff.githubusercontent.com/raw/ericvaandering/rucio/pull/7.patch /patch/7.patch
+# Add Kronos patch to stop resubmission
+#ADD https://patch-diff.githubusercontent.com/raw/yuyiguo/rucio/pull/4.patch /patch/4.patch
 
 # Eric patch for cache-consumer (revisit if ever comes up again)
 

@@ -2,8 +2,10 @@
 
 set -e
 
-export CMS_VERSION=1.31.0.cms2
-export RUCIO_VERSION=1.31.0
+export RUCIO_VERSION=1.31.3
+export CMS_VERSION=${RUCIO_VERSION}.cms2
+export CMS_TAG=cms_1_29_4
+
 export HARBOR=registry.cern.ch/cmsrucio
 
 podman build --build-arg RUCIO_VERSION=$RUCIO_VERSION -f docker/rucio-server/Dockerfile -t $HARBOR/rucio-server:release-$CMS_VERSION .
