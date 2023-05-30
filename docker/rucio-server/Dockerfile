@@ -11,23 +11,11 @@ ARG RUCIO_VERSION
 
 FROM rucio/rucio-server:release-$RUCIO_VERSION
 
-ARG CMS_TAG
-
 # Add CMS policy package
-RUN mkdir -p /opt/rucio/policy/cms
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/__init__.py /opt/rucio/policy/cms/
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/schema.py /opt/rucio/policy/cms/
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/permission.py /opt/rucio/policy/cms/
-RUN chmod 755 /opt/rucio/policy/cms/*
-# FIXME: Relocate cmstfc?
-
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/docker/CMSRucioClient/scripts/cmstfc.py  /usr/local/lib/python3.6/site-packages/cmstfc.py
-
-RUN chmod 755 /usr/local/lib/python3.6/site-packages/cmstfc.py
-
+RUN mkdir -p /opt/rucio/policy/CMSRucioPolicy
+COPY ../../../src/policy/CMSRucioPolicy /opt/rucio/policy/CMSRucioPolicy
 
 # FIXME: Probably don't need these anymore either
-
 RUN yum -y install http://linuxsoft.cern.ch/wlcg/centos7/x86_64/wlcg-repo-1.0.0-1.el7.noarch.rpm && \
     yum clean all && \
     rm -rf /var/cache/yum
@@ -60,15 +48,8 @@ RUN mkdir -p /patch
 
 # My patch for FNAL URL problem
 ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6097.patch /patch/6097.patch
-# Rahul patch for account name problem
-#ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6102.patch /patch/6102.patch
+
 # Patch for kronos
 ADD https://patch-diff.githubusercontent.com/raw/ericvaandering/rucio/pull/7.patch /patch/7.patch
-
-
-# Patch for Rahul. New schema file also to legacy location
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/schema.py  /usr/local/lib/python3.6/site-packages/rucio/common/schema/cms.py
-RUN chmod 755 /usr/local/lib/python3.6/site-packages/rucio/common/schema/cms.py
-RUN python3 -m compileall /usr/local/lib/python3.6/site-packages/rucio/common/schema/
 
 ENTRYPOINT ["/cms-entrypoint.sh"]
