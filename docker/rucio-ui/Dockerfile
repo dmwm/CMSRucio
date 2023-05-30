@@ -9,15 +9,10 @@
 
 ARG RUCIO_VERSION
 FROM rucio/rucio-ui:release-$RUCIO_VERSION
-ARG CMS_TAG
 
 # Add CMS policy package
-RUN mkdir -p /opt/rucio/policy/cms
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/__init__.py /opt/rucio/policy/cms/
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/schema.py /opt/rucio/policy/cms/
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/permission.py /opt/rucio/policy/cms/
-RUN chmod 755 /opt/rucio/policy/cms/*
-# FIXME: Relocate cmstfc?
+RUN mkdir -p /opt/rucio/policy/CMSRucioPolicy
+COPY ../../../src/policy/CMSRucioPolicy /opt/rucio/policy/CMSRucioPolicy
 
 # FIXME: Probably don't need this anymore
 RUN yum -y install http://linuxsoft.cern.ch/wlcg/centos7/x86_64/wlcg-repo-1.0.0-1.el7.noarch.rpm \
@@ -40,10 +35,6 @@ RUN yum update  -y \
 #    && rm -rf /var/cache/yum
 
 RUN mkdir -p /etc/grid-security && ln -s /cvmfs/grid.cern.ch/etc/grid-security/certificates /etc/grid-security/
-
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/docker/CMSRucioClient/scripts/cmstfc.py  /usr/local/lib/python3.6/site-packages/cmstfc.py
-
-RUN chmod 755 /usr/local/lib/python3.6/site-packages/cmstfc.py
 
 # Might get recreated if apache was upgraded
 RUN rm -f /etc/httpd/conf.d/welcome.conf /etc/httpd/conf.d/userdir.conf /etc/httpd/conf.d/ssl.conf

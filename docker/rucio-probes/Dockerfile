@@ -15,15 +15,8 @@ FROM rucio/probes:1.31.3
 RUN ln -s /usr/bin/python3 /usr/local/bin/python
 
 # Add CMS policy package
-RUN mkdir -p /opt/rucio/policy/cms
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/__init__.py /opt/rucio/policy/cms/
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/schema.py /opt/rucio/policy/cms/
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/permission.py /opt/rucio/policy/cms/
-RUN chmod 755 /opt/rucio/policy/cms/*
-# FIXME: Relocate cmstfc?
-
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/docker/CMSRucioClient/scripts/cmstfc.py  /usr/local/lib/python3.6/site-packages/cmstfc.py
-RUN chmod 755 /usr/local/lib/python3.6/site-packages/cmstfc.py
+RUN mkdir -p /opt/rucio/policy/CMSRucioPolicy
+COPY ../../../src/policy/CMSRucioPolicy /opt/rucio/policy/CMSRucioPolicy
 
 # Temporary additions
 
