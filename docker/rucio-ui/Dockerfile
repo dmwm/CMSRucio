@@ -12,7 +12,7 @@ FROM rucio/rucio-ui:release-$RUCIO_VERSION
 
 # Add CMS policy package
 RUN mkdir -p /opt/rucio/policy/CMSRucioPolicy
-COPY ../../../src/policy/CMSRucioPolicy /opt/rucio/policy/CMSRucioPolicy
+COPY src/policy/CMSRucioPolicy /opt/rucio/policy/CMSRucioPolicy
 
 # FIXME: Probably don't need this anymore
 RUN yum -y install http://linuxsoft.cern.ch/wlcg/centos7/x86_64/wlcg-repo-1.0.0-1.el7.noarch.rpm \
@@ -47,5 +47,5 @@ RUN mkdir -p /patch
 # My patch for FNAL URL problem
 ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6097.patch /patch/6097.patch
 
-ADD cms-entrypoint.sh /
+ADD docker/rucio-probes/cms-entrypoint.sh /
 ENTRYPOINT ["/cms-entrypoint.sh"]
