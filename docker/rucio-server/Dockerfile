@@ -13,7 +13,7 @@ FROM rucio/rucio-server:release-$RUCIO_VERSION
 
 # Add CMS policy package
 RUN mkdir -p /opt/rucio/policy/CMSRucioPolicy
-COPY ../../../src/policy/CMSRucioPolicy /opt/rucio/policy/CMSRucioPolicy
+COPY src/policy/CMSRucioPolicy/ /opt/rucio/policy/CMSRucioPolicy/
 
 # FIXME: Probably don't need these anymore either
 RUN yum -y install http://linuxsoft.cern.ch/wlcg/centos7/x86_64/wlcg-repo-1.0.0-1.el7.noarch.rpm && \
@@ -33,11 +33,11 @@ RUN yum update  -y && \
 
 RUN mkdir -p /etc/grid-security && ln -s /cvmfs/grid.cern.ch/etc/grid-security/certificates /etc/grid-security/
 ENV RUCIO_CA_PATH="/cvmfs/grid.cern.ch/etc/grid-security/certificates"
-ADD cms-entrypoint.sh /
+ADD docker/rucio-server/cms-entrypoint.sh /
 #RUN echo "32 */6 * * * root ! /usr/sbin/fetch-crl -q -r 360 ; killall -HUP httpd" > /etc/cron.d/fetch-crl-docker
 
 # Install what's needed out of dmwm/rucio/CMS branch
-ADD install_mail_templates.sh /tmp/
+ADD docker/rucio-server/install_mail_templates.sh /tmp/
 RUN /tmp/install_mail_templates.sh
 
 # Might get recreated if apache was upgraded

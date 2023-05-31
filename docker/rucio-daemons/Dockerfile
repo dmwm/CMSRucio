@@ -12,19 +12,19 @@ FROM rucio/rucio-daemons:release-$RUCIO_VERSION
 
 # Add CMS policy package
 RUN mkdir -p /opt/rucio/policy/CMSRucioPolicy
-COPY ../../../src/policy/CMSRucioPolicy /opt/rucio/policy/CMSRucioPolicy
+COPY src/policy/CMSRucioPolicy /opt/rucio/policy/CMSRucioPolicy
 
 # Install what's needed out of dmwm/rucio/CMS branch
-ADD install_mail_templates.sh /tmp/
+ADD docker/rucio-daemons/install_mail_templates.sh /tmp/
 RUN /tmp/install_mail_templates.sh
 
 # Install globus SDK
 RUN python3 -m pip install --no-cache-dir globus-sdk pyyaml
-ADD globus-config.yml.j2 /tmp
+ADD docker/rucio-daemons/globus-config.yml.j2 /tmp
 
 RUN mkdir -p /etc/grid-security && ln -s /cvmfs/grid.cern.ch/etc/grid-security/certificates /etc/grid-security/
 
-ADD cms-entrypoint.sh /
+ADD docker/rucio-daemons/cms-entrypoint.sh /
 
 # Cannot make patch directory unless there are patches
 RUN mkdir -p /patch
