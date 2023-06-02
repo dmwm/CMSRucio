@@ -24,16 +24,6 @@ RUN yum update  -y \
     && yum clean all \
     && rm -rf /var/cache/yum
 
-# We need to install all the certificates and set up the revocation list.
-# This is necessary for Go to be able to access the auth server with X509
-
-#RUN yum -y install ca-policy-egi-core \
-#    && yum clean all \
-#    && rm -rf /var/cache/yum
-#RUN yum -y install ca-certificates.noarch   \
-#    && yum clean all \
-#    && rm -rf /var/cache/yum
-
 RUN mkdir -p /etc/grid-security && ln -s /cvmfs/grid.cern.ch/etc/grid-security/certificates /etc/grid-security/
 
 # Might get recreated if apache was upgraded

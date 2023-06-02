@@ -26,18 +26,6 @@ RUN mkdir -p /etc/grid-security && ln -s /cvmfs/grid.cern.ch/etc/grid-security/c
 
 ADD docker/rucio-daemons/cms-entrypoint.sh /
 
-# Cannot make patch directory unless there are patches
-RUN mkdir -p /patch
-
-
-# My patch for FNAL URL problem
-ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6097.patch /patch/6097.patch
-
-# Patch for kronos
-#ADD https://patch-diff.githubusercontent.com/raw/ericvaandering/rucio/pull/7.patch /patch/7.patch
-# Add Kronos patch to stop resubmission
-#ADD https://patch-diff.githubusercontent.com/raw/yuyiguo/rucio/pull/4.patch /patch/4.patch
-
 # Eric patch for cache-consumer (revisit if ever comes up again)
 
 # ADD https://raw.githubusercontent.com/ericvaandering/rucio/fix_cache_consumer/lib/rucio/daemons/cache/consumer.py /usr/local/lib/python3.6/site-packages/rucio/daemons/cache/consumer.py
@@ -46,7 +34,12 @@ ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6097.patch /pa
 # RUN python3 -m compileall /usr/local/lib/python3.6/site-packages/rucio/core
 # ADD https://raw.githubusercontent.com/ericvaandering/rucio/fix_cache_consumer/lib/rucio/common/stomp_utils.py /usr/local/lib/python3.6/site-packages/rucio/common/stomp_utils.py
 # RUN python3 -m compileall /usr/local/lib/python3.6/site-packages/rucio/common
+# ADD https://raw.githubusercontent.com/ericvaandering/containers/add_preparer/daemons/rucio.cfg.j2 /tmp/rucio.cfg.j2
 
-#ADD https://raw.githubusercontent.com/ericvaandering/containers/add_preparer/daemons/rucio.cfg.j2 /tmp/rucio.cfg.j2
+# Cannot make patch directory unless there are patches
+RUN mkdir -p /patch
+
+# My patch for FNAL URL problem
+ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6097.patch /patch/6097.patch
 
 ENTRYPOINT ["/cms-entrypoint.sh"]
