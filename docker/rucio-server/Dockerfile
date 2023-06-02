@@ -24,17 +24,9 @@ RUN yum update  -y && \
     yum clean all && \
     rm -rf /var/cache/yum
 
-# We need to install all the certificates and set up the revocation list.
-# This is necessary for Go to be able to access the auth server with X509
-
-#RUN yum -y install ca-policy-egi-core ca-certificates.noarch fetch-crl cronie psmisc && \
-#    yum clean all && \
-#    rm -rf /var/cache/yum
-
 RUN mkdir -p /etc/grid-security && ln -s /cvmfs/grid.cern.ch/etc/grid-security/certificates /etc/grid-security/
 ENV RUCIO_CA_PATH="/cvmfs/grid.cern.ch/etc/grid-security/certificates"
 ADD docker/rucio-server/cms-entrypoint.sh /
-#RUN echo "32 */6 * * * root ! /usr/sbin/fetch-crl -q -r 360 ; killall -HUP httpd" > /etc/cron.d/fetch-crl-docker
 
 # Install what's needed out of dmwm/rucio/CMS branch
 ADD docker/rucio-server/install_mail_templates.sh /tmp/
@@ -48,8 +40,5 @@ RUN mkdir -p /patch
 
 # My patch for FNAL URL problem
 ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6097.patch /patch/6097.patch
-
-# Patch for kronos
-ADD https://patch-diff.githubusercontent.com/raw/ericvaandering/rucio/pull/7.patch /patch/7.patch
 
 ENTRYPOINT ["/cms-entrypoint.sh"]
