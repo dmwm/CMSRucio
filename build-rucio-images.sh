@@ -4,7 +4,6 @@ set -e
 
 export RUCIO_VERSION=1.31.3
 export CMS_VERSION=${RUCIO_VERSION}.cms4
-export CMS_TAG=cms_1_29_4
 
 export HARBOR=registry.cern.ch/cmsrucio
 

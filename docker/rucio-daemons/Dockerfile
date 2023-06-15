@@ -42,4 +42,7 @@ RUN mkdir -p /patch
 # My patch for FNAL URL problem
 ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6097.patch /patch/6097.patch
 
+# Patch for auto approve plugin rucio/pull/6215
+ADD https://raw.githubusercontent.com/dynamic-entropy/rucio/b55a1d62e39565ac0a220b64f42530db96cb468f/0001-Policies-Adding-plugin-hook-for-auto-approval-flow.patch /patch/6203.patch 
+
 ENTRYPOINT ["/cms-entrypoint.sh"]

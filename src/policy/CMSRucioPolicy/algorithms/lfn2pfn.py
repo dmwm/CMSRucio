@@ -1,5 +1,7 @@
 #! /usr/bin/env python3
 
+import re
+
 """
 LFN-to-path algorithms for TFC
 """
