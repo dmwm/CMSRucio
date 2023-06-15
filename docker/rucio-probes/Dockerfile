@@ -101,16 +101,16 @@ ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_check_expired_lo
 ADD https://raw.githubusercontent.com/FernandoGarzon/probes/check_rules_counts_vs_time/cms/check_rule_counts /probes/cms
 
 # PR 110
-ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-ruciorucio5804-1/cms/check_expected_total_number_of_files_per_rse_expression /probes/cms
-ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-ruciorucio5804-1/cms/check_missing_data_at_rse /probes/cms
-ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-ruciorucio5804-1/cms/check_not_OK_rules_per_rse /probes/cms
-ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-ruciorucio5804-1/cms/check_number_of_missing_files_per_rse /probes/cms
-ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-ruciorucio5804-1/cms/check_report_free_space /probes/cms
-ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-ruciorucio5804-1/cms/check_report_used_space /probes/cms
-ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-ruciorucio5804-1/cms/check_rule_counts /probes/cms
-ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-ruciorucio5804-1/cms/check_rules_with_0_completion_volume /probes/cms
-ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-ruciorucio5804-1/cms/check_unlocked_replicas_per_rse /probes/cms
-ADD https://raw.githubusercontent.com/ericvaandering/probes/108-adapt-probes-to-ruciorucio5804-1/common/utils/common.py /probes/common/utils/
+ADD https://raw.githubusercontent.com/rucio/probes/master/cms/check_expected_total_number_of_files_per_rse_expression /probes/cms
+ADD https://raw.githubusercontent.com/rucio/probes/master/cms/check_missing_data_at_rse /probes/cms
+ADD https://raw.githubusercontent.com/rucio/probes/master/cms/check_not_OK_rules_per_rse /probes/cms
+ADD https://raw.githubusercontent.com/rucio/probes/master/cms/check_number_of_missing_files_per_rse /probes/cms
+ADD https://raw.githubusercontent.com/rucio/probes/master/cms/check_report_free_space /probes/cms
+ADD https://raw.githubusercontent.com/rucio/probes/master/cms/check_report_used_space /probes/cms
+ADD https://raw.githubusercontent.com/rucio/probes/master/cms/check_rule_counts /probes/cms
+ADD https://raw.githubusercontent.com/rucio/probes/master/cms/check_rules_with_0_completion_volume /probes/cms
+ADD https://raw.githubusercontent.com/rucio/probes/master/cms/check_unlocked_replicas_per_rse /probes/cms
+ADD https://raw.githubusercontent.com/rucio/probes/master/common/utils/common.py /probes/common/utils/
 
 # PR 111
 ADD https://raw.githubusercontent.com/ericvaandering/probes/check_rules_state_PROBE_2/cms/check_rules_states_by_account /probes/cms
