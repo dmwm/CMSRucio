@@ -2,7 +2,7 @@
 #
 # Eric Vaandering <ewv@fnal.gov>, 2022
 
-from CMSRucioPolicy.algorithms import lfn2pfn
+from CMSRucioPolicy.algorithms import lfn2pfn, auto_approve
 
 SUPPORTED_VERSION = ["1.30", "1.31"]
 
@@ -14,5 +14,8 @@ def get_algorithms():
     return {
         'lfn2pfn': {
             'cmstfc': lfn2pfn.cmstfc,
+        },
+        'auto_approve': {
+            'global': auto_approve.global_approval,
         }
     }
