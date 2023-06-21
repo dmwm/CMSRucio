@@ -23,8 +23,9 @@ from rucio.common.exception import ConfigNotFound, InvalidRSEExpression
 
 # Set dry_run to True to test the script without updating the static usage
 dry_run = False
+debug = False
 
-if dry_run:
+if debug:
     logging_level = logging.DEBUG
 else:
     logging_level = logging.INFO
@@ -37,6 +38,8 @@ logger = logging.getLogger(__name__)
 
 # Build the opensearch get request
 QUERY_HEADER = '{"search_type":"query_then_fetch","ignore_unavailable":true,"index":["monit_prod_cmssst_*"]}'
+MAX_MIN_FREE_PERCENTAGE = 20.0
+DEFAULT_MIN_FREE_PERCENTAGE = 10.0
 
 try:
     path = os.path.dirname(os.path.realpath(__file__))
@@ -99,8 +102,15 @@ try:
 
     try:
         default_min_free_space_percentage = float(rclient.get_config(section='rses', option='default_min_free_space_percentage'))
+
+        # Preventing accidental setting of min_free_space_percentage to a very high value
+        if default_min_free_space_percentage > MAX_MIN_FREE_PERCENTAGE:
+            raise Exception(f"Invalid default_min_free_space_percentage: {default_min_free_space_percentage}")
     except ConfigNotFound as e:
-        default_min_free_space_percentage = 10.0
+        default_min_free_space_percentage = DEFAULT_MIN_FREE_PERCENTAGE
+    except Exception as e:
+        logger.warn(f"Unexpected value for default_min_free_space_percentage: {e}")
+        default_min_free_space_percentage = DEFAULT_MIN_FREE_PERCENTAGE
     
     rses = [rse['rse'] for rse in rclient.list_rses('cms_type=real&rse_type=DISK')]
     for site in sites :
@@ -124,6 +134,8 @@ try:
         rse_attributes = rclient.list_rse_attributes(rse=rse)
         if 'min_free_space_percentage' in rse_attributes:
             min_free_space_percentage = float(rse_attributes['min_free_space_percentage'])
+            if min_free_space_percentage > MAX_MIN_FREE_PERCENTAGE:
+                min_free_space_bytes = default_min_free_space_percentage
 
         try:
             # Static usage is 0 for many T3s - These are managed as quasi-static
@@ -138,18 +150,26 @@ try:
             else:
                 current_static_usage = current_static_usage[0]['used']
 
-            if current_static_usage == rse_available_bytes:
+            rse_limits = rclient.get_rse_limits(rse=rse)
+            if 'MinFreeSpace' in rse_limits:
+                current_min_free_space = rse_limits['MinFreeSpace']
+            else:
+                current_min_free_space = 0
+            
+            min_free_space_bytes = int(rse_available_bytes*min_free_space_percentage*0.01)
+            # Trigger update on both value and configuraton change
+            if current_static_usage == rse_available_bytes and current_min_free_space == min_free_space_bytes:
                 logger.debug(f"Static usage for {rse} already up to date")
                 continue
 
             if dry_run:
                 logger.info(f"Updating static usage, from {current_static_usage*1e-12:.2f}TB to {rse_available_bytes*1e-12:.2f}TB, for {rse}, dry_run=True")
-                logger.info(f"Updating MinFreeSpace, from {current_static_usage*1e-13:.2f}TB to {rse_available_bytes*1e-13:.2f}TB, for {rse}, dry_run=True")
+                logger.info(f"Updating MinFreeSpace, from {current_min_free_space*1e-12:.2f}TB to {min_free_space_bytes*1e-12:.2f}TB, for {rse}, dry_run=True")
             else:
                 rclient.set_rse_usage(rse=rse, source='static', used=rse_available_bytes, free=None)
-                rclient.set_rse_limits(rse=rse, name='MinFreeSpace', value=rse_available_bytes//min_free_space_percentage)
+                rclient.set_rse_limits(rse=rse, name='MinFreeSpace', value=min_free_space_bytes)
                 logger.info(f"Updating static usage, from {current_static_usage*1e-12:.2f}TB to {rse_available_bytes*1e-12:.2f}TB, for {rse}")
-                logger.info(f"Updating MinFreeSpace, from {current_static_usage*1e-13:.2f}TB to {rse_available_bytes*1e-13:.2f}TB, for {rse}")
+                logger.info(f"Updating MinFreeSpace, from {current_min_free_space*1e-12:.2f}TB to {min_free_space_bytes*1e-12:.2f}TB, for {rse}")
         except Exception as e:
             logger.error(f"Failed to update static usage for {rse}: {e}")
             traceback.print_exc()
