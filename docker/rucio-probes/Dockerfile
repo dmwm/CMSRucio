@@ -17,6 +17,7 @@ RUN ln -s /usr/bin/python3 /usr/local/bin/python
 # Add CMS policy package
 RUN mkdir -p /opt/rucio/policy/CMSRucioPolicy
 COPY src/policy/CMSRucioPolicy /opt/rucio/policy/CMSRucioPolicy
+ENV PYTHONPATH /opt/rucio/policy/
 
 # Temporary additions
 
