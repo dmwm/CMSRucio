@@ -17,7 +17,8 @@ RUN ln -s /usr/bin/python3 /usr/local/bin/python
 # Add CMS policy package
 RUN mkdir -p /opt/rucio/policy/CMSRucioPolicy
 COPY src/policy/CMSRucioPolicy /opt/rucio/policy/CMSRucioPolicy
-ENV PYTHONPATH /opt/rucio/policy/
+# Make it search the policy directory. Needs a change for python upgrades
+RUN echo "/opt/rucio/policy" > /usr/local/lib/python3.6/site-packages/policy.pth
 
 # Temporary additions
 
