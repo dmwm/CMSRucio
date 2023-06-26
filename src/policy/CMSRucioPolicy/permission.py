@@ -708,7 +708,10 @@ def perm_declare_bad_file_replicas(issuer, kwargs, *, session: "Optional[Session
     :param session: The DB session to use
     :returns: True if account is allowed, otherwise False
     """
-    return _is_root(issuer) or has_account_attribute(account=issuer, key='admin', session=session)
+    if _is_root(issuer) or has_account_attribute(account=issuer, key='admin', session=session):
+        return True
+
+    return _is_cms_site_admin(kwargs['rse_id'], issuer, session)
 
 
 def perm_declare_suspicious_file_replicas(issuer, kwargs, *, session: "Optional[Session]" = None):
@@ -886,22 +889,9 @@ def perm_set_local_account_limit(issuer, kwargs, *, session: "Optional[Session]"
     """
     if _is_root(issuer) or has_account_attribute(account=issuer, key='admin', session=session):
         return True
-    # # Check if user is a country admin
-    # admin_in_country = []
-    # from rucio.core.account import has_account_attribute, list_account_attributes
-    # for kv in list_account_attributes(account=issuer, session=session):
-    #     if kv['key'].startswith('country-') and kv['value'] == 'admin':
-    #         admin_in_country.append(kv['key'].partition('-')[2])
-    # if admin_in_country and list_rse_attributes(rse_id=kwargs['rse_id'], session=session).get('country') in admin_in_country:
-    #     return True
 
-    # Those listed as quota approvers can add to quotas
-    rse_attr = list_rse_attributes(rse_id=kwargs['rse_id'], session=session)
-    quota_approvers = rse_attr.get('quota_approvers', None)
-    if quota_approvers and issuer.external in quota_approvers.split(','):
-        return True
-
-    return False
+    # Those listed as site admins can add to quotas
+    return _is_cms_site_admin(kwargs['rse_id'], issuer, session)
 
 
 def perm_set_global_account_limit(issuer, kwargs, *, session: "Optional[Session]" = None):
@@ -915,15 +905,7 @@ def perm_set_global_account_limit(issuer, kwargs, *, session: "Optional[Session]
     """
     if _is_root(issuer) or has_account_attribute(account=issuer, key='admin', session=session):
         return True
-    # # Check if user is a country admin
-    # admin_in_country = set()
-    # for kv in list_account_attributes(account=issuer, session=session):
-    #     if kv['key'].startswith('country-') and kv['value'] == 'admin':
-    #         admin_in_country.add(kv['key'].partition('-')[2])
-    # resolved_rse_countries = {list_rse_attributes(rse_id=rse['rse_id'], session=session).get('country')
-    #                           for rse in parse_expression(kwargs['rse_expression'], filter={'vo': issuer.vo}, session=session)}
-    # if resolved_rse_countries.issubset(admin_in_country):
-    #     return True
+
     return False
 
 
@@ -938,16 +920,7 @@ def perm_delete_global_account_limit(issuer, kwargs, *, session: "Optional[Sessi
     """
     if _is_root(issuer) or has_account_attribute(account=issuer, key='admin', session=session):
         return True
-    # # Check if user is a country admin
-    # admin_in_country = set()
-    # for kv in list_account_attributes(account=issuer, session=session):
-    #     if kv['key'].startswith('country-') and kv['value'] == 'admin':
-    #         admin_in_country.add(kv['key'].partition('-')[2])
-    # if admin_in_country:
-    #     resolved_rse_countries = {list_rse_attributes(rse_id=rse['rse_id'], session=session).get('country')
-    #                               for rse in parse_expression(kwargs['rse_expression'], filter={'vo': issuer.vo}, session=session)}
-    #     if resolved_rse_countries.issubset(admin_in_country):
-    #         return True
+
     return False
 
 
@@ -962,20 +935,8 @@ def perm_delete_local_account_limit(issuer, kwargs, *, session: "Optional[Sessio
     """
     if _is_root(issuer) or has_account_attribute(account=issuer, key='admin', session=session):
         return True
-    # # Check if user is a country admin
-    # admin_in_country = []
-    # for kv in list_account_attributes(account=issuer, session=session):
-    #     if kv['key'].startswith('country-') and kv['value'] == 'admin':
-    #         admin_in_country.append(kv['key'].partition('-')[2])
-    # if admin_in_country and list_rse_attributes(rse_id=kwargs['rse_id'], session=session).get('country') in admin_in_country:
-    #     return True
 
-    rse_attr = list_rse_attributes(rse_id=kwargs['rse_id'], session=session)
-    quota_approvers = rse_attr.get('quota_approvers', None)
-    if quota_approvers and issuer.external in quota_approvers.split(','):
-        return True
-
-    return False
+    return _is_cms_site_admin(kwargs['rse_id'], issuer, session)
 
 
 def perm_config(issuer, kwargs, *, session: "Optional[Session]" = None):
@@ -1001,10 +962,7 @@ def perm_get_local_account_usage(issuer, kwargs, *, session: "Optional[Session]"
     """
     if _is_root(issuer) or has_account_attribute(account=issuer, key='admin', session=session) or kwargs.get('account') == issuer:
         return True
-    # # Check if user is a country admin
-    # for kv in list_account_attributes(account=issuer, session=session):
-    #     if kv['key'].startswith('country-') and kv['value'] == 'admin':
-    #         return True
+
     return False
 
 
@@ -1188,3 +1146,19 @@ def perm_access_rule_vo(issuer, kwargs, *, session: "Optional[Session]" = None):
     :returns: True if account is allowed, otherwise False
     """
     return get_rule(kwargs['rule_id'])['scope'].vo == issuer.vo
+
+
+def _is_cms_site_admin(rse_id, issuer, session):
+    """
+    Checks if an account is a CMS site admin for an RSE.
+
+    :param rse_id: The RSE id.
+    :param issuer: Account identifier which issues the command.
+    :param session: The DB session to use
+    :returns: True if account is a CMS site admin, otherwise False
+    """
+    rse_attr = list_rse_attributes(rse_id=rse_id, session=session)
+    site_admins = rse_attr.get('site_admins', None)
+    if site_admins and issuer.external in site_admins.split(','):
+        return True
+    return False
