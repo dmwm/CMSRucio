@@ -20,9 +20,10 @@ from requests.exceptions import ConnectionError
 
 from rucio.client import Client
 from rucio.common.exception import ConfigNotFound, InvalidRSEExpression
+from setSiteQuotas import setLocalUsersQuota
 
 # Set dry_run to True to test the script without updating the static usage
-dry_run = False
+dry_run = True
 debug = False
 
 if debug:
@@ -94,6 +95,7 @@ except Exception as e:
 # Update the rucio static usage
 try:
     rclient = Client()
+    group_accounts = set(account['account'] for account in rclient.list_accounts(account_type="GROUP"))
 
     try:
         skip_sites = [rse['rse'] for rse in rclient.list_rses(rse_expression='skip_site_capacity_update=True')]
@@ -130,6 +132,9 @@ try:
         disk_local_use_bytes = site['disk_local_use'] * 1e12 #additional quota for local rse_local_users account
         rse_available_bytes = disk_experiment_use_bytes + disk_local_use_bytes
 
+        # Set Quota for local users account for the rse
+        setLocalUsersQuota(rclient, group_accounts, rse, disk_local_use_bytes, logger, dry_run)
+
         min_free_space_percentage = default_min_free_space_percentage
         rse_attributes = rclient.list_rse_attributes(rse=rse)
         if 'min_free_space_percentage' in rse_attributes:
@@ -165,6 +170,7 @@ try:
             if dry_run:
                 logger.info(f"Updating static usage, from {current_static_usage*1e-12:.2f}TB to {rse_available_bytes*1e-12:.2f}TB, for {rse}, dry_run=True")
                 logger.info(f"Updating MinFreeSpace, from {current_min_free_space*1e-12:.2f}TB to {min_free_space_bytes*1e-12:.2f}TB, for {rse}, dry_run=True")
+                
             else:
                 rclient.set_rse_usage(rse=rse, source='static', used=rse_available_bytes, free=None)
                 rclient.set_rse_limits(rse=rse, name='MinFreeSpace', value=min_free_space_bytes)
