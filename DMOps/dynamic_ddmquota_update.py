@@ -1,64 +1,44 @@
-# 2022/04/13  
+
+# NOTE: Maybe this should be run from somewhere where the team has access? 
 # It is running in an acrontab owned by Benedict Maier
 
 from rucio.client import Client
 client = Client()
 
-# DISK, no tape
-# rse_type=DISK or TAPE
-# cms_type=real or test
-# tier<3, exclude T3
-# tier>0, exclude T0,
-# \(T2_US_Caltech_Ceph|T2_PL_Warsaw) (exclude)
+# ddm_quota are weight given to RSEs based on the amount of free space
+# This is calulated as static use - rucio use
+# The rule evaluation algorithm uses a weighted random selection of RSEs based on this value
 
-RSE_EXPRESSION = "rse_type=DISK&cms_type=real&tier<3&tier>0\(T2_US_Caltech_Ceph|T2_PL_Warsaw)"
-
-minfree=15000000000000 # 15.0 TB
-
-rses = list(client.list_rses(rse_expression=RSE_EXPRESSION))
-rse_names = []
-for e in rses:
-    rse_names.append(e["rse"])
-rse_names.sort()
+# NOTE: This probably needs to be reviewed after an assement of age of dynamic data at different sites
+# and if this can be used to normalise that
 
 
+DRY_RUN = True
 
-for rse in rse_names:
-    site_usage = list(client.get_rse_usage(rse))
+# Adding ddm_quota attribute to all disk RSEs
+# T3s do not have the "static" usage set, they are quasi-static
+RSE_EXPRESSION = "rse_type=DISK&cms_type=real&tier<3&tier>0"
 
-    total = 0 # total = static
-    rucio = 0 # rucio used
-    free = 0
-    ddm_quota = 1000000  # 10**6
+rses = [rse["rse"] for rse in client.list_rses(rse_expression=RSE_EXPRESSION)]
 
-    for source in site_usage:
+for rse in rses:
+    rse_usage = list(client.get_rse_usage(rse))
+
+    static, rucio = 0, 0
+
+    for source in rse_usage:
         if source["source"] == "static":
-            total = source["used"]
+            static = source["used"]
         if source["source"] == "rucio":
             rucio = source["used"]
 
-    free = total - rucio
-
-    if free>minfree:
-        ddm_quota = free - minfree
-    else:
-        ddm_quota = 1000000
+    ddm_quota = max(static - rucio, 0)
  
-    if rse == "T2_CH_CERN":
-        ddm_quota = 10000
-    if rse == "T1_RU_JINR_Disk":
-        ddm_quota = 10000
-    if rse == "T2_UA_KIPT":
-        ddm_quota = 0
-    if rse == "T2_US_MIT_Tape":
-        ddm_quota = 0
-    if rse == "T2_EE_Estonia":   # ggus-ticket 158850 2022-09-20: REMOVE once the Storage System migration is completed. 
-        ddm_quota = 0
-    if rse == "T2_FR_GRIF":   # ggus-ticket 57739: Commissioning new site. CRAB Issuers. Remove once the site is OK 
-        ddm_quota = 0        
-    if rse == "T2_US_Florida": # COnsistency Check incident 2023-01-17
-        ddm_quota = 0
-        
-        
-    result = client.add_rse_attribute(rse, "ddm_quota", ddm_quota)
-    print(rse, ", ddmquota ", ddm_quota, "updated:", result)
+    # Override ddm_quota for operational purposes
+    rse_attributes = client.list_rse_attributes(rse)
+    if "override_ddm_quota" in rse_attributes:
+        ddm_quota = rse_attributes["override_ddm_quota"]
+    
+    if not DRY_RUN:
+        client.add_rse_attribute(rse, "ddm_quota", ddm_quota)
+    print("Setting ddm_quota for {} to {}".format(rse, ddm_quota))
