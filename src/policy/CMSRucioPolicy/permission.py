@@ -19,7 +19,7 @@ import rucio.core.scope
 from rucio.core.account import has_account_attribute
 from rucio.core.identity import exist_identity_account
 from rucio.core.permission.generic import perm_get_global_account_usage
-from rucio.core.rse import list_rse_attributes
+from rucio.core.rse import list_rse_attributes, get_rse
 from rucio.core.rse_expression_parser import parse_expression
 from rucio.core.rule import get_rule
 from rucio.db.sqla.constants import IdentityType
@@ -190,7 +190,18 @@ def perm_add_rule(issuer, kwargs, *, session: "Optional[Session]" = None):
             rse_attr = list_rse_attributes(rse_id=rse['id'])
             if rse_attr.get('requires_approval', False):
                 return False
-
+            
+    if kwargs["activity"] == "User AutoApprove":
+    # prevent rule creation under 'User AutoApprove' for rules without ask_approval
+        if not kwargs["ask_approval"]:
+            return False
+    # prevent rule creation to tape under the 'User AutoApprove' activity
+        for rse in rses:
+            rse_details = get_rse(rse_id=rse['id'], session=session)
+            rse_type = rse_details.get('rse_type', None)
+            if rse_type == "TAPE":
+                return False
+    
     # Anyone can use _Temp RSEs if a lifetime is set and under a month
     all_temp = True
     for rse in rses:
