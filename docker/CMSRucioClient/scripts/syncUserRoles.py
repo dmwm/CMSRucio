@@ -79,22 +79,15 @@ def set_rse_manager(client, rse_name, site_managers, alt_rse=None):
         alt_rse = alt_rse.lower()
     try:
         client.delete_rse_attribute(rse=rse_name, key='rule_approvers')
-        client.delete_rse_attribute(rse=rse_name, key='quota_approvers')
+        client.delete_rse_attribute(rse=rse_name, key='site_admins')
     except RSEAttributeNotFound:
         pass
-    rule_approvers = ','.join(site_managers[alt_rse])
-    print(f"Setting managers for {rse_name} to {rule_approvers}")
+    site_admins = ','.join(site_managers[alt_rse])
+    print(f"Setting managers for {rse_name} to {site_admins}")
 
-    client.add_rse_attribute(rse=rse_name, key='rule_approvers', value=rule_approvers)
-    # For now, quota approvers are also rule approvers
-    client.add_rse_attribute(rse=rse_name, key='quota_approvers', value=rule_approvers)
-
-    # This is perhaps temporary
-    for account in site_managers[alt_rse]:
-        try:
-            client.add_account_attribute(account=account, key='country-XX', value='admin')
-        except Duplicate:
-            pass
+    client.add_rse_attribute(rse=rse_name, key='rule_approvers', value=site_admins)
+    # For now, site admins are also rule approvers
+    client.add_rse_attribute(rse=rse_name, key='site_admins', value=site_admins)
 
 
 def get_egroup_map(all_groups, tag_relation="facility", role="local-data-manager"):
