@@ -65,28 +65,28 @@ def global_approval(did, rule_attributes, session):
 
 
     try:
-        GLOBAL_USAGE_THRESHOLD = float(config_get('rules', 'global_usage_threshold', raise_exception=True, default=1e15))
+        global_usage_threshold = float(config_get('rules', 'global_usage_threshold', raise_exception=True, default=1e15))
     except (NoOptionError, NoSectionError, RuntimeError):
-        GLOBAL_USAGE_THRESHOLD = 1e15
+        global_usage_threshold = 1e15
 
     try:
-        RULE_LIFETIME_THRESHOLD = int(config_get('rules', 'rule_lifetime_threshold', raise_exception=True, default=2592000))
+        rule_lifetime_threshold = int(config_get('rules', 'rule_lifetime_threshold', raise_exception=True, default=2592000))
     except (NoOptionError, NoSectionError, RuntimeError):
-        RULE_LIFETIME_THRESHOLD = 2592000
+        rule_lifetime_threshold = 2592000
 
     try:
-        SINGLE_RSE_RULE_SIZE_THRESHOLD = float(config_get('rules', 'single_rse_rule_size_threshold', raise_exception=True, default=50e12))
+        single_rse_rule_size_threshold = float(config_get('rules', 'single_rse_rule_size_threshold', raise_exception=True, default=50e12))
     except (NoOptionError, NoSectionError, RuntimeError):
-        SINGLE_RSE_RULE_SIZE_THRESHOLD = 50e12
+        single_rse_rule_size_threshold = 50e12
 
-    AUTO_APPROVE_ACTIVITY = 'User AutoApprove'
+    auto_approve_activity = 'User AutoApprove'
 
     # Check if the account is banned
     if has_account_attribute(account, 'rule_banned', session=session):
         return False
 
     # Check activity is User AutoApprove
-    if rule_attributes['activity'] != AUTO_APPROVE_ACTIVITY:
+    if rule_attributes['activity'] != auto_approve_activity:
         return False
 
     # Check if the rule is locked
@@ -94,7 +94,7 @@ def global_approval(did, rule_attributes, session):
         return False
 
     # Check if the rule lifetime is less than a month
-    if rule_attributes['lifetime'] > RULE_LIFETIME_THRESHOLD:
+    if rule_attributes['lifetime'] > rule_lifetime_threshold:
         return False
 
     size_of_rule = sum([file['bytes'] for file in list_files(did['scope'], did['name'], session=session)])
@@ -106,15 +106,15 @@ def global_approval(did, rule_attributes, session):
     rse_expression = rule_attributes['rse_expression']
     rses = parse_expression(rse_expression, filter_={'availability_write': True}, session=session)
     if len(rses) == 1:
-        this_rse_autoapprove_rules = list_rules(filters={'account': account, 'activity': AUTO_APPROVE_ACTIVITY, 'rse_expression': rse_expression}, session=session)
+        this_rse_autoapprove_rules = list_rules(filters={'account': account, 'activity': auto_approve_activity, 'rse_expression': rse_expression}, session=session)
         this_rse_autoapprove_usage = _get_rules_size(this_rse_autoapprove_rules)
-        if this_rse_autoapprove_usage + size_of_rule > SINGLE_RSE_RULE_SIZE_THRESHOLD:
+        if this_rse_autoapprove_usage + size_of_rule > single_rse_rule_size_threshold:
             return False
 
     # Check global usage of the account under this activity
-    all_auto_approve_rules_by_account = list_rules(filters={'account': account, 'activity': AUTO_APPROVE_ACTIVITY}, session=session)
+    all_auto_approve_rules_by_account = list_rules(filters={'account': account, 'activity': auto_approve_activity}, session=session)
     global_auto_approve_usage_by_account = _get_rules_size(all_auto_approve_rules_by_account)
-    if global_auto_approve_usage_by_account + size_of_rule > GLOBAL_USAGE_THRESHOLD:
+    if global_auto_approve_usage_by_account + size_of_rule > global_usage_threshold:
         return False
 
     return True
