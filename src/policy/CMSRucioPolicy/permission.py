@@ -184,6 +184,13 @@ def perm_add_rule(issuer, kwargs, *, session: "Optional[Session]" = None):
     if isinstance(repr(issuer), str) and repr(issuer).startswith('sync_'):  # noqa
         return True
 
+    # If any of RSEs matching the expression needs approval, the rule cannot be created
+    if not kwargs['ask_approval']:
+        for rse in rses:
+            rse_attr = list_rse_attributes(rse_id=rse['id'])
+            if rse_attr.get('requires_approval', False):
+                return False
+
     # Anyone can use _Temp RSEs if a lifetime is set and under a month
     all_temp = True
     for rse in rses:
