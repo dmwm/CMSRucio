@@ -57,7 +57,7 @@ class LinksMatrix(object):
             try:
                 self.rselist.append({
                     'rse': rse,
-                    'pnn': attrs['pnn'],
+                    'pnn': attrs.get('pnn'),
                     'type': attrs['cms_type'],
                     'country': attrs['country'],
                     'region': attrs.get('region', None)
