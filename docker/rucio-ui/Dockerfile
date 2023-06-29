@@ -34,7 +34,8 @@ ENV RUCIO_CA_PATH="/cvmfs/grid.cern.ch/etc/grid-security/certificates"
 # Cannot make patch directory unless there are patches
 RUN mkdir -p /patch
 
-# My patch for FNAL URL problem
+# Eric's patch for FNAL URL problem
+# Merged for Rucio 32
 ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6097.patch /patch/6097.patch
 
 # Patch for auto approve plugin rucio/pull/6215
