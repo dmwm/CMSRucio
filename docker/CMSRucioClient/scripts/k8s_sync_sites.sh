@@ -41,3 +41,5 @@ echo "Setting quotas"
 ./setSiteQuotas
 echo "Setting availability"
 ./setSiteAvailability
+echo "Update DDM quota"
+./updateDDMQuota
