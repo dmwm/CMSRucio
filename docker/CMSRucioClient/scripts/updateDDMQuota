@@ -1,6 +1,4 @@
-
-# NOTE: Maybe this should be run from somewhere where the team has access? 
-# It is running in an acrontab owned by Benedict Maier
+#! /usr/bin/env python3
 
 from rucio.client import Client
 client = Client()
@@ -11,7 +9,6 @@ client = Client()
 
 # NOTE: This probably needs to be reviewed after an assement of age of dynamic data at different sites
 # and if this can be used to normalise that
-
 
 DRY_RUN = True
 
@@ -32,7 +29,8 @@ for rse in rses:
         if source["source"] == "rucio":
             rucio = source["used"]
 
-    ddm_quota = max(static - rucio, 0)
+    # Normalise
+    ddm_quota = max(static - rucio, 0)/static
  
     # Override ddm_quota for operational purposes
     rse_attributes = client.list_rse_attributes(rse)
