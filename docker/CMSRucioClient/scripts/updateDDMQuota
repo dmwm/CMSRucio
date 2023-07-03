@@ -30,8 +30,11 @@ for rse in rses:
             rucio = source["used"]
 
     # Normalise
-    ddm_quota = max(static - rucio, 0)/static
- 
+    if static == 0:
+        continue
+    
+    ddm_quota = round(max(static - rucio, 0)/static, 4)
+        
     # Override ddm_quota for operational purposes
     rse_attributes = client.list_rse_attributes(rse)
     if "override_ddm_quota" in rse_attributes:
