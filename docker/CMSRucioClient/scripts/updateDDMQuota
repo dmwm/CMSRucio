@@ -10,7 +10,7 @@ client = Client()
 # NOTE: This probably needs to be reviewed after an assement of age of dynamic data at different sites
 # and if this can be used to normalise that
 
-DRY_RUN = True
+DRY_RUN = False
 
 # Adding ddm_quota attribute to all disk RSEs
 # T3s do not have the "static" usage set, they are quasi-static
