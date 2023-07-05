@@ -52,5 +52,6 @@ oidc-gen cms --issuer "$IAM_SERVER" \
     --redirect-uri http://localhost:8843 \
     --pw-cmd "echo \"DUMMY PWD\""
 
-echo "Syncing OIDC user identities"
-./syncaccount_oidc.py
+# Disabling until fixed
+# echo "Syncing OIDC user identities"
+# ./syncaccount_oidc.py
