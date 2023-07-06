@@ -32,6 +32,6 @@ jobs:
         username: ${{ secrets.HARBOR_USERNAME }}
         access-token: ${{ secrets.HARBOR_TOKEN }}
         force: true
-        chart-folder: helm/rucio-consistency
+        chart-folder: ./helm/rucio-consistency
 
   
