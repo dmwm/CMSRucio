@@ -15,14 +15,14 @@ for chart in $(ls -d */Chart.yaml | xargs dirname); do
               echo "INFO There are no remote versions."
               REMOTE_LATEST_VERSION=""
           fi
-          if [ "${REMOTE_LATEST_VERSION}" = "" ] || \
-              [ "$(expr "${REMOTE_LATEST_VERSION}" \< "${LOCAL_VERSION}")" -eq 1 ]; then
+#          if [ "${REMOTE_LATEST_VERSION}" = "" ] || \
+#              [ "$(expr "${REMOTE_LATEST_VERSION}" \< "${LOCAL_VERSION}")" -eq 1 ]; then
               helm dep update ${chart}
               helm package ${chart}
 	      set +x
               helm cm-push --username=${HARBOR_USERNAME} --password=${HARBOR_TOKEN} "${chart}-${LOCAL_VERSION}.tgz"  myrepo
 	      # OCI
-	      helm push "${chart}-${LOCAL_VERSION}.tgz" oci://registry.cern.ch/cmsrucio/helm-${chart}
-              set -x
-          fi
+              set -x 
+	      helm push "${chart}-${LOCAL_VERSION}.tgz" oci://registry.cern.ch/cmsrucio/helm-${chart}        
+#          fi
 done
