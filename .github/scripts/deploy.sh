@@ -23,6 +23,6 @@ for chart in $(ls -d */Chart.yaml | xargs dirname); do
               helm cm-push --username=${HARBOR_USERNAME} --password=${HARBOR_TOKEN} "${chart}-${LOCAL_VERSION}.tgz"  myrepo
 	      # OCI
               set -x 
-	      helm push "${chart}-${LOCAL_VERSION}.tgz" oci://registry.cern.ch/cmsrucio/helm-${chart}        
+	      helm push "${chart}-${LOCAL_VERSION}.tgz" oci://registry.cern.ch/cmsrucio/helm      
 #          fi
 done
