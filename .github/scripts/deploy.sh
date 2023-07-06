@@ -5,6 +5,8 @@ helm plugin install https://github.com/chartmuseum/helm-push
 helm repo add --username=${HARBOR_USERNAME} --password=${HARBOR_TOKEN} myrepo  https://registry.cern.ch/chartrepo/cmsrucio
 helm repo update
 helm repo list
+# OCI
+echo "${HARBOR_TOKEN}" | helm registry login -u ${HARBOR_USERNAME} --password-stdin registry.cern.ch
 cd helm
 for chart in $(ls -d */Chart.yaml | xargs dirname); do
 # echo $chart
@@ -19,6 +21,8 @@ for chart in $(ls -d */Chart.yaml | xargs dirname); do
               helm package ${chart}
 	      set +x
               helm cm-push --username=${HARBOR_USERNAME} --password=${HARBOR_TOKEN} "${chart}-${LOCAL_VERSION}.tgz"  myrepo
+	      # OCI
+	      helm push "${chart}-${LOCAL_VERSION}.tgz" oci://registry.cern.ch/cmsrucio/helm-${chart}
               set -x
           fi
 done
