@@ -21,19 +21,26 @@ rses = [rse["rse"] for rse in client.list_rses(rse_expression=RSE_EXPRESSION)]
 for rse in rses:
     rse_usage = list(client.get_rse_usage(rse))
 
-    static, rucio = 0, 0
-
+    static, rucio, unavailable, expired = 0, 0, 0, 0
     for source in rse_usage:
         if source["source"] == "static":
             static = source["used"]
         if source["source"] == "rucio":
             rucio = source["used"]
+        if source["source"] == "unavailable":
+            unavailable = source["used"]
+        if source["source"] == "expired":
+            expired = source["used"]
 
     # Normalise
     if static == 0:
-        continue
+        continue # Skip if static is 0
 
-    ddm_quota = int((max(static - rucio, 0)/static)*1e4)
+    # ddm_quota is set proportional to percentage of (dynamic + free) space
+    # Apprantly, python integers do not overflow, https://docs.python.org/3/library/exceptions.html#OverflowError
+
+    locked = rucio - unavailable - expired
+    ddm_quota = int((max(static - locked, 0)/static)*1e4)
 
     # Override ddm_quota for operational purposes
     rse_attributes = client.list_rse_attributes(rse)
