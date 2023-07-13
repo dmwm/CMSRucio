@@ -37,8 +37,7 @@ fi
 
 echo "Set site capacity"
 ./setSiteCapacity
-echo "Setting quotas"
-./setSiteQuotas
+
 echo "Setting availability"
 ./setSiteAvailability
 echo "Update DDM quota"
