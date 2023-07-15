@@ -23,7 +23,7 @@ from rucio.common.exception import ConfigNotFound, InvalidRSEExpression
 from setLocalAccountQuotas import setLocalUsersQuota
 
 # Set dry_run to True to test the script without updating the static usage
-dry_run = False 
+dry_run = False
 debug = False
 
 if debug:
