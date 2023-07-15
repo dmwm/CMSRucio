@@ -13,6 +13,6 @@ def setLocalUsersQuota(rclient, group_accounts, rse, quota, logger, dry_run):
                     logger.info(f"Setting quota for {local_account} from {current_quota*1e-12:.2f}TB to {quota*1e-12:.2f}TB, dry_run=True")
                 else:
                     logger.info(f"Setting quota for {local_account} from {current_quota*1e-12:.2f}TB to {quota*1e-12:.2f}TB")
-                    rclient.set_local_account_limit(account=local_account, rse=rse, bytes=quota)
+                    rclient.set_local_account_limit(account=local_account, rse=rse, bytes_=quota)
 
             break
