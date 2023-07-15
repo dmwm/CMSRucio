@@ -20,7 +20,7 @@ from requests.exceptions import ConnectionError
 
 from rucio.client import Client
 from rucio.common.exception import ConfigNotFound, InvalidRSEExpression
-from setSiteQuotas import setLocalUsersQuota
+from setLocalAccountQuotas import setLocalUsersQuota
 
 # Set dry_run to True to test the script without updating the static usage
 dry_run = False
