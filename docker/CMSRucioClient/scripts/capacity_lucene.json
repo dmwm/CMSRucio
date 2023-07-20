@@ -34,7 +34,8 @@
       "metadata.timestamp",
       "data.name",
       "data.disk_experiment_use",
-      "data.disk_local_use"
+      "data.disk_local_use",
+      "data.tape_usable"
     ]
   },
   "size": 500,
