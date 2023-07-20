@@ -70,7 +70,7 @@ try:
     if j['responses'][0]['hits']['total'] == 0 or len(j['responses'][0]['hits']['hits']) == 0:
         logger.error(f'No data found in opensearch')
         raise Exception("No data found in opensearch")
-    
+
     # Filter responses to keep records with highest (latest) metadata.timestamp
     sites = []
     for record in j['responses'][0]['hits']['hits']:
@@ -98,9 +98,9 @@ try:
     group_accounts = set(account['account'] for account in rclient.list_accounts(account_type="GROUP"))
 
     try:
-        skip_sites = [rse['rse'] for rse in rclient.list_rses(rse_expression='skip_site_capacity_update=True')]
+        skip_rses = [rse['rse'] for rse in rclient.list_rses(rse_expression='skip_site_capacity_update=True')]
     except InvalidRSEExpression as e:
-        skip_sites = []
+        skip_rses = []
 
     try:
         default_min_free_space_percentage = float(rclient.get_config(section='rses', option='default_min_free_space_percentage'))
@@ -113,12 +113,30 @@ try:
     except Exception as e:
         logger.warn(f"Unexpected value for default_min_free_space_percentage: {e}")
         default_min_free_space_percentage = DEFAULT_MIN_FREE_PERCENTAGE
-    
+
     rses = [rse['rse'] for rse in rclient.list_rses('cms_type=real&rse_type=DISK')]
+    tape_rses = [rse['rse'] for rse in rclient.list_rses('cms_type=real&rse_type=TAPE')]
+
     for site in sites :
-        if site['name'] in skip_sites or f"{site}_Disk" in skip_sites:
-            continue
-       
+        # Update static usage for Tapes
+        tape_rse = f"{site['name']}_Tape"
+        if tape_rse in tape_rses and tape_rse not in skip_rses:
+            tape_usable_bytes = site['tape_usable'] * 1e12
+
+            current_static_usage = list(rclient.get_rse_usage(rse=tape_rse, filters={'source':'static'}))
+            if len(current_static_usage) == 0:
+                current_static_usage = 0
+            else:
+                current_static_usage = current_static_usage[0]['used']
+
+            if tape_usable_bytes != current_static_usage:
+                if dry_run:
+                    logger.info(f"Updating static usage, from {current_static_usage*1e-12:.2f}TB to {tape_usable_bytes*1e-12:.2f}TB, for {tape_rse}, dry_run=True")
+                else:
+                    rclient.set_rse_usage(rse=tape_rse, source='static', used=tape_usable_bytes, free=None)
+                    logger.info(f"Updating static usage, from {current_static_usage*1e-12:.2f}TB to {tape_usable_bytes*1e-12:.2f}TB, for {tape_rse}")
+
+        # Update static usage for Disks
         if site['name'] in rses:
             rse = site['name']
         elif f"{site['name']}_Disk" in rses:
@@ -126,7 +144,11 @@ try:
         else:
             logger.debug(f"RSE {site['name']} or {site['name']}_Disk not a valid RSE")
             continue
-        
+
+        if rse in skip_rses:
+            logger.debug(f"Skipping static usage update for {rse}")
+            continue
+
         logger.debug(f"Updating static usage for {rse}")
         disk_experiment_use_bytes = site['disk_experiment_use'] * 1e12 #total space used by CMS experiment data
         disk_local_use_bytes = site['disk_local_use'] * 1e12 #additional quota for local rse_local_users account
@@ -160,7 +182,7 @@ try:
                 current_min_free_space = rse_limits['MinFreeSpace']
             else:
                 current_min_free_space = 0
-            
+
             min_free_space_bytes = int(rse_available_bytes*min_free_space_percentage*0.01)
             # Trigger update on both value and configuraton change
             if current_static_usage == rse_available_bytes and current_min_free_space == min_free_space_bytes:
@@ -170,7 +192,7 @@ try:
             if dry_run:
                 logger.info(f"Updating static usage, from {current_static_usage*1e-12:.2f}TB to {rse_available_bytes*1e-12:.2f}TB, for {rse}, dry_run=True")
                 logger.info(f"Updating MinFreeSpace, from {current_min_free_space*1e-12:.2f}TB to {min_free_space_bytes*1e-12:.2f}TB, for {rse}, dry_run=True")
-                
+
             else:
                 rclient.set_rse_usage(rse=rse, source='static', used=rse_available_bytes, free=None)
                 rclient.set_rse_limits(rse=rse, name='MinFreeSpace', value=min_free_space_bytes)
@@ -180,7 +202,7 @@ try:
             logger.error(f"Failed to update static usage for {rse}: {e}")
             traceback.print_exc()
 
-        
+
 except Exception as e:
     logger.error(f'Failed to connect to rucio: {e}')
     traceback.print_exc()
