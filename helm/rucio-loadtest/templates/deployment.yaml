@@ -47,11 +47,21 @@ spec:
           volumeMounts:
             - mountPath: /tmp/x509up0
               name: userproxy
+          {{- range $key, $val := .Values.persistentVolumes }}
+            - name: {{ $key }}
+              mountPath: {{ $val.mountPath }}
+          {{- end }}
+
       volumes:
         - name: userproxy
           secret:
             defaultMode: 400
             secretName: "{{ .Values.loadtest.proxySecret }}"
+      {{- range $key, $val := .Values.persistentVolumes }}
+        - name: {{ $key }}
+          persistentVolumeClaim:
+            claimName: {{ $val.name }}
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

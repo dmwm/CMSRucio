@@ -9,38 +9,22 @@
 
 ARG RUCIO_VERSION
 FROM rucio/rucio-daemons:release-$RUCIO_VERSION
-ARG CMS_TAG
 
 # Add CMS policy package
-RUN mkdir -p /opt/rucio/policy/cms
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/__init__.py /opt/rucio/policy/cms/
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/schema.py /opt/rucio/policy/cms/
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/permission.py /opt/rucio/policy/cms/
-RUN chmod 755 /opt/rucio/policy/cms/*
-# FIXME: Relocate cmstfc?
+RUN mkdir -p /opt/rucio/policy/CMSRucioPolicy
+COPY src/policy/CMSRucioPolicy /opt/rucio/policy/CMSRucioPolicy
 
 # Install what's needed out of dmwm/rucio/CMS branch
-ADD install_mail_templates.sh /tmp/
+ADD docker/rucio-daemons/install_mail_templates.sh /tmp/
 RUN /tmp/install_mail_templates.sh
 
 # Install globus SDK
 RUN python3 -m pip install --no-cache-dir globus-sdk pyyaml
-ADD globus-config.yml.j2 /tmp
-
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/docker/CMSRucioClient/scripts/cmstfc.py /usr/local/lib/python3.6/site-packages/cmstfc.py
-RUN chmod 755 /usr/local/lib/python3.6/site-packages/cmstfc.py
+ADD docker/rucio-daemons/globus-config.yml.j2 /tmp
 
 RUN mkdir -p /etc/grid-security && ln -s /cvmfs/grid.cern.ch/etc/grid-security/certificates /etc/grid-security/
 
-ADD cms-entrypoint.sh /
-
-# Cannot make patch directory unless there are patches
-RUN mkdir -p /patch
-
-# My patch for FNAL URL problem
-ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6097.patch /patch/6097.patch
-# Rahul patch for account name problem
-ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6102.patch /patch/6102.patch
+ADD docker/rucio-daemons/cms-entrypoint.sh /
 
 # Eric patch for cache-consumer (revisit if ever comes up again)
 
@@ -50,12 +34,16 @@ ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6102.patch /pa
 # RUN python3 -m compileall /usr/local/lib/python3.6/site-packages/rucio/core
 # ADD https://raw.githubusercontent.com/ericvaandering/rucio/fix_cache_consumer/lib/rucio/common/stomp_utils.py /usr/local/lib/python3.6/site-packages/rucio/common/stomp_utils.py
 # RUN python3 -m compileall /usr/local/lib/python3.6/site-packages/rucio/common
+# ADD https://raw.githubusercontent.com/ericvaandering/containers/add_preparer/daemons/rucio.cfg.j2 /tmp/rucio.cfg.j2
 
-#ADD https://raw.githubusercontent.com/ericvaandering/containers/add_preparer/daemons/rucio.cfg.j2 /tmp/rucio.cfg.j2
+# Cannot make patch directory unless there are patches
+RUN mkdir -p /patch
 
-# Patch for Rahul. New schema file also to legacy location
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/schema.py  /usr/local/lib/python3.6/site-packages/rucio/common/schema/cms.py
-RUN chmod 755 /usr/local/lib/python3.6/site-packages/rucio/common/schema/cms.py
-RUN python3 -m compileall /usr/local/lib/python3.6/site-packages/rucio/common/schema/
+# Eric's patch for FNAL URL problem
+# Merged for Rucio 32
+ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6097.patch /patch/6097.patch
+
+# Patch for auto approve plugin rucio/pull/6215
+ADD https://raw.githubusercontent.com/dynamic-entropy/rucio/b55a1d62e39565ac0a220b64f42530db96cb468f/0001-Policies-Adding-plugin-hook-for-auto-approval-flow.patch /patch/6203.patch 
 
 ENTRYPOINT ["/cms-entrypoint.sh"]

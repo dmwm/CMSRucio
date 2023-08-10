@@ -32,18 +32,12 @@
   "_source": {
     "includes": [
       "metadata.timestamp",
-      "metadata.kafka_timestamp",
       "data.name",
-      "data.disk_pledge",
-      "data.disk_usable",
       "data.disk_experiment_use",
-      "data.tape_pledge",
+      "data.disk_local_use",
       "data.tape_usable"
     ]
   },
-  "size": 10000,
-  "search_after": [ 0 ],
-  "sort": [
-    { "metadata.timestamp": "asc" }
-  ]
+  "size": 500,
+  "sort": [{ "metadata.timestamp": "desc" }]
 }

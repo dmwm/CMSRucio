@@ -35,7 +35,10 @@ fi
 ./setRucioFromGitlab --type test
 ./setRucioFromGitlab --type temp
 
-echo "Setting quotas"
-./setSiteQuotas
+echo "Set site capacity"
+./setSiteCapacity
+
 echo "Setting availability"
 ./setSiteAvailability
+echo "Update DDM quota"
+./updateDDMQuota

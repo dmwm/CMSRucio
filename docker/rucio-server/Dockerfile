@@ -11,23 +11,11 @@ ARG RUCIO_VERSION
 
 FROM rucio/rucio-server:release-$RUCIO_VERSION
 
-ARG CMS_TAG
-
 # Add CMS policy package
-RUN mkdir -p /opt/rucio/policy/cms
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/__init__.py /opt/rucio/policy/cms/
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/schema.py /opt/rucio/policy/cms/
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/permission.py /opt/rucio/policy/cms/
-RUN chmod 755 /opt/rucio/policy/cms/*
-# FIXME: Relocate cmstfc?
-
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/docker/CMSRucioClient/scripts/cmstfc.py  /usr/local/lib/python3.6/site-packages/cmstfc.py
-
-RUN chmod 755 /usr/local/lib/python3.6/site-packages/cmstfc.py
-
+RUN mkdir -p /opt/rucio/policy/CMSRucioPolicy
+COPY src/policy/CMSRucioPolicy/ /opt/rucio/policy/CMSRucioPolicy/
 
 # FIXME: Probably don't need these anymore either
-
 RUN yum -y install http://linuxsoft.cern.ch/wlcg/centos7/x86_64/wlcg-repo-1.0.0-1.el7.noarch.rpm && \
     yum clean all && \
     rm -rf /var/cache/yum
@@ -36,20 +24,12 @@ RUN yum update  -y && \
     yum clean all && \
     rm -rf /var/cache/yum
 
-# We need to install all the certificates and set up the revocation list.
-# This is necessary for Go to be able to access the auth server with X509
-
-#RUN yum -y install ca-policy-egi-core ca-certificates.noarch fetch-crl cronie psmisc && \
-#    yum clean all && \
-#    rm -rf /var/cache/yum
-
 RUN mkdir -p /etc/grid-security && ln -s /cvmfs/grid.cern.ch/etc/grid-security/certificates /etc/grid-security/
 ENV RUCIO_CA_PATH="/cvmfs/grid.cern.ch/etc/grid-security/certificates"
-ADD cms-entrypoint.sh /
-#RUN echo "32 */6 * * * root ! /usr/sbin/fetch-crl -q -r 360 ; killall -HUP httpd" > /etc/cron.d/fetch-crl-docker
+ADD docker/rucio-server/cms-entrypoint.sh /
 
 # Install what's needed out of dmwm/rucio/CMS branch
-ADD install_mail_templates.sh /tmp/
+ADD docker/rucio-server/install_mail_templates.sh /tmp/
 RUN /tmp/install_mail_templates.sh
 
 # Might get recreated if apache was upgraded
@@ -58,14 +38,11 @@ RUN rm -f /etc/httpd/conf.d/welcome.conf /etc/httpd/conf.d/userdir.conf /etc/htt
 # Cannot make patch directory unless there are patches
 RUN mkdir -p /patch
 
-# My patch for FNAL URL problem
+# Eric's patch for FNAL URL problem
+# Merged for Rucio 32
 ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6097.patch /patch/6097.patch
-# Rahul patch for account name problem
-ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6102.patch /patch/6102.patch
 
-# Patch for Rahul. New schema file also to legacy location
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/schema.py  /usr/local/lib/python3.6/site-packages/rucio/common/schema/cms.py
-RUN chmod 755 /usr/local/lib/python3.6/site-packages/rucio/common/schema/cms.py
-RUN python3 -m compileall /usr/local/lib/python3.6/site-packages/rucio/common/schema/
+# Patch for auto approve plugin rucio/pull/6215
+ADD https://raw.githubusercontent.com/dynamic-entropy/rucio/b55a1d62e39565ac0a220b64f42530db96cb468f/0001-Policies-Adding-plugin-hook-for-auto-approval-flow.patch /patch/6203.patch 
 
 ENTRYPOINT ["/cms-entrypoint.sh"]
