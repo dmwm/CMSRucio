@@ -14,7 +14,7 @@ data:
 {{- end }}
         scanner:
           recursion:      1
-          nworkers:        8
+          nworkers:       3
           timeout:        300
 {{- if  (.Values.consistency.filter) }}
           filter: {{ .Values.consistency.filter }}
