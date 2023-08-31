@@ -49,13 +49,20 @@ RUN yum install -y xrootd-libs xrootd-client\
 RUN rpm -i https://github.com/dshearer/jobber/releases/download/v1.4.0/jobber-1.4.0-1.el7.x86_64.rpm
 
 # Python and libs
-RUN yum install -y python3 python3-pip git \
-    && yum clean all \
-    && rm -rf /var/cache/yum
+WORKDIR /root
+RUN curl -o Miniconda3-latest-Linux-x86_64.sh \
+    https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
+    && mkdir /root/.conda \
+    && bash Miniconda3-latest-Linux-x86_64.sh -b \
+    && rm -f Miniconda3-latest-Linux-x86_64.sh \
+    && echo PATH="/root/miniconda3/bin":$PATH >> .bashrc 
+
+ENV PATH=/root/miniconda3/bin:${PATH}
 
 RUN pip3 install --upgrade pip
 RUN pip3 install --upgrade setuptools
-RUN pip3 --no-cache-dir install SQLAlchemy pyyaml pythreader cx_Oracle j2cli 
+RUN conda install -c anaconda cx_oracle
+RUN pip3 --no-cache-dir install SQLAlchemy pyyaml pythreader j2cli 
 RUN pip3 install rucio-clients rucio-consistency
 
 RUN mkdir -p /consistency
