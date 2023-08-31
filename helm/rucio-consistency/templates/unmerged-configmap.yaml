@@ -20,7 +20,7 @@ data:
           filter:     "/store/unmerged/"
         scanner:
           recursion:       1
-          nworkers:        3
+          nworkers:        5
           timeout:        180
 {{- if  (.Values.consistency.filter) }}
           filter: {{ .Values.consistency.filter }}
