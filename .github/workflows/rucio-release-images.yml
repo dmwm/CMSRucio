@@ -11,7 +11,7 @@ jobs:
     name: Build and Push CMS Rucio Release Images
     strategy:
       matrix:
-        image: [rucio-probes, rucio-daemons, rucio-server]
+        image: [rucio-probes, rucio-daemons, rucio-server, rucio-ui]
       fail-fast: False
 
     steps:
@@ -35,8 +35,7 @@ jobs:
 
       - name: Build the Docker Image
         run: |
-          cd docker/${{ matrix.image }} && \
-          buildah build --build-arg RUCIO_VERSION=${{ env.rucio_version }} --tag registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/${{ matrix.image }}:${{ env.tag }} .
+          buildah build --build-arg RUCIO_VERSION=${{ env.rucio_version }} --file docker/${{ matrix.image }}/Dockerfile --tag registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/${{ matrix.image }}:${{ env.tag }} .
 
       - name: Push the Docker Image
         run: |
