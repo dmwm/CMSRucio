@@ -11,18 +11,13 @@ ARG RUCIO_VERSION
 
 FROM rucio/rucio-server:release-$RUCIO_VERSION
 
-# Add CMS policy package
-RUN mkdir -p /opt/rucio/policy/CMSRucioPolicy
-COPY src/policy/CMSRucioPolicy/ /opt/rucio/policy/CMSRucioPolicy/
-
-# FIXME: Probably don't need these anymore either
-RUN yum -y install http://linuxsoft.cern.ch/wlcg/centos7/x86_64/wlcg-repo-1.0.0-1.el7.noarch.rpm && \
-    yum clean all && \
-    rm -rf /var/cache/yum
-ADD http://repository.egi.eu/sw/production/cas/1/current/repo-files/EGI-trustanchors.repo /etc/yum.repos.d/egi.repo
 RUN yum update  -y && \
     yum clean all && \
     rm -rf /var/cache/yum
+
+# Add CMS policy package
+RUN mkdir -p /opt/rucio/policy/CMSRucioPolicy
+COPY src/policy/CMSRucioPolicy/ /opt/rucio/policy/CMSRucioPolicy/
 
 RUN mkdir -p /etc/grid-security && ln -s /cvmfs/grid.cern.ch/etc/grid-security/certificates /etc/grid-security/
 ENV RUCIO_CA_PATH="/cvmfs/grid.cern.ch/etc/grid-security/certificates"
