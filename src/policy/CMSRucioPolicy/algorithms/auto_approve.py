@@ -1,6 +1,8 @@
 """
 Auto approve algorithm for CMS Rucio policy
 """
+import logging
+from sqlalchemy.sql import func
 from configparser import NoOptionError, NoSectionError
 
 
@@ -51,6 +53,7 @@ def global_approval(did, rule_attributes, session):
     from rucio.core.rule import list_rules
     from rucio.core.did import list_files
     from rucio.core.rse_expression_parser import parse_expression
+    from rucio.db.sqla import models
 
     def _get_rules_size(rules):
         rule_size = 0
@@ -62,12 +65,15 @@ def global_approval(did, rule_attributes, session):
         return rule_size
 
     account = rule_attributes['account']
-
+    try:
+        global_usage_all_accounts = float(config_get('rules', 'global_usage_all_accounts', raise_exception=True, default=1e16))
+    except (NoOptionError, NoSectionError, RuntimeError):
+        global_usage_all_accounts = 1e16
 
     try:
-        global_usage_threshold = float(config_get('rules', 'global_usage_threshold', raise_exception=True, default=1e15))
+        global_usage_per_account = float(config_get('rules', 'global_usage_per_account', raise_exception=True, default=1e15))
     except (NoOptionError, NoSectionError, RuntimeError):
-        global_usage_threshold = 1e15
+        global_usage_per_account = 1e15
 
     try:
         rule_lifetime_threshold = int(config_get('rules', 'rule_lifetime_threshold', raise_exception=True, default=2592000))
@@ -93,7 +99,7 @@ def global_approval(did, rule_attributes, session):
     if rule_attributes['locked']:
         return False
 
-    # Check if the rule lifetime is less than a month
+    # Check if the rule lifetime is less than defined threshold
     if rule_attributes['lifetime'] > rule_lifetime_threshold:
         return False
 
@@ -106,15 +112,30 @@ def global_approval(did, rule_attributes, session):
     rse_expression = rule_attributes['rse_expression']
     rses = parse_expression(rse_expression, filter_={'availability_write': True}, session=session)
     if len(rses) == 1:
-        this_rse_autoapprove_rules = list_rules(filters={'account': account, 'activity': auto_approve_activity, 'rse_expression': rse_expression}, session=session)
+        this_rse_autoapprove_rules = list_rules(
+            filters={'account': account, 'activity': auto_approve_activity, 'rse_expression': rse_expression},
+            session=session)
         this_rse_autoapprove_usage = _get_rules_size(this_rse_autoapprove_rules)
         if this_rse_autoapprove_usage + size_of_rule > single_rse_rule_size_threshold:
+            logging.warning('Single RSE usage exceeded for auto approve rules for account %s and RSE %s', account, rse_expression)
             return False
 
     # Check global usage of the account under this activity
     all_auto_approve_rules_by_account = list_rules(filters={'account': account, 'activity': auto_approve_activity}, session=session)
     global_auto_approve_usage_by_account = _get_rules_size(all_auto_approve_rules_by_account)
-    if global_auto_approve_usage_by_account + size_of_rule > global_usage_threshold:
+    if global_auto_approve_usage_by_account + size_of_rule > global_usage_per_account:
+        logging.warning('Global usage exceeded for auto approve rules for account %s', account)
         return False
 
+    # Check global usage under the AutoApprove category by all accounts
+    query = session.query(
+        func.sum(models.ReplicaLock.bytes)).join(
+        models.ReplicationRule, models.ReplicaLock.rule_id == models.ReplicationRule.id).filter(
+        models.ReplicationRule.activity == 'User AutoApprove')
+    current_auto_approve_usage = query.scalar()
+    if current_auto_approve_usage is None:
+        current_auto_approve_usage = 0
+    if current_auto_approve_usage + size_of_rule > global_usage_all_accounts:
+        logging.warning('Global usage exceeded for auto approve rules')
+        return False
     return True
