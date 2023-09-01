@@ -60,6 +60,7 @@ def map_cric_users(country, option, dry_run):
         institute_country = user['institute_country']
         institute = user['institute']
         dns = {user['dn']}
+        dns.add(rfc2253dn(user['dn']))
         email = user['email']
         account_type = "USER"
         policy = ''
@@ -83,6 +84,7 @@ def map_cric_users(country, option, dry_run):
             for profile in profiles:
                 if 'dn' in profile:
                     dns.add(profile['dn'])
+                    dns.add(rfc2253dn(profile['dn']))
         except KeyError:
             continue
 
@@ -159,6 +161,21 @@ def usage():
     print("\t-h, --help")
     print("\t-o, --option=\tset-new-only|reset-all|delete-all")
     print("\t-d, --dry_run=\tt|f")
+
+
+def rfc2253dn(legacy_dn):
+    """
+    Convert a slash separated DN to a comma separated format
+    :param legacy_dn:
+    :return:
+    """
+    if not legacy_dn.startswith('/'):  # No op for things which aren't DNs
+        return legacy_dn
+    legacy_dn = legacy_dn.replace(',', r'\,')
+    parts = legacy_dn.split('/')[1:]  # Get rid of leading slash
+    new_dn = ','.join(parts)
+
+    return new_dn
 
 
 def main():

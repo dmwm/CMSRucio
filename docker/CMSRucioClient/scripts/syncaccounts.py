@@ -111,7 +111,7 @@ class SyncAccounts(object):
                                        authtype=self.identity['type'], email=None)
                 logging.debug('added %s for account %s', self.identity, account)
             except Duplicate:  # Sometimes idmissing doesn't seem to work
-                logging.warn('identity %s for account %s existed', self.identity, account)
+                logging.warning('identity %s for account %s existed', self.identity, account)
                 return False
         return idmissing
 
