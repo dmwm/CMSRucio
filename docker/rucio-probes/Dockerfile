@@ -11,13 +11,13 @@ ARG RUCIO_VERSION
 FROM rucio/probes:$RUCIO_VERSION
 
 # For now CMS versions use python3 explicitly. Can be removed when main container goes to python3
-RUN ln -s /usr/bin/python3 /usr/local/bin/python
+#RUN ln -s /usr/bin/python3 /usr/local/bin/python
 
 # Add CMS policy package
 RUN mkdir -p /opt/rucio/policy/CMSRucioPolicy
 COPY src/policy/CMSRucioPolicy /opt/rucio/policy/CMSRucioPolicy
 # Make it search the policy directory. Needs a change for python upgrades
-RUN echo "/opt/rucio/policy" > /usr/local/lib/python3.6/site-packages/policy.pth
+RUN echo "/opt/rucio/policy" > /usr/local/lib/python3.9/site-packages/policy.pth
 
 # Temporary additions
 

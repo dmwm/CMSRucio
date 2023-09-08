@@ -10,10 +10,6 @@
 ARG RUCIO_VERSION
 FROM rucio/rucio-ui:release-$RUCIO_VERSION
 
-RUN yum update  -y \
-    && yum clean all \
-    && rm -rf /var/cache/yum
-
 # Add CMS policy package
 RUN mkdir -p /opt/rucio/policy/CMSRucioPolicy
 COPY src/policy/CMSRucioPolicy /opt/rucio/policy/CMSRucioPolicy
@@ -28,12 +24,8 @@ ENV RUCIO_CA_PATH="/cvmfs/grid.cern.ch/etc/grid-security/certificates"
 # Cannot make patch directory unless there are patches
 RUN mkdir -p /patch
 
-# Eric's patch for FNAL URL problem
-# Merged for Rucio 32
-ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6097.patch /patch/6097.patch
-
 # Patch for auto approve plugin rucio/pull/6215
-ADD https://raw.githubusercontent.com/dynamic-entropy/rucio/b55a1d62e39565ac0a220b64f42530db96cb468f/0001-Policies-Adding-plugin-hook-for-auto-approval-flow.patch /patch/6203.patch 
+ADD https://github.com/rucio/rucio/pull/6215.patch /patch/6215.patch
 
 ADD docker/rucio-ui/cms-entrypoint.sh /
 ENTRYPOINT ["/cms-entrypoint.sh"]
