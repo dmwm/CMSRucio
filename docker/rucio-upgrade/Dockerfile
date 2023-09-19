@@ -11,19 +11,17 @@ ARG RUCIO_VERSION
 
 FROM rucio/rucio-daemons:release-$RUCIO_VERSION
 
-RUN yum install -y git \
-    nano openssh-client \
-    && yum clean all \
+RUN yum clean all \
     && rm -rf /var/cache/yum
 
+# Add CMS policy package
+RUN mkdir -p /opt/rucio/policy/CMSRucioPolicy
+COPY src/policy/CMSRucioPolicy/ /opt/rucio/policy/CMSRucioPolicy/
 
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/docker/CMSRucioClient/scripts/cmstfc.py  /usr/lib/python2.7/site-packages/cmstfc.py
-RUN chmod 755 /usr/lib/python2.7/site-packages/cmstfc.py
-
-ADD upgrade_image_start.sh /tmp
+ADD docker/rucio-upgrade/upgrade_image_start.sh /tmp
 RUN chmod 755 /tmp/upgrade_image_start.sh
 
-ADD alembic.ini.j2 /tmp
+ADD docker/rucio-upgrade/alembic.ini.j2 /tmp
 
 ENTRYPOINT ["/tmp/upgrade_image_start.sh"]
 
