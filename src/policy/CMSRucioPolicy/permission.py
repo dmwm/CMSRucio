@@ -190,18 +190,20 @@ def perm_add_rule(issuer, kwargs, *, session: "Optional[Session]" = None):
             rse_attr = list_rse_attributes(rse_id=rse['id'])
             if rse_attr.get('requires_approval', False):
                 return False
-            
+
     if kwargs["activity"] == "User AutoApprove":
-    # prevent rule creation under 'User AutoApprove' for rules without ask_approval
+        # prevent rule creation under 'User AutoApprove' for rules without ask_approval
         if not kwargs["ask_approval"]:
             return False
-    # prevent rule creation to tape under the 'User AutoApprove' activity
-        for rse in rses:
-            rse_details = get_rse(rse_id=rse['id'], session=session)
-            rse_type = rse_details.get('rse_type', None)
-            if rse_type == "TAPE":
-                return False
-    
+    # prevent rule creation to tape and Tier3 and Tier0 under the 'User AutoApprove' activity
+        rule_rses = {rse['rse'] for rse in rses}
+        t3_rses = {rse['rse'] for rse in parse_expression("tier=3|tier=0", filter_={'vo': issuer.vo}, session=session)}
+        tape_rses = {rse['rse'] for rse in parse_expression(
+            "rse_type=TAPE", filter_={'vo': issuer.vo}, session=session)}
+
+        if rule_rses.intersection(t3_rses) or rule_rses.intersection(tape_rses):
+            return False
+
     # Anyone can use _Temp RSEs if a lifetime is set and under a month
     all_temp = True
     for rse in rses:
@@ -331,7 +333,10 @@ def perm_get_auth_token_user_pass(issuer, kwargs, *, session: "Optional[Session]
     :param session: The DB session to use
     :returns: True if account is allowed, otherwise False
     """
-    if exist_identity_account(identity=kwargs['username'], type_=IdentityType.USERPASS, account=kwargs['account'], session=session):
+    if exist_identity_account(
+            identity=kwargs['username'],
+            type_=IdentityType.USERPASS, account=kwargs['account'],
+            session=session):
         return True
     return False
 
@@ -345,7 +350,10 @@ def perm_get_auth_token_gss(issuer, kwargs, *, session: "Optional[Session]" = No
     :param session: The DB session to use
     :returns: True if account is allowed, otherwise False
     """
-    if exist_identity_account(identity=kwargs['gsscred'], type_=IdentityType.GSS, account=kwargs['account'], session=session):
+    if exist_identity_account(
+            identity=kwargs['gsscred'],
+            type_=IdentityType.GSS, account=kwargs['account'],
+            session=session):
         return True
     return False
 
@@ -359,7 +367,10 @@ def perm_get_auth_token_x509(issuer, kwargs, *, session: "Optional[Session]" = N
     :param session: The DB session to use
     :returns: True if account is allowed, otherwise False
     """
-    if exist_identity_account(identity=kwargs['dn'], type_=IdentityType.X509, account=kwargs['account'], session=session):
+    if exist_identity_account(
+            identity=kwargs['dn'],
+            type_=IdentityType.X509, account=kwargs['account'],
+            session=session):
         return True
     return False
 
@@ -373,7 +384,10 @@ def perm_get_auth_token_saml(issuer, kwargs, *, session: "Optional[Session]" = N
     :param session: The DB session to use
     :returns: True if account is allowed, otherwise False
     """
-    if exist_identity_account(identity=kwargs['saml_nameid'], type_=IdentityType.SAML, account=kwargs['account'], session=session):
+    if exist_identity_account(
+            identity=kwargs['saml_nameid'],
+            type_=IdentityType.SAML, account=kwargs['account'],
+            session=session):
         return True
     return False
 
@@ -978,7 +992,8 @@ def perm_get_local_account_usage(issuer, kwargs, *, session: "Optional[Session]"
     :param session: The DB session to use
     :returns: True if account is allowed, otherwise False
     """
-    if _is_root(issuer) or has_account_attribute(account=issuer, key='admin', session=session) or kwargs.get('account') == issuer:
+    if _is_root(issuer) or has_account_attribute(
+            account=issuer, key='admin', session=session) or kwargs.get('account') == issuer:
         return True
 
     return False
