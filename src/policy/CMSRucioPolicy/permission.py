@@ -13,9 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from configparser import NoOptionError, NoSectionError
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 import rucio.core.scope
+from rucio.common.config import config_get
 from rucio.core.account import has_account_attribute
 from rucio.core.identity import exist_identity_account
 from rucio.core.permission.generic import perm_get_global_account_usage
@@ -558,6 +561,39 @@ def perm_update_rule(issuer, kwargs, *, session: "Optional[Session]" = None):
     """
     if _is_root(issuer) or has_account_attribute(account=issuer, key='admin', session=session):
         return True
+
+    rule = get_rule(kwargs['rule_id'])
+    if issuer == rule.get('account'):
+        # Allow users to update the following rule options when rule is sans ask-approval
+        allowed_options = ['lifetime', 'state', 'comment', 'purge_replicas',
+                           'cancel_requests', 'source_replica_expression', 'child_rule_id']
+        update_options = kwargs.get('options', {})
+        for key in update_options:
+            if key not in allowed_options:
+                return False
+        if rule["ignore_account_limit"] is False:
+            return True
+
+        if rule['activity'] == 'User AutoApprove' and "lifetime" not in update_options:
+            return True
+        if rule['activity'] == 'User AutoApprove':
+            try:
+                # Default single extension duration - 1 month
+                extended_lifetime_limit = config_get("rules", "extended_lifetime_limit")
+                # Total lifetime including all extensions cannot exceed 1 year
+                single_extension_limit = config_get("rules", "single_extension_limit")
+            except (NoOptionError, NoSectionError):
+                extended_lifetime_limit = 31536000
+                single_extension_limit = 2592000
+
+            new_lifetime = update_options.get("lifetime", 0)
+            rule_created_at = rule['created_at']
+            current_time = datetime.utcnow()
+            current_lifetime = current_time - rule_created_at
+
+            if new_lifetime < single_extension_limit:
+                if current_lifetime.total_seconds() + new_lifetime < extended_lifetime_limit:
+                    return True
     return False
 
 
