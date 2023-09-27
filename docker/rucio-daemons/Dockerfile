@@ -22,7 +22,7 @@ RUN /tmp/install_mail_templates.sh
 RUN python3 -m pip install --no-cache-dir globus-sdk pyyaml
 ADD docker/rucio-daemons/globus-config.yml.j2 /tmp
 
-RUN mkdir -p /etc/grid-security && ln -s /cvmfs/grid.cern.ch/etc/grid-security/certificates /etc/grid-security/
+RUN rmdir /etc/grid-security/certificates && ln -s /cvmfs/grid.cern.ch/etc/grid-security/certificates /etc/grid-security/certificates
 
 ADD docker/rucio-daemons/cms-entrypoint.sh /
 
@@ -39,11 +39,7 @@ ADD docker/rucio-daemons/cms-entrypoint.sh /
 # Cannot make patch directory unless there are patches
 RUN mkdir -p /patch
 
-# Eric's patch for FNAL URL problem
-# Merged for Rucio 32
-ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6097.patch /patch/6097.patch
-
 # Patch for auto approve plugin rucio/pull/6215
-ADD https://raw.githubusercontent.com/dynamic-entropy/rucio/b55a1d62e39565ac0a220b64f42530db96cb468f/0001-Policies-Adding-plugin-hook-for-auto-approval-flow.patch /patch/6203.patch 
+ADD https://github.com/rucio/rucio/pull/6215.patch /patch/6215.patch
 
 ENTRYPOINT ["/cms-entrypoint.sh"]
