@@ -1,20 +1,10 @@
 #! /usr/bin/env python3
 
+import re
+
 """
 LFN-to-path algorithms for TFC
 """
-
-from __future__ import print_function
-
-import re
-
-REGISTER = True
-
-try:
-    from rucio.rse.protocols.protocol import RSEDeterministicTranslation
-except ImportError:
-    REGISTER = False
-
 MAX_CHAIN_DEPTH = 5
 
 
@@ -83,9 +73,6 @@ def tfc_lfn2pfn(lfn, tfc, proto, depth=0):
 
     raise ValueError("lfn %s with proto %s cannot be matched by tfc %s" % (lfn, proto, tfc))
 
-
-if REGISTER:
-    RSEDeterministicTranslation.register(cmstfc)
 
 if __name__ == '__main__':
 
@@ -159,7 +146,6 @@ if __name__ == '__main__':
                        'prefix': '/',
                        'scheme': 'srm'}
 
-
     def test_tfc_mapping(name, proto_attrs, pfn, scope="cms"):
         """
         Unit test for lfn to pfn mapping
@@ -170,7 +156,6 @@ if __name__ == '__main__':
             print("%s:%s -> %s" % (scope, name, pfn))
         else:
             print("FAILURE: %s:%s -> %s (expected %s)" % (scope, name, mapped_pfn, pfn))
-
 
     test_tfc_mapping(
         "/store/some//path//file.root",

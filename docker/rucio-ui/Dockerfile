@@ -9,41 +9,12 @@
 
 ARG RUCIO_VERSION
 FROM rucio/rucio-ui:release-$RUCIO_VERSION
-ARG CMS_TAG
 
 # Add CMS policy package
-RUN mkdir -p /opt/rucio/policy/cms
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/__init__.py /opt/rucio/policy/cms/
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/schema.py /opt/rucio/policy/cms/
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/src/policy/permission.py /opt/rucio/policy/cms/
-RUN chmod 755 /opt/rucio/policy/cms/*
-# FIXME: Relocate cmstfc?
-
-# FIXME: Probably don't need this anymore
-RUN yum -y install http://linuxsoft.cern.ch/wlcg/centos7/x86_64/wlcg-repo-1.0.0-1.el7.noarch.rpm \
-    && yum clean all \
-    && rm -rf /var/cache/yum
-
-ADD http://repository.egi.eu/sw/production/cas/1/current/repo-files/EGI-trustanchors.repo /etc/yum.repos.d/egi.repo
-RUN yum update  -y \
-    && yum clean all \
-    && rm -rf /var/cache/yum
-
-# We need to install all the certificates and set up the revocation list.
-# This is necessary for Go to be able to access the auth server with X509
-
-#RUN yum -y install ca-policy-egi-core \
-#    && yum clean all \
-#    && rm -rf /var/cache/yum
-#RUN yum -y install ca-certificates.noarch   \
-#    && yum clean all \
-#    && rm -rf /var/cache/yum
+RUN mkdir -p /opt/rucio/policy/CMSRucioPolicy
+COPY src/policy/CMSRucioPolicy /opt/rucio/policy/CMSRucioPolicy
 
 RUN mkdir -p /etc/grid-security && ln -s /cvmfs/grid.cern.ch/etc/grid-security/certificates /etc/grid-security/
-
-ADD https://raw.githubusercontent.com/dmwm/CMSRucio/master/docker/CMSRucioClient/scripts/cmstfc.py  /usr/local/lib/python3.6/site-packages/cmstfc.py
-
-RUN chmod 755 /usr/local/lib/python3.6/site-packages/cmstfc.py
 
 # Might get recreated if apache was upgraded
 RUN rm -f /etc/httpd/conf.d/welcome.conf /etc/httpd/conf.d/userdir.conf /etc/httpd/conf.d/ssl.conf
@@ -53,8 +24,8 @@ ENV RUCIO_CA_PATH="/cvmfs/grid.cern.ch/etc/grid-security/certificates"
 # Cannot make patch directory unless there are patches
 RUN mkdir -p /patch
 
-# My patch for FNAL URL problem
-ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6097.patch /patch/6097.patch
+# Patch for auto approve plugin rucio/pull/6215
+ADD https://github.com/rucio/rucio/pull/6215.patch /patch/6215.patch
 
-ADD cms-entrypoint.sh /
+ADD docker/rucio-ui/cms-entrypoint.sh /
 ENTRYPOINT ["/cms-entrypoint.sh"]

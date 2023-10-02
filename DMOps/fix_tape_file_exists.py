@@ -87,7 +87,7 @@ def run(args, client, ctx, engine, qry):
             continue
         checksum = ctx.checksum(pfn, "adler32")
         logger.debug(f"adler32 = {checksum}")
-        if checksum != row["adler32"]:
+        if int(checksum,16) != int(row["adler32"],16):
             logger.info(
                 f"Checksum mismatch for {pfn}: expected {row['adler32']} got {checksum}"
             )

@@ -1,0 +1,42 @@
+name: Rucio Release Image CI
+
+on:
+  push:
+    tags:
+      - "release-*.cms*"
+
+jobs:
+  buildx:
+    runs-on: ubuntu-latest
+    name: Build and Push CMS Rucio Release Images
+    strategy:
+      matrix:
+        image: [rucio-probes, rucio-daemons, rucio-server, rucio-ui]
+      fail-fast: False
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Get git tag name
+        id: gittag
+        run: echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_ENV"
+
+      - name: Get rucio version
+        id: rucioversion
+        run: echo "rucio_version=$( echo ${{ env.tag }} |  grep -Eo '[0-9]*\.?[0-9]+\.[0-9]+')" >> "$GITHUB_ENV"
+
+      - name: Login to CERN Harbour
+        uses: redhat-actions/podman-login@v1
+        with:
+          registry: registry.cern.ch
+          username: ${{ secrets.HARBOR_USERNAME }}
+          password: ${{ secrets.HARBOR_TOKEN }}
+
+      - name: Build the Docker Image
+        run: |
+          buildah build --build-arg RUCIO_VERSION=${{ env.rucio_version }} --file docker/${{ matrix.image }}/Dockerfile --tag registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/${{ matrix.image }}:${{ env.tag }} .
+
+      - name: Push the Docker Image
+        run: |
+          buildah push registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/${{ matrix.image }}:${{ env.tag }}

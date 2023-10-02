@@ -1,19 +1,15 @@
 #! /usr/bin/env python3
 
-
-from __future__ import absolute_import, division, print_function
-
 import io
 import json
 import os
+import requests
 import time
 
-import requests
-from rucio.client.client import Client
-from rucio.common.exception import RSENotFound
+from rucio.client import Client
 
-SKIP_SITES = ['T3_US_NERSC', 'T2_US_Caltech_Ceph', 'T2_FR_GRIF_LLR', 'T2_FR_GRIF_IRFU', 'T2_GR_Ioannina']
 QUERY_HEADER = '{"search_type":"query_then_fetch","ignore_unavailable":true,"index":["monit_prod_cmssst_*"]}'
+DRY_RUN = False
 
 with open('availability_lucene.json', 'r') as lucene_json:
     lucene = json.load(lucene_json)
@@ -32,42 +28,51 @@ j = json.loads(r.text)
 
 sites = [record['_source']['data'] for record in j['responses'][0]['hits']['hits']]
 
-rucio = Client()
+rclient = Client()
 
 available_map = {}
+skip_rses = [rse['rse'] for rse in rclient.list_rses(rse_expression='skip_site_availability_update=True')]
+all_rses = [rse['rse'] for rse in rclient.list_rses()]
 
 # Records are sorted most recent to least recent. Pick up the value for the most recent for a site
 for site in sites:
-    rse = site['name']
-    if rse in SKIP_SITES:
-        continue
-    if rse.startswith('T3_'):
-        continue  # Until we get good metrics for Tier3s
-    if rse in available_map:
-        continue
-    ssb_status = site.get('status', None)
-    if not ssb_status or ssb_status != 'enabled':
-        available_map[rse] = False
-    else:
-        available_map[rse] = True
+    site_name = site['name']
+
+    # Get the disk rse for the site
+    # Are there sites that don't have a disk rse but only a tape rse?
+    site_rses = []
+    if site_name in all_rses:
+        rse_disk = site_name
+        site_rses.append(rse_disk)
+    elif site_name + '_Disk' in all_rses:
+        rse_disk = site_name + '_Disk'
+        site_rses.append(rse_disk)
+
+    # Get the Tape rse for the site - if any
+    if site_name + '_Tape' in all_rses:
+        rse_tape = site_name + '_Tape'
+        site_rses.append(rse_tape)
+
+    for rse in site_rses:
+        if rse in skip_rses:
+            continue
+        if rse.startswith('T3_'):
+            continue  # Until we get good metrics for Tier3s
+        if rse in available_map:
+            continue
+        ssb_status = site.get('status', None)
+        if not ssb_status or ssb_status != 'enabled':
+            available_map[rse] = False
+        else:
+            available_map[rse] = True
+
+print("Skipping RSEs: %s" % skip_rses)
 
 for rse, available in available_map.items():
-    print('Setting availability for %s to %s' % (rse, available))
     try:
-        rucio.get_rse(rse)
-        rucio.update_rse(rse, {"availability_write": available, "availability_delete": available})
-        print('  Set the availability for %s to %s' % (rse, available))
-    except RSENotFound:  # This might be a Tier1, let's try _Tape and _Disk instead
-        if rse.startswith('T1_'):
-            try:
-                rucio.get_rse(rse + '_Disk')
-                rucio.update_rse(rse + '_Disk', {"availability_write": available, "availability_delete": available})
-                print('  Set the availability for %s to %s' % (rse + '_Disk', available))
-            except RSENotFound:
-                print('  Could not find %s or %s' % (rse, rse + '_Disk'))
-            try:
-                rucio.get_rse(rse + '_Tape')
-                rucio.update_rse(rse + '_Tape', {"availability_write": available, "availability_delete": available})
-                print('  Set the availability for %s to %s' % (rse + '_Tape', available))
-            except RSENotFound:
-                print('  Could not find %s or %s' % (rse, rse + '_Tape'))
+        if not DRY_RUN:
+            rclient.update_rse(rse, {"availability_write": available, "availability_delete": available})
+        print('Setting availability for %s to %s' % (rse, available))
+    except Exception as e:  # Should never be the case
+        print('Failed to update RSE %s, Error %s' % (rse, e))
+

@@ -7,14 +7,21 @@ data:
     rses:
       "*": # default
         ignore_list:
-          - /store/unmerged/logs
-          - /store/unmerged/SAM/testSRM
+            - /store/unmerged/data
+            - /store/unmerged/hidata
+            - /store/unmerged/express
+            - /store/unmerged/tier0_harvest
+            - /store/unmerged/data/logs
+            - /store/unmerged/hidata/logs
+            - /store/unmerged/express/logs
+            - /store/unmerged/logs
+            - /store/unmerged/SAM        
         preprocess:
           filter:     "/store/unmerged/"
         scanner:
-          recursion:      1
-          nworkers:        8
-          timeout:        180
+          recursion:       1
+          nworkers:        5
+          timeout:        3600
 {{- if  (.Values.consistency.filter) }}
           filter: {{ .Values.consistency.filter }}
 {{- end }}

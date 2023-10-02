@@ -10,11 +10,14 @@ export PYTHON=python3
 
 cfg_src=/config/config.yaml
 cfg_copy=/consistency/config.yaml
+cfg_copy_shared=/var/cache/consistency-dump/ce_config.yaml         # to make it available to the Monitor
 
 if [ ! -f $cfg_copy ]; then
     cp $cfg_src $cfg_copy    # to make it editable
     echo Config file $cfg_src copied to $cfg_copy
 fi
+
+cp $cfg_copy $cfg_copy_shared
 
 ./site_cmp3.sh \
   $cfg_copy \

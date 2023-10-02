@@ -57,7 +57,7 @@ class LinksMatrix(object):
             try:
                 self.rselist.append({
                     'rse': rse,
-                    'pnn': attrs['pnn'],
+                    'pnn': attrs.get('pnn'),
                     'type': attrs['cms_type'],
                     'country': attrs['country'],
                     'region': attrs.get('region', None)
@@ -129,7 +129,7 @@ class LinksMatrix(object):
         """
         Updates distances according to what is expected
         :overwrite:   overwrite distance of the links that already exist
-        :disable:     set ranking to 0 for the links that should be disabled
+        :disable:     set distance to 0 for the links that should be disabled
         :dry:         dry run
         """
 
@@ -150,44 +150,33 @@ class LinksMatrix(object):
                 if (srse in CTA_RSES and drse not in CERN_RSES) or (drse in CTA_RSES and srse not in CERN_RSES):
                     logging.info("Not setting link from %s to %s", srse, drse)
                     continue
-                    
+
                 count['checked'].append([srse, drse])
 
-                # Todo.. doublecheck I'm not reversing things
                 link = self.rcli.get_distance(srse, drse)
 
                 if srse in self.links and drse in self.links[srse] and self.links[srse][drse] >= 0:
                     if not link:
-                        pars = {'distance': 1, 'ranking': self.links[srse][drse]}
-
+                        pars = {'distance': self.links[srse][drse]}
                         if dry:
                             logging.info("adding link from %s to %s with %s. Dry Run", srse, drse, str(pars))
                         else:
                             self.rcli.add_distance(srse, drse, pars)
 
                         count['created'].append([srse, drse])
-
                     elif link and overwrite:
                         if dry:
                             logging.info("setting distance %s for link from %s to %s. Dry run.",
                                          self.links[srse][drse], srse, drse)
                         else:
-                            self.rcli.update_distance(srse, drse,
-                                                      {'ranking': self.links[srse][drse],
-                                                       'distance': 1
-                                                       })
-
+                            self.rcli.update_distance(srse, drse, {'distance': self.links[srse][drse]})
                         count['updated'].append([srse, drse])
 
                 elif link and disable:
                     if dry:
                         logging.info("disabling link from %s to %s. Dry run", srse, drse)
                     else:
-                        self.rcli.update_distance(srse, drse, {
-                            'ranking': None,
-                            'distance': None,
-                        })
-
+                        self.rcli.update_distance(srse, drse, {'distance': None, })
                     count['disabled'].append([srse, drse])
 
         return count

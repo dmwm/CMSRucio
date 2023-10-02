@@ -126,7 +126,7 @@ def ensure_rse_self_expression(client, rse):
 def next_available_filenumber(client, rse, filesize):
     did_search = FILENUMBER_SEARCH.format(rse=rse, filesize=filesize)
     max_fn = -1
-    for did in client.list_dids("cms", {"name": did_search}, type="file"):
+    for did in client.list_dids("cms", {"name": did_search}, did_type="file"):
         m = FILENUMBER_RE.match(did)
         if m:
             max_fn = max(max_fn, int(m.groups()[0]))
@@ -189,7 +189,7 @@ def delete_replicas(client, dest_rse, replicas):
 
 
 def update_loadtest(
-    client, source_rse, dest_rse, source_files, rule, dataset, account, activity
+    client, source_rse, dest_rse, source_files, rule, dataset, account, activity, tape_rses_require_approval
 ):
     links = client.get_distance(source_rse, dest_rse)
     if len(links) == 0 and rule is not None:
@@ -222,6 +222,8 @@ def update_loadtest(
             "grouping": "DATASET",
             "comment": DEFAULT_RULE_COMMENT,
         }
+        if dest_rse in tape_rses_require_approval:
+            rule["ask_approval"] = True
         logger.debug("Creating rule: %r" % rule)
         try:
             client.add_replication_rule(**rule)
@@ -293,6 +295,8 @@ def run(source_rse_expression, dest_rse_expression, account, activity, filesize)
     client = Client(account=account)
     uploader = UploadClient(_client=client, logger=logger)
 
+    tape_rses_require_approval = [rse['rse'] for rse in client.list_rses(rse_expression="requires_approval=True")]
+
     while ACTIVE:
         cycle_start = datetime.datetime.utcnow()
         source_rses = [item["rse"] for item in client.list_rses(source_rse_expression)]
@@ -315,40 +319,42 @@ def run(source_rse_expression, dest_rse_expression, account, activity, filesize)
                     client, uploader, source_rse, filesize, next_filenumber
                 )
                 if not success:
-                    logger.error(
-                        f"RSE {source_rse} has no source files and could not upload, skipping"
-                    )
+                    logger.error(f"RSE {source_rse} has no source files and could not upload, skipping")
                     continue
                 source_files = list(client.list_files("cms", dataset))
 
-            dest_rules = client.list_replication_rules(
-                {
-                    "scope": "cms",
-                    "name": dataset,
-                    "account": account,
-                    "activity": activity,
-                }
-            )
-            dest_rules = {
-                rule["rse_expression"]: rule
-                for rule in dest_rules
-                if rule["source_replica_expression"] == source_rse
-            }
-
+            dest_rules = {rule["rse_expression"]: rule
+                          for rule in client.list_did_rules("cms", dataset)
+                          }
             for dest_rse in dest_rses:
-                if dest_rse == source_rse:
-                    continue
                 dest_rule = dest_rules.get(dest_rse, None)
-                update_loadtest(
-                    client,
-                    source_rse,
-                    dest_rse,
-                    source_files,
-                    dest_rule,
-                    dataset,
-                    account,
-                    activity,
-                )
+                if dest_rse == source_rse:
+                    rule_attributes = {
+                        "dids": [{"scope": "cms", "name": dataset}],
+                        "copies": 1,
+                        "rse_expression": source_rse,
+                        "account": account,
+                        "activity": "Functional Test",
+                        "ignore_availability": True,
+                        "comment": "Locking loadtest replicas at source"
+                    }
+                    if dest_rse in tape_rses_require_approval:
+                        rule_attributes["ask_approval"] = True
+                    if dest_rule is None:
+                        logger.info(f"Adding new replication rule at src for rse {source_rse}")
+                        client.add_replication_rule(**rule_attributes)
+                else:
+                    update_loadtest(
+                        client,
+                        source_rse,
+                        dest_rse,
+                        source_files,
+                        dest_rule,
+                        dataset,
+                        account,
+                        activity,
+                        tape_rses_require_approval
+                    )
 
         cycle_time = (datetime.datetime.utcnow() - cycle_start).total_seconds()
         logger.info(f"Completed loadtest cycle in {cycle_time}s")

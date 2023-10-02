@@ -25,7 +25,7 @@ def myrses(account=None):
 
     for r in c.list_rses():
         attributes = c.list_rse_attributes(r['rse'])
-	if ('quota_approvers' in attributes and account in attributes['quota_approvers']) \
+	if ('site_admins' in attributes and account in attributes['site_admins']) \
 	    or ('rule_approvers' in attributes and account in attributes['rule_approvers']):
 	    rses.append(r)
 

@@ -17,10 +17,12 @@ def add_group_account_scopes(rclient, include_local_users_accounts, only_include
         scope_name = f"group.{account_name}"
         if account_name.endswith("_local_users") or account_name.endswith("_local"):
             if include_local_users_accounts:
-                desired_group_scopes.add((account_name, scope_name))
+                scope_name_short = scope_name.split("_local")[0]
+                desired_group_scopes.add((account_name, scope_name_short))
         elif only_include_accounts_with_group_suffix:
             if account_name.endswith("_group"):
-                desired_group_scopes.add((account_name, scope_name))
+                scope_name_short = scope_name.split("_group")[0]
+                desired_group_scopes.add((account_name, scope_name_short))
         else:
             desired_group_scopes.add((account_name, scope_name))
 

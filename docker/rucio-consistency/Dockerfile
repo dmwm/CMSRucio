@@ -5,7 +5,6 @@ RUN yum install -y epel-release.noarch\
     && yum clean all \
     && rm -rf /var/cache/yum
 
-
 # PKI stuff
 RUN yum install -y https://repo.opensciencegrid.org/osg/3.5/osg-3.5-el7-release-latest.rpm\
     && yum clean all \
@@ -24,10 +23,9 @@ RUN rpm -i http://mirror.grid.uchicago.edu/pub/osg/3.5/el7/release/x86_64/voms-c
     && yum clean all \
     && rm -rf /var/cache/yum
 
-RUN yum install -y osg-ca-certs\
-    && yum clean all \
-    && rm -rf /var/cache/yum
-
+RUN mkdir -p /etc/grid-security \
+    && rm -rf /etc/grid-security/certificates \
+    && ln -s /cvmfs/grid.cern.ch/etc/grid-security/certificates /etc/grid-security/
 
 # Oracle client
 RUN yum install -y libaio\
@@ -52,8 +50,8 @@ RUN yum install -y python3 python3-pip git \
 
 RUN pip3 install --upgrade pip
 RUN pip3 install --upgrade setuptools
-RUN pip3 --no-cache-dir install SQLAlchemy pyyaml pythreader cx_Oracle j2cli
-RUN pip3 install rucio-clients
+RUN pip3 --no-cache-dir install SQLAlchemy pyyaml pythreader cx_Oracle j2cli 
+RUN pip3 install rucio-clients rucio-consistency
 
 RUN mkdir -p /consistency
 RUN mkdir /root/RAL
