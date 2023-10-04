@@ -21,7 +21,6 @@ import rucio.core.scope
 from rucio.common.config import config_get
 from rucio.core.account import has_account_attribute
 from rucio.core.identity import exist_identity_account
-from rucio.core.permission.generic import perm_get_global_account_usage
 from rucio.core.rse import list_rse_attributes, get_rse
 from rucio.core.rse_expression_parser import parse_expression
 from rucio.core.rule import get_rule
@@ -1028,11 +1027,19 @@ def perm_get_local_account_usage(issuer, kwargs, *, session: "Optional[Session]"
     :param session: The DB session to use
     :returns: True if account is allowed, otherwise False
     """
-    if _is_root(issuer) or has_account_attribute(
-            account=issuer, key='admin', session=session) or kwargs.get('account') == issuer:
-        return True
+    return True
 
-    return False
+
+def perm_get_global_account_usage(issuer, kwargs, *, session: "Optional[Session]" = None):
+    """
+    Checks if an account can get the account usage of an account.
+
+    :param issuer: Account identifier which issues the command.
+    :param kwargs: List of arguments for the action.
+    :param session: The DB session to use
+    :returns: True if account is allowed, otherwise False
+    """
+    return True
 
 
 def perm_add_account_attribute(issuer, kwargs, *, session: "Optional[Session]" = None):
