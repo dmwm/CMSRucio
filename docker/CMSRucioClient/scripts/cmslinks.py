@@ -3,7 +3,8 @@
 Class definition for the distances (links) among CMS RSEs.
 And script for updating the distances.
 """
-
+import gitlab
+import base64
 import argparse
 import json
 import logging
@@ -45,6 +46,8 @@ class LinksMatrix(object):
         self._get_matrix(distance, exclude)
 
     def _get_rselist(self, rselist=None):
+        private_token = os.environ['GITLAB_TOKEN']
+        gl = gitlab.Gitlab('https://gitlab.cern.ch', private_token=private_token)
 
         self.rselist = []
 
@@ -53,11 +56,20 @@ class LinksMatrix(object):
 
         for rse in rselist:
             attrs = self.rcli.list_rse_attributes(rse=rse)
+            pnn = attrs.get('pnn')
+            if pnn is None:
+                project = gl.projects.get('SITECONF/'+rse)
+                f = project.files.get('storage.json', 'master')
+                sites = json.loads(base64.b64decode(f.content))
+                for site in sites:
+                    if site.get('rse') == rse:
+                        pnn = site.get('site')
+                        break
 
             try:
                 self.rselist.append({
                     'rse': rse,
-                    'pnn': attrs.get('pnn'),
+                    'pnn': pnn,
                     'type': attrs['cms_type'],
                     'country': attrs['country'],
                     'region': attrs.get('region', None)
