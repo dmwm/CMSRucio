@@ -46,8 +46,12 @@ class LinksMatrix(object):
         self._get_matrix(distance, exclude)
 
     def _get_rselist(self, rselist=None):
-        private_token = os.environ['GITLAB_TOKEN']
-        gl = gitlab.Gitlab('https://gitlab.cern.ch', private_token=private_token)
+        try:
+            private_token = os.environ['GITLAB_TOKEN']
+            gl = gitlab.Gitlab('https://gitlab.cern.ch', private_token=private_token)
+        except Exception as e:
+            logging.warning(f'Could not connect to gitlab. Error: {str(e)}')
+            gl = None
 
         self.rselist = []
 
@@ -58,11 +62,17 @@ class LinksMatrix(object):
             attrs = self.rcli.list_rse_attributes(rse=rse)
             pnn = attrs.get('pnn')
             if pnn is None:
-                project = gl.projects.get('SITECONF/'+rse)
-                f = project.files.get('storage.json', 'master')
-                sites = json.loads(base64.b64decode(f.content))
+                sites = []
+                try:
+                    project_rse = rse.split('_')[:3]
+                    project_rse = '_'.join(project_rse)
+                    project = gl.projects.get('SITECONF/'+project_rse)
+                    f = project.files.get('storage.json', 'master')
+                    sites = json.loads(base64.b64decode(f.content))
+                except Exception as e:
+                    logging.warning(f'No PNN for RSE {rse}. Trying to get it from gitlab. Error: {str(e)}')
                 for site in sites:
-                    if site.get('rse') == rse:
+                    if site.get('rse') in rse:
                         pnn = site.get('site')
                         break
 
