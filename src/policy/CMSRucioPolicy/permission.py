@@ -22,6 +22,8 @@ from typing import TYPE_CHECKING
 
 import rucio.core.scope
 from rucio.common.config import config_get
+from rucio.common.exception import InvalidRSEExpression
+from rucio.common.types import InternalScope
 from rucio.core.account import has_account_attribute
 from rucio.core.did import list_files
 from rucio.core.identity import exist_identity_account
@@ -188,9 +190,15 @@ def _check_for_auto_approve_eligibility(issuer, rses, kwargs, session: "Optional
         return False
     # prevent rule creation to tape and Tier3 and Tier0 under the 'User AutoApprove' activity
     rule_rses = {rse['rse'] for rse in rses}
-    t3_rses = {rse['rse'] for rse in parse_expression("tier=3|tier=0", filter_={'vo': issuer.vo}, session=session)}
-    tape_rses = {rse['rse'] for rse in parse_expression(
-        "rse_type=TAPE", filter_={'vo': issuer.vo}, session=session)}
+    try:
+        t3_rses = {rse['rse'] for rse in parse_expression("tier=3|tier=0", session=session)}
+    except InvalidRSEExpression:
+        t3_rses = set()
+
+    try:
+        tape_rses = {rse['rse'] for rse in parse_expression("rse_type=TAPE", session=session)}
+    except InvalidRSEExpression:
+        tape_rses = set()
 
     if rule_rses.intersection(t3_rses) or rule_rses.intersection(tape_rses):
         return False
@@ -237,7 +245,10 @@ def _check_for_auto_approve_eligibility(issuer, rses, kwargs, session: "Optional
         return False
 
     for did in dids:
-        size_of_rule = sum([file['bytes'] for file in list_files(did['scope'], did['name'], session=session)])
+        size_of_rule = sum([file['bytes']
+                            for file in list_files(InternalScope(did['scope']),
+                                                   did['name'],
+                                                   session=session)])
 
         # Limit single RSE rules to 50 TB
         # This does not mean that the total locks size at a RSE will be limited to 50 TB
@@ -245,14 +256,17 @@ def _check_for_auto_approve_eligibility(issuer, rses, kwargs, session: "Optional
         # This is just a simple check to avoid a single RSE rules from being too large
         rse_expression = kwargs['rse_expression']
         rses = parse_expression(rse_expression, filter_={'availability_write': True}, session=session)
+
         if len(rses) == 1:
             this_rse_autoapprove_rules = list_rules(
                 filters={'account': account, 'activity': auto_approve_activity, 'rse_expression': rse_expression},
                 session=session)
             this_rse_autoapprove_usage = _get_rule_size(this_rse_autoapprove_rules)
             if this_rse_autoapprove_usage + size_of_rule > single_rse_rule_size_threshold:
-                logging.warning('Single RSE usage exceeded for auto approve rules for account %s and RSE %s',
-                                account, rse_expression)
+                logging.warning(
+                    'Single RSE usage exceeded for auto approve rules for account %s and RSE %s, this_rse_autoapprove_usage, size_of_rule, single_rse_rule_size_threshold: %s, %s, %s',
+                    account, rse_expression, this_rse_autoapprove_usage, size_of_rule,
+                    single_rse_rule_size_threshold)
                 return False
 
         # Check global usage of the account under this activity
@@ -260,7 +274,9 @@ def _check_for_auto_approve_eligibility(issuer, rses, kwargs, session: "Optional
             filters={'account': account, 'activity': auto_approve_activity}, session=session)
         global_auto_approve_usage_by_account = _get_rule_size(all_auto_approve_rules_by_account)
         if global_auto_approve_usage_by_account + size_of_rule > global_usage_per_account:
-            logging.warning('Global usage exceeded for auto approve rules for account %s', account)
+            logging.warning(
+                'Global usage exceeded for auto approve rules for account %s, current usage, size of rule, global_usage_per_account: %s, %s, %s',
+                account, global_auto_approve_usage_by_account, size_of_rule, global_usage_per_account)
             return False
 
         # Check global usage under the AutoApprove category by all accounts
@@ -272,7 +288,9 @@ def _check_for_auto_approve_eligibility(issuer, rses, kwargs, session: "Optional
         if current_auto_approve_usage is None:
             current_auto_approve_usage = 0
         if current_auto_approve_usage + size_of_rule > global_usage_all_accounts:
-            logging.warning('Global usage exceeded for auto approve rules')
+            logging.warning('Global usage exceeded for auto approve rules, current usage, size of rule, '
+                            'global_usage_all_accounts: %s, %s, %s', current_auto_approve_usage, size_of_rule,
+                            global_usage_all_accounts)
             return False
 
     return True
