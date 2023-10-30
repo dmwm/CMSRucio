@@ -63,9 +63,9 @@ class CMSRSE:
         self.rucio_rse_type = json['type'].upper()
 
         # If we are building a _Test or _Temp instance add the special prefix
-        if cms_type=="test":
+        if cms_type == "test":
             self.rse_name = json['rse']+"_Test"
-        elif cms_type=="temp":
+        elif cms_type == "temp":
             self.rse_name = json['rse']+"_Temp"
         else:
             self.rse_name = json['rse']
@@ -85,74 +85,76 @@ class CMSRSE:
     @protocol_name. Is one of RUCIO_PROTOS = ['SRMv2', 'XRootD', 'WebDAV']
     @is_prefix. Tell use whethere we are analyzing a prefix or a rule from the TFC
     """
+
     def _parse_url(self, url, protocol_name, is_prefix):
         error = False
         prefix_regexp_list = [
-            {'type': 1, 'regexp': re.compile(r'(?P<scheme>\w+)://(?P<host>[a-zA-Z0-9\-\.]+):(?P<port>\d+)(?P<service_p>\/.*\=)(?P<prefix>.*)')},
-            {'type': 2, 'regexp': re.compile(r'(?P<scheme>\w+)://(?P<host>[a-zA-Z0-9\-\.]+):(?P<port>\d+)/(?P<prefix>.*)')},
+            {'type': 1, 'regexp': re.compile(
+                r'(?P<scheme>\w+)://(?P<host>[a-zA-Z0-9\-\.]+):(?P<port>\d+)(?P<service_p>\/.*\=)(?P<prefix>.*)')},
+            {'type': 2, 'regexp': re.compile(
+                r'(?P<scheme>\w+)://(?P<host>[a-zA-Z0-9\-\.]+):(?P<port>\d+)/(?P<prefix>.*)')},
             {'type': 3, 'regexp': re.compile(r'(?P<scheme>\w+)://(?P<host>[a-zA-Z0-9\-\.]+):(?P<port>\d+)')},
             {'type': 4, 'regexp': re.compile(r'(?P<scheme>\w+)://(?P<host>[a-zA-Z0-9\-\.]+)/(?P<prefix>.*)')},
-            {'type': 5, 'regexp': re.compile(r'(?P<scheme>\w+)://(?P<host>[a-zA-Z0-9\-\.]+)')}
-        ]
+            {'type': 5, 'regexp': re.compile(r'(?P<scheme>\w+)://(?P<host>[a-zA-Z0-9\-\.]+)')}]
 
-        regexp_type=0
+        regexp_type = 0
         for prefix_regexp in prefix_regexp_list:
             prefix_regexp_match = prefix_regexp['regexp'].match(url)
             if prefix_regexp_match:
                 regexp_type = prefix_regexp['type']
                 break
 
-        scheme   = prefix_regexp_match.group('scheme')
+        scheme = prefix_regexp_match.group('scheme')
         hostname = prefix_regexp_match.group('host')
 
         if regexp_type == 1:
-            #logging.debug("Looking for prefix with web service path")
-            port    = prefix_regexp_match.group('port')
-            prefix  = prefix_regexp_match.group('prefix')
+            # logging.debug("Looking for prefix with web service path")
+            port = prefix_regexp_match.group('port')
+            prefix = prefix_regexp_match.group('prefix')
             if is_prefix:
                 extended_attributes = {'web_service_path': prefix_regexp_match.group('service_p')}
             else:
-                extended_attributes = { 'tfc_proto': protocol_name.lower(),
-                                        'web_service_path': prefix_regexp_match.group('service_p')}
+                extended_attributes = {'tfc_proto': protocol_name.lower(),
+                                       'web_service_path': prefix_regexp_match.group('service_p')}
 
         elif regexp_type == 2:
-            #logging.debug("Looking for prefix with port")
-            port                = prefix_regexp_match.group('port')
-            prefix              = '/' + prefix_regexp_match.group('prefix')
+            # logging.debug("Looking for prefix with port")
+            port = prefix_regexp_match.group('port')
+            prefix = '/' + prefix_regexp_match.group('prefix')
             if is_prefix:
                 extended_attributes = None
             else:
                 extended_attributes = {'tfc_proto': protocol_name.lower()}
 
         elif regexp_type == 3:
-            #logging.debug("Looking for port and no prefix")
-            port                = prefix_regexp_match.group('port')
-            prefix              = '/'
+            # logging.debug("Looking for port and no prefix")
+            port = prefix_regexp_match.group('port')
+            prefix = '/'
             if is_prefix:
                 extended_attributes = None
             else:
                 extended_attributes = {'tfc_proto': protocol_name.lower()}
 
         elif regexp_type == 4:
-            #logging.debug("Looking for a prefix and no port")
-            port                = DEFAULT_PORTS[scheme]
-            prefix              = '/' + prefix_regexp_match.group('prefix')
+            # logging.debug("Looking for a prefix and no port")
+            port = DEFAULT_PORTS[scheme]
+            prefix = '/' + prefix_regexp_match.group('prefix')
             if is_prefix:
                 extended_attributes = None
             else:
                 extended_attributes = {'tfc_proto': protocol_name.lower()}
 
         elif regexp_type == 5:
-            #logging.debug("Looking for no prefix and no port")
-            port                = DEFAULT_PORTS[scheme]
-            prefix              = '/'
+            # logging.debug("Looking for no prefix and no port")
+            port = DEFAULT_PORTS[scheme]
+            prefix = '/'
             if is_prefix:
                 extended_attributes = None
             else:
                 extended_attributes = {'tfc_proto': protocol_name.lower()}
 
         else:
-            #logging.error("Cannot parse the following url: "+url)
+            # logging.error("Cannot parse the following url: "+url)
             error = True
 
         if error:
@@ -167,8 +169,8 @@ class CMSRSE:
     # Make sure that when buidling a TFC all the rules have the same schems, hostname
     # and port thant the protocol, otherwise the URL gets wrongly calculated
     def _verify_and_fix(self, rule_pfn, proto):
-        status=None
-        pfn=None
+        status = None
+        pfn = None
         rule_regex1 = re.compile(r'(?P<scheme>\w+)://(?P<host>[a-zA-Z0-9\-\.]+):(?P<port>\d+)/(?P<prefix>.*)')
         rule_regex2 = re.compile(r'(?P<scheme>\w+)://(?P<host>[a-zA-Z0-9\-\.]+)/(?P<prefix>.*)')
         rule_match1 = rule_regex1.match(rule_pfn)
@@ -180,24 +182,24 @@ class CMSRSE:
             hostname = rule_match1.group('host')
             port = rule_match1.group('port')
             if scheme == proto['scheme'] and hostname == proto['hostname'] and int(port) == proto['port']:
-                status="ok"
-                pfn=rule_pfn
+                status = "ok"
+                pfn = rule_pfn
             else:
-                status="error"
+                status = "error"
         elif rule_match2:
             # The rule has scheme and hostname but not port. Add the port from 'proto'
             scheme = rule_match2.group('scheme')
             hostname = rule_match2.group('host')
             prefix = rule_match2.group('prefix')
             if scheme == proto['scheme'] and hostname == proto['hostname']:
-                status="changed"
+                status = "changed"
                 pfn = scheme+"://"+hostname+":"+str(proto['port'])+"/"+prefix
             else:
-                status="error"
+                status = "error"
         else:
             # In this case we assume that the rule was a simple prefix
-            status="ok"
-            pfn=rule_pfn
+            status = "ok"
+            pfn = rule_pfn
 
         return status, pfn
 
@@ -279,7 +281,6 @@ class CMSRSE:
 
         return changed
 
-
     def _get_protocol(self, proto_json, protos_json):
         """
         Get the informations about the RSE protocol from creator argument or
@@ -305,7 +306,9 @@ class CMSRSE:
             logging.debug("Not adding unsupported rucio protocol: "+protocol_name)
             return algorithm, proto
         if access not in ['global-rw', 'global-ro']:
-            logging.debug("Only global-rw and global-ro access are supported. Not adding protocol: "+protocol_name+" with access: "+access)
+            logging.debug(
+                "Only global-rw and global-ro access are supported. Not adding protocol: " + protocol_name +
+                " with access: " + access)
             return algorithm, proto
 
         domains = copy.deepcopy(DOMAINS_BY_TYPE[self.cms_type])
@@ -320,7 +323,7 @@ class CMSRSE:
                             domains['wan'][method] = 0
                         else:
                             domains['wan'][method] = PROTO_WEIGHT_TPC[protocol_name]
-                            
+
                     else:
                         if access == 'global-ro' and method != 'read':
                             domains['wan'][method] = 0
@@ -337,7 +340,8 @@ class CMSRSE:
             """
 
             algorithm = 'cmstfc'
-            scheme, hostname, port, prefix, extended_attributes = self._parse_url(proto_json['prefix'], protocol_name, True)
+            scheme, hostname, port, prefix, extended_attributes = self._parse_url(
+                proto_json['prefix'], protocol_name, True)
 
             # If we cannot parse the prefix correctly, let's better not try to configure this protocol
             if scheme is None:
@@ -345,15 +349,15 @@ class CMSRSE:
                 return None, None
 
             # Make sure that prefix always ends with "/"
-            if prefix[len(prefix) -1] != "/":
-                prefix = prefix +"/"
+            if prefix[len(prefix) - 1] != "/":
+                prefix = prefix + "/"
 
             # if we are building a _Test instance add the specia prefix
             if self.cms_type == "test":
-                prefix = prefix +"store/test/rucio/"
+                prefix = prefix + "store/test/rucio/"
 
             elif self.cms_type == "temp":
-                prefix = prefix +"store/temp/"
+                prefix = prefix + "store/temp/"
 
             proto = {
                 'scheme': scheme,
@@ -410,17 +414,18 @@ class CMSRSE:
                             entry = {'proto': proto_name.lower()}
                             # make sure that the rule has the exact same scheme, hostname and port as 'proto'
                             status, rule_pfn = self._verify_and_fix(rule['pfn'], proto)
-                            if status == "ok" or status=="changed":
+                            if status == "ok" or status == "changed":
                                 entry.update({'path': rule['lfn'], 'out': rule_pfn})
                             else:
-                                logging.warning("the 'scheme' and/or 'hostname' is different in the rule: "+str(rule['pfn'])+ " than in the protocol : "+str(proto_json['protocol']))
+                                logging.warning(
+                                    "the 'scheme' and/or 'hostname' is different in the rule: " + str(rule['pfn']) +
+                                    " than in the protocol : " + str(proto_json['protocol']))
                                 entry.update({'path': rule['lfn'], 'out': rule['pfn']})
                             if 'chain' in rule:
                                 chains.add(rule['chain'])  # If it's three layers deep
                                 entry.update({'chain': rule['chain']})
                             tfc.append(entry)
                         done_chains.add(proto_name)
-
 
             # If we are building a _Test or _Temp instance
             if self.cms_type == "test" or self.cms_type == "temp":
@@ -429,7 +434,7 @@ class CMSRSE:
                 # adpat it as a prefix
                 for rule in tfc:
                     prefix_regex = re.compile(rule['path'])
-                    if self.cms_type =="test":
+                    if self.cms_type == "test":
                         prefix_match = prefix_regex.match("/store/test/rucio")
                     else:
                         prefix_match = prefix_regex.match("/store/temp")
@@ -453,18 +458,18 @@ class CMSRSE:
                     # if we're here chances are that the prefix didn't have a prefixed "scheme://"
                     logging.debug("couldn't find a scheme when calculating special prefix")
 
-                proto['prefix']= prefix
+                proto['prefix'] = prefix
                 # Get rid of the TFC since were are using a prefix but don't get rid
                 # of the web_service_path if it is there
                 if 'web_service_path' in proto['extended_attributes']:
                     aux = proto['extended_attributes']['web_service_path']
-                    proto['extended_attributes']= {'web_service_path':aux}
+                    proto['extended_attributes'] = {'web_service_path': aux}
                 else:
-                    proto['extended_attributes']= None
+                    proto['extended_attributes'] = None
             else:
                 proto['extended_attributes']['tfc'] = tfc
 
-        #pprint.pprint(proto)
+        # pprint.pprint(proto)
         return algorithm, proto
 
     def _set_protocols(self):
@@ -481,7 +486,7 @@ class CMSRSE:
         # get messed up.
         # when a protocol is removed from Rucio, the priorities of the remaining
         # protocols get adjusted so that there is a protocol with priority = 1
-        sorted_new_protocols = sorted(self.protocols, key = lambda i:i['domains']['wan']['read'])
+        sorted_new_protocols = sorted(self.protocols, key=lambda i: i['domains']['wan']['read'])
         for new_proto in sorted_new_protocols:
             protocol_unchanged = False
             for existing_proto in current_protocols:
@@ -513,7 +518,7 @@ class CMSRSE:
                     self.rcli.add_protocol(rse=self.rse_name, params=new_proto)
                     new_changes = True
 
-        #delete protocols that are not in the new list
+        # delete protocols that are not in the new list
         updated_current_protocols = self.rcli.get_protocols(rse=self.rse_name)
         updated_protocols_set = set([proto['scheme'] for proto in updated_current_protocols])
         gitlab_protocols_set = set([proto['scheme'] for proto in self.protocols])
@@ -528,7 +533,6 @@ class CMSRSE:
                         logging.info('Deleting %s from %s', proto['scheme'], self.rse_name)
                         self.rcli.delete_protocols(rse=self.rse_name, scheme=proto['scheme'])
                         new_changes = True
-
 
         return new_changes
 
@@ -571,7 +575,7 @@ class CMSRSE:
     # This can be used to see how a protocol would be set for a given RSE
     # @scheme the scheme of the protocol we want to see e.g. srm, gsiftp, davs
     def show_proto(self, scheme):
-        if scheme in ["srm","gsiftp"]:
+        if scheme in ["srm", "gsiftp"]:
             schemes = ["srm", "gsiftp"]
         elif scheme == "all":
             schemes = ["srm", "gsiftp", "root", "davs"]
