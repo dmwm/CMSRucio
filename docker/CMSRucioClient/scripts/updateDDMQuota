@@ -65,20 +65,25 @@ def normalize_ddm_quotas():
 def set_ddm_quotas():
     # Set automatically calculated ddm quotas
     for rse, ddm_quota in ddm_quotas.items():
-        client.add_rse_attribute(rse, "ddm_quota", ddm_quota)
-        print("Set ddm_quota for {} to {}".format(rse, ddm_quota))
+        if DRY_RUN:
+            print("DRY-RUN: Set ddm_quota for {} to {}".format(rse, ddm_quota))
+        else:
+            client.add_rse_attribute(rse, "ddm_quota", ddm_quota)
+            print("Set ddm_quota for {} to {}".format(rse, ddm_quota))
 
     # Set overriden ddm_quotas
     for rse, ddm_quota in overridden_ddm_quotas.items():
-        client.add_rse_attribute(rse, "ddm_quota", ddm_quota)
-        print("Override ddm_quota for {} to {}".format(rse, ddm_quota))
+        if DRY_RUN:
+            print("DRY-RUN: Override ddm_quota for {} to {}".format(rse, ddm_quota))
+        else:
+            client.add_rse_attribute(rse, "ddm_quota", ddm_quota)
+            print("Override ddm_quota for {} to {}".format(rse, ddm_quota))
 
 def main():
 
     calculate_ddm_quotas()
     normalize_ddm_quotas()
-    if not DRY_RUN:
-        set_ddm_quotas()
+    set_ddm_quotas()
 
 if __name__ == "__main__":
     main()
