@@ -73,6 +73,9 @@ class CMSRSE:
         self._get_attributes()
         self.attrs['fts'] = ','.join(json['fts'])
 
+        if json.get('loadtest', None) is not None:
+            self.attrs['loadtest'] = json['loadtest']
+
     """
     Parses either a prefix or a pfn within a rule in the storage.json
     @url is something like:
