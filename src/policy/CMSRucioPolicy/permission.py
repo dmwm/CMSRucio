@@ -200,7 +200,7 @@ def _check_for_auto_approve_eligibility(issuer, rses, kwargs, session: "Optional
     except InvalidRSEExpression:
         tape_rses = set()
 
-    if rule_rses.intersection(t3_rses) or rule_rses.intersection(tape_rses):
+    if rule_rses & t3_rses or rule_rses & tape_rses:
         return False
 
     account = kwargs['account']
@@ -220,9 +220,9 @@ def _check_for_auto_approve_eligibility(issuer, rses, kwargs, session: "Optional
 
     try:
         rule_lifetime_threshold = int(config_get('rules', 'rule_lifetime_threshold',
-                                      raise_exception=True, default=2592000))
+                                      raise_exception=True, default=30*24*3600))
     except (NoOptionError, NoSectionError, RuntimeError):
-        rule_lifetime_threshold = 2592000
+        rule_lifetime_threshold = 30*24*3600
 
     try:
         single_rse_rule_size_threshold = float(config_get(
@@ -231,7 +231,7 @@ def _check_for_auto_approve_eligibility(issuer, rses, kwargs, session: "Optional
         single_rse_rule_size_threshold = 50e12
 
     # Check if the account is banned
-    if has_account_attribute(account, 'rule_banned', session=session):
+    if has_account_attribute(account, 'auto_approve_banned', session=session):
         return False
 
     # Check if the rule is locked
@@ -327,14 +327,6 @@ def perm_add_rule(issuer, kwargs, *, session: "Optional[Session]" = None):
             all_temp = False
 
     if all_temp and kwargs['lifetime'] is not None and kwargs['lifetime'] < 31 * 24 * 60 * 60:
-        return True
-
-    # FIXME: This should be removed soon, we can move sync data to a single account, say phedex
-    # Keep while sync is running so it can make rules on all RSEs
-    if _is_root(issuer) and repr(kwargs['account']).startswith('sync_'):
-        return True
-
-    if isinstance(repr(issuer), str) and repr(issuer).startswith('sync_'):  # noqa
         return True
 
     # Non admin users can create rules without the ability to lock them
