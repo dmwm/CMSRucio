@@ -12,8 +12,8 @@ client = Client()
 
 
 DRY_RUN = False
-VERBOSE = True
-MAX_DDM_QUOTA = 100
+MAX_DDM_QUOTA = 1000
+FREE_SPACE_COEFFICIENT = 2
 
 # Adding ddm_quota attribute to all disk RSEs
 # T3s do not have the "static" usage set, they are quasi-static
@@ -26,26 +26,30 @@ def calculate_ddm_quotas():
     for rse in rses:
         rse_usage = list(client.get_rse_usage(rse))
 
-        static, rucio, unavailable, expired = 0, 0, 0, 0
+        required_fields = {"static", "rucio", "unavailable", "expired"}
+        relevant_info = {}
+
         for source in rse_usage:
-            if source["source"] == "static":
-                static = source["used"]
-            if source["source"] == "rucio":
-                rucio = source["used"]
-            if source["source"] == "unavailable":
-                unavailable = source["used"]
-            if source["source"] == "expired":
-                expired = source["used"]
+            # Assuming source and used keys exist
+            relevant_info[source["source"]] = source["used"]
+
+
+        if not required_fields.issubset(relevant_info.keys()):
+            print("Skipping {} due to lack of relevant key in rse".format(rse))
+            print("{} is not a subset of {}".format(required_fields, relevant_info.keys()))
+            continue
+
+        # ddm_quota is set proportional to percentage of (dynamic + free) space
+        # Apparently, python integers do not overflow, https://docs.python.org/3/library/exceptions.html#OverflowError
+
+        static, rucio, unavailable, expired = relevant_info["static"], relevant_info["rucio"] ,relevant_info["unavailable"], relevant_info["expired"]
 
         # Normalise
         if static == 0:
             continue  # Skip if static is 0
 
-        # ddm_quota is set proportional to percentage of (dynamic + free) space
-        # Apprantly, python integers do not overflow, https://docs.python.org/3/library/exceptions.html#OverflowError
-
-        locked = rucio - unavailable - expired
-        ddm_quota = int((max(static - locked, 0) / static) * 1e4) ** 2
+        free = static - rucio
+        ddm_quota = (((FREE_SPACE_COEFFICIENT * free + expired) / static) * 10) ** 2
 
         # Override ddm_quota for operational purposes
         rse_attributes = client.list_rse_attributes(rse)
@@ -59,7 +63,7 @@ def calculate_ddm_quotas():
 def normalize_ddm_quotas():
     weights = [int(value) for value in ddm_quotas.values()]
     for rse, weight in ddm_quotas.items():
-        ddm_quotas[rse] = int( ((int(weight) - min(weights)) / (max(weights) - min(weights)) ) * MAX_DDM_QUOTA )
+        ddm_quotas[rse] = int(((weight - min(weights)) / (max(weights) - min(weights))) * MAX_DDM_QUOTA)
 
 
 def set_ddm_quotas():
