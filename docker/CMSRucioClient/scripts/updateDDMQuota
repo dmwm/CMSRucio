@@ -14,7 +14,7 @@ client = Client()
 
 
 DRY_RUN = False
-VERBOSE = True
+VERBOSE = False
 MAKE_QUADRATIC = False
 MAX_DDM_QUOTA = 1000
 
