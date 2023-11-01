@@ -611,14 +611,14 @@ def perm_approve_rule(issuer, kwargs, *, session: "Optional[Session]" = None):
     rule = get_rule(rule_id=kwargs['rule_id'])
     rses = parse_expression(rule['rse_expression'], filter_={'vo': issuer.vo}, session=session)
 
-    # Those in rule_approvers can approve the rule
+    # For a multi-RSE expression, check if admin for all RSEs
     for rse in rses:
         rse_attr = list_rse_attributes(rse_id=rse['id'], session=session)
-        rule_approvers = rse_attr.get('rule_approvers', None)
-        if rule_approvers and issuer.external in rule_approvers.split(','):
-            return True
+        rule_approvers = rse_attr.get('rule_approvers', [])
+        if rule_approvers and issuer.external not in rule_approvers.split(','):
+            return False
 
-    return False
+    return True
 
 
 def perm_reduce_rule(issuer, kwargs, *, session: "Optional[Session]" = None):
