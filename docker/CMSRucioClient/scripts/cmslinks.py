@@ -75,14 +75,16 @@ class LinksMatrix(object):
                     if site.get('rse') in rse:
                         pnn = site.get('site')
                         break
-
-            self.rselist.append({
-                'rse': rse,
-                'pnn': pnn,
-                'type': attrs.get('cms_type'),
-                'country': attrs.get('country'),
-                'region': attrs.get('region', None)
-            })
+            try:
+                self.rselist.append({
+                    'rse': rse,
+                    'pnn': pnn,
+                    'type': attrs.get('cms_type'),
+                    'country': attrs.get('country'),
+                    'region': attrs.get('region')
+                })
+            except Exception as e:
+                logging.warning(f'Could not get attributes for RSE {rse}. Error: {str(e)}')
 
 
     def _get_matrix(self, distance, exclude):
