@@ -1,0 +1,91 @@
+from rucio.client import Client
+from argparse import ArgumentParser
+
+
+def set_davs_endpoint(client, rse):
+    # remove the srm and any other protocol that is not davs
+    protocols = client.get_protocols(rse=rse)
+    for proto in protocols:
+        if proto['scheme'] != 'davs':
+            client.delete_protocols(rse=rse, scheme=proto['scheme'], hostname=proto['hostname'], port=proto['port'])
+
+    # Then set update_from_json=False
+    client.add_rse_attribute(rse=rse, key='update_from_json', value=False)
+
+
+def create_write_rule(client, rse, scope, name):
+    # create rule to the rse
+    rse_id = client.add_replication_rule(dids=[{'scope': scope, 'name': name}],
+                                         copies=1, rse_expression=rse, grouping='DATASET', lifetime=86400,
+                                         activity='Debug',
+                                         comment="Testing tape http rest write operation")[0]
+
+    print("Rule created: %s" % rse_id)
+    print(f"https://cms-rucio-webui.cern.ch/rule?rule_id={rse_id}")
+
+
+def create_read_rule(client, rse, scope, name, read_to_rse):
+    # create rule to the rse
+    rse_id = client.add_replication_rule(dids=[{'scope': scope, 'name': name}],
+                                         copies=1, rse_expression=read_to_rse, grouping='DATASET', lifetime=86400,
+                                         activity='Debug',
+                                         comment="Testing tape http rest read operation",
+                                         source_replica_expression=rse)
+
+    print("Rule created: %s" % rse_id)
+    print(f"https://cms-rucio-webui.cern.ch/rule?rule_id={rse_id}")
+
+
+def check_davs_scheme_exists(client, rse):
+    protocols = client.get_protocols(rse=rse)
+    for proto in protocols:
+        if proto['scheme'] == 'davs':
+            return True
+    return False
+
+
+if __name__ == "__main__":
+    ap = ArgumentParser()
+
+    ap.add_argument('--rse', help='rse to test', required=True)
+    ap.add_argument('--mode', help='mode to test', required=True, choices=['write', 'read'])
+    ap.add_argument('--scope', help='scope to test', default='cms')
+    ap.add_argument(
+        '--dataset', help='dataset to test',
+        default='/StreamALCAPPSExpress/Run2023C-PPSCalMaxTracks-Express-v4/ALCARECO#fefaecd0-d3a3-4dec-85b0-7a031b2fecc6')
+    ap.add_argument('--ruleid', help='exsiting rule id to use as a read source', default=None)
+    ap.add_argument('--readtorse', help='destination rse to use for read operation', default='T2_CH_CERN')
+
+    args = ap.parse_args()
+
+    client = Client()
+    rse = args.rse
+    scope = args.scope
+    name = args.dataset
+    mode = args.mode
+    rule_id = args.ruleid
+    reard_to_rse = args.readtorse
+
+    # if chosen mode is read then require a ruleid argument
+    if args.mode == 'read':
+        try:
+            rule = client.get_replication_rule(rule_id=rule_id)
+            if rule['state'] != 'OK' or rule["rse_expression"] != rse:
+                raise Exception
+        except Exception as e:
+            print("Rule not found or not valid, please provide a valid rule id or try again in 1 hr", e)
+            exit(1)
+
+    if not check_davs_scheme_exists(client, rse):
+        print("No davs scheme exists for rse: %s" % rse)
+        print("If the configurtaion exists in storage.json, please set update_from_json=True and try again in 1 hr")
+        print("If the configuration does not exist, please add the protocol manually")
+
+    else:
+        set_davs_endpoint(client, rse)
+        if mode == 'write':
+            create_write_rule(client, rse, scope, name)
+        elif mode == 'read':
+            name = rule['name']
+            scope = rule['scope']
+            create_read_rule(client, rse, scope, name, reard_to_rse)
