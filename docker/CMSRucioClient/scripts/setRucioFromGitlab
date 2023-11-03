@@ -20,7 +20,7 @@ parser.add_argument('--type', dest='cms_type', help='type of RSE (prod-real, int
 parser.add_argument('--dryrun', dest='dry_run', action='store_true',
                     help='do not change anything in rucio, checking only')
 
-parser.add_argument('--debug', action='store_true',help="be more verbose=")
+parser.add_argument('--debug', action='store_true', help="be more verbose=")
 
 options = parser.parse_args()
 
@@ -41,7 +41,6 @@ if options.debug:
     logger.setLevel(level=logging.DEBUG)
 else:
     logger.setLevel(level=logging.INFO)
-
 
 
 client = Client()
@@ -70,9 +69,9 @@ for project in projects:
                 if rse_name in SKIP_SITES or not DO_SITES or rse_name not in DO_SITES:
                     print(' Skipping.')
                     continue
-                    
+
                 if 'fts' not in site:
-                  site.update({'fts': [ "https://fts3-cms.cern.ch:8446", "https://lcgfts3.gridpp.rl.ac.uk:8446" ] })
+                    site.update({'fts': ["https://fts3-cms.cern.ch:8446", "https://lcgfts3.gridpp.rl.ac.uk:8446"]})
                 rse = CMSRSE(site, dry=options.dry_run, cms_type=options.cms_type, deterministic=deterministic)
                 try:
                     if rse.update():
@@ -88,7 +87,7 @@ for project in projects:
                     continue
 
                 if 'fts' not in site:
-                  site.update({'fts': [ "https://fts3-cms.cern.ch:8446", "https://lcgfts3.gridpp.rl.ac.uk:8446" ] })
+                    site.update({'fts': ["https://fts3-cms.cern.ch:8446", "https://lcgfts3.gridpp.rl.ac.uk:8446"]})
                 rse = CMSRSE(site, dry=options.dry_run, cms_type=options.cms_type)
                 try:
                     if rse.update():
