@@ -1,0 +1,23 @@
+{
+    "vo": "cms",
+    "share": {
+        "aso": 0.3,
+        "data challenge": 0.5,
+        "data consolidation": 0.3,
+        "data rebalancing": 0.3,
+        "data brokering": 0.01,
+        "default": 0.1,
+        "express": 0.4,
+        "functional test": 0.2,
+        "production input": 0.6,
+        "production output": 0.6,
+        "analysis input": 0.4,
+        "analysis output": 0.4,
+        "recovery": 0.4,
+        "t0 export": 0.7,
+        "t0 tape": 0.7,
+        "user subscriptions": 0.2,
+        "user autoapprove": 0.2
+    },
+    "active": true
+}
