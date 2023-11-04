@@ -5,6 +5,9 @@ from argparse import ArgumentParser
 def set_davs_endpoint(client, rse):
     # remove the srm and any other protocol that is not davs
     protocols = client.get_protocols(rse=rse)
+
+    # in principle we do not need to delete protocols, the davs protocol gets priority
+    # but we do it to emulate the final goal of having only davs protocol
     for proto in protocols:
         if proto['scheme'] != 'davs':
             client.delete_protocols(rse=rse, scheme=proto['scheme'], hostname=proto['hostname'], port=proto['port'])
