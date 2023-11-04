@@ -49,10 +49,14 @@ if __name__ == "__main__":
 
     ap.add_argument('--rse', help='rse to test', required=True)
     ap.add_argument('--mode', help='mode to test', required=True, choices=['write', 'read'])
-    ap.add_argument('--scope', help='scope to test', default='cms')
+
+    # arguments for write mode
+    ap.add_argument('--scope', help='scope of did to use for write operation', default='cms')
     ap.add_argument(
-        '--dataset', help='dataset to test',
+        '--dataset', help='dataset name to use for write operation',
         default='/StreamALCAPPSExpress/Run2023C-PPSCalMaxTracks-Express-v4/ALCARECO#fefaecd0-d3a3-4dec-85b0-7a031b2fecc6')
+
+    # arguments for read mode
     ap.add_argument('--ruleid', help='exsiting rule id to use as a read source', default=None)
     ap.add_argument('--readtorse', help='destination rse to use for read operation', default='T2_CH_CERN')
 
@@ -60,14 +64,12 @@ if __name__ == "__main__":
 
     client = Client()
     rse = args.rse
-    scope = args.scope
-    name = args.dataset
     mode = args.mode
-    rule_id = args.ruleid
-    reard_to_rse = args.readtorse
 
     # if chosen mode is read then require a ruleid argument
     if args.mode == 'read':
+        rule_id = args.ruleid
+        reard_to_rse = args.readtorse
         try:
             rule = client.get_replication_rule(rule_id=rule_id)
             if rule['state'] != 'OK' or rule["rse_expression"] != rse:
@@ -84,6 +86,8 @@ if __name__ == "__main__":
     else:
         set_davs_endpoint(client, rse)
         if mode == 'write':
+            scope = args.scope
+            name = args.dataset
             create_write_rule(client, rse, scope, name)
         elif mode == 'read':
             name = rule['name']
