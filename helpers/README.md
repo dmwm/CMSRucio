@@ -40,3 +40,8 @@ This is to test HTTP REST API readiness for all our Tapes.
    - Keep site support in loop for any help
 
 8. Feel free to delete and suspend rules and modify the script for you convinience.
+
+9. Finally, set update_from_json to true for both the main and test _Tape RSEs.
+
+PS: Start with a small functional test transfer, the default dataset is a good example.
+If it works, then try with a larger dataset for stress testing.
