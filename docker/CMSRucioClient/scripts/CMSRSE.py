@@ -69,12 +69,12 @@ class CMSRSE:
             self.rse_name = json['rse']+"_Temp"
         else:
             self.rse_name = json['rse']
+            if json.get('loadtest', None) is not None:
+                self.attrs['loadtest'] = json['loadtest']
 
         self._get_attributes()
         self.attrs['fts'] = ','.join(json['fts'])
 
-        if json.get('loadtest', None) is not None:
-            self.attrs['loadtest'] = json['loadtest']
 
     """
     Parses either a prefix or a pfn within a rule in the storage.json
@@ -335,7 +335,7 @@ class CMSRSE:
 
         if proto_json.get('prefix', None):
             """
-            The simple case where all we have is a prefix. This just triggers the identity algorithm 
+            The simple case where all we have is a prefix. This just triggers the identity algorithm
             with some simple settings
             """
 
@@ -369,7 +369,7 @@ class CMSRSE:
                 'impl': IMPL_MAP[protocol_name]
             }
         elif proto_json.get('rules', None):
-            """ 
+            """
             Instead we have a full set of TFC rules which we need to gather
             """
             chains = {protocol_name}
