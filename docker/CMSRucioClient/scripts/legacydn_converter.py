@@ -15,7 +15,20 @@ def rfc2253dn(legacy_dn: str) -> str:
     legacy_dn = legacy_dn.replace(',', r'\,')
     parts = legacy_dn.split('/')[1:]
 
-    return ','.join(parts)
+    return ','.join(parts[::-1])
+
+
+def get_identities_to_add(identities):
+    # get only legacy dns and convert them to new dn
+    dns_to_check = [rfc2253dn(i['identity']) for i in identities if "/" in i['identity']]
+
+    identities_to_add = []
+    for identity in identities:
+        if not identity['identity'] in dns_to_check:
+            # add identity
+            identities_to_add.append(identity)
+
+    return identities_to_add
 
 
 def convert_identities(account_type: str, dry_run: bool=True):
@@ -23,11 +36,13 @@ def convert_identities(account_type: str, dry_run: bool=True):
     accounts = client.list_accounts(account_type=account_type)
 
     for account in accounts:
+        # filter only X509 identities
         identities = [i for i in client.list_identities(account["account"]) if i['type'] == 'X509']
-        for identity in identities:
+        identities_to_add = get_identities_to_add(identities)
+        for identity in identities_to_add:
             new_dn = rfc2253dn(identity["identity"])
-            print(f"old_dn: {identity['identity']} new_dn: {new_dn}")
 
+            print(f"adding identity. account: {account['account']}, new_dn: {new_dn}, type: X509, email: {identity['email']}")
             if not dry_run:
                 # add identities
                 # client.add_identity(account['account'], new_dn, 'X509', identity['email'])
