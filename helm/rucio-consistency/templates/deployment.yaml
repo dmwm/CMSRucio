@@ -96,7 +96,7 @@ spec:
       - name: proxy-volume
         secret:
           defaultMode: 420
-          secretName: daemons-rucio-x509up
+          secretName: server-rucio-x509up
       - name: jobber-config
         configMap:
           defaultMode: 0644
