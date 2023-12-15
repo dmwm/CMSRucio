@@ -48,6 +48,10 @@ ADD https://raw.githubusercontent.com/ericvaandering/probes/test_new_pusher/cms/
 ADD https://raw.githubusercontent.com/ericvaandering/probes/test_new_pusher/common/check_expired_rules /probes/common/
 ADD https://raw.githubusercontent.com/ericvaandering/probes/test_new_pusher/common/utils/common.py /probes/common/utils/
 
+# PR 122
+
+ADD https://raw.githubusercontent.com/ericvaandering/probes/675-dev-merge-and-update-rse-based-probes/cms/check_rse_files_rules /probes/cms/
+
 RUN chmod +x /probes/common/check_*
 RUN chmod +x /probes/cms/check_*
 
