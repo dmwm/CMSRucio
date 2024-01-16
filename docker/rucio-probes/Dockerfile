@@ -52,6 +52,10 @@ ADD https://raw.githubusercontent.com/ericvaandering/probes/test_new_pusher/comm
 
 ADD https://raw.githubusercontent.com/ericvaandering/probes/675-dev-merge-and-update-rse-based-probes/cms/check_rse_files_rules /probes/cms/
 
+# PR 123
+
+ADD https://raw.githubusercontent.com/Panos512/probes/20240116_combines_space_probes/cms/check_used_space /probes/cms/
+
 RUN chmod +x /probes/common/check_*
 RUN chmod +x /probes/cms/check_*
 
