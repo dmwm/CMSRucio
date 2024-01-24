@@ -30,12 +30,6 @@ ADD https://raw.githubusercontent.com/nsmith-/probes/hack_replicas/common/check_
 
 ADD https://raw.githubusercontent.com/dmielaikaite/probes/dmielaik_probes/common/check_used_space /probes/common
 
-# PR 71
-# Supplanted in PR115 ADD https://raw.githubusercontent.com/ericvaandering/probes/expiring_rules_rse_127/cms/check_expiring_rules_per_rse /probes/cms
-
-# PR 72
-ADD https://raw.githubusercontent.com/ericvaandering/probes/update_check_expected_total_number_of_files_per_rse/cms/check_expected_total_number_of_files_per_rse /probes/cms
-
 # Where from?
 # Supplanted in PR115 ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_check_expired_rules/common/check_expired_rules /probes/common
 ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_check_expired_locked/common/check_expired_locked_rules /probes/common
