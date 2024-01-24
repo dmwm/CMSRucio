@@ -22,10 +22,10 @@ RUN rm -f /etc/httpd/conf.d/welcome.conf /etc/httpd/conf.d/userdir.conf /etc/htt
 ENV RUCIO_CA_PATH="/cvmfs/grid.cern.ch/etc/grid-security/certificates"
 
 # Cannot make patch directory unless there are patches
-RUN mkdir -p /patch
+#RUN mkdir -p /patch
 
 # Patch for auto approve plugin rucio/pull/6215
-ADD https://github.com/rucio/rucio/pull/6215.patch /patch/6215.patch
+#ADD https://github.com/rucio/rucio/pull/6215.patch /patch/6215.patch
 
 ADD docker/rucio-ui/cms-entrypoint.sh /
 ENTRYPOINT ["/cms-entrypoint.sh"]

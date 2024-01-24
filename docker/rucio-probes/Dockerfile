@@ -40,15 +40,7 @@ ADD https://raw.githubusercontent.com/ericvaandering/probes/update_check_expecte
 # Supplanted in PR115 ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_check_expired_rules/common/check_expired_rules /probes/common
 ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_check_expired_locked/common/check_expired_locked_rules /probes/common
 
-# PR 115
-
-ADD https://raw.githubusercontent.com/ericvaandering/probes/test_new_pusher/cms/check_expected_total_number_of_files_per_rse /probes/cms/
-ADD https://raw.githubusercontent.com/ericvaandering/probes/test_new_pusher/cms/check_expiring_rules_per_rse /probes/cms/
-ADD https://raw.githubusercontent.com/ericvaandering/probes/test_new_pusher/cms/check_report_used_space /probes/cms/
-ADD https://raw.githubusercontent.com/ericvaandering/probes/test_new_pusher/common/check_expired_rules /probes/common/
-ADD https://raw.githubusercontent.com/ericvaandering/probes/test_new_pusher/common/utils/common.py /probes/common/utils/
-
-# PR 122
+# PR 122 - Should be in 33.4
 
 ADD https://raw.githubusercontent.com/ericvaandering/probes/675-dev-merge-and-update-rse-based-probes/cms/check_rse_files_rules /probes/cms/
 
