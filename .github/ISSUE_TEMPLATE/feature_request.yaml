@@ -1,0 +1,63 @@
+name: Feature Request
+description: Describe a new feature or enhancement
+title: "[FEATURE] <title>"
+labels: ["enhancement", "needs triage"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to request a feature or enhancement in the project. Please fill out the information below to the best of your ability. If you have a possible solution or workaround, please describe it.
+  - type: textarea
+    id: feature-description
+    attributes:
+      label: Feature Description
+      description: A clear and concise description of what the feature is.
+      placeholder: Describe the feature
+      render: Shell
+    validations:
+      required: true
+  - type: textarea
+    id: feature-usecase
+    attributes:
+      label: Use Case
+      description: Why do you need this feature?
+      placeholder: Describe the use case for this feature
+      render: Shell
+    validations:
+      required: true
+  - type: textarea
+    id: feature-proposal
+    attributes:
+      label: Proposal
+      description: A clear and concise description of what you want to happen.
+      placeholder: Describe what you want to happen
+      render: Shell
+    validations:
+      required: false
+  - type: textarea
+    id: feature-solution
+    attributes:
+      label: Possible Solution
+      description: If you have a possible solution or workaround, please describe it.
+      placeholder: If you have any ideas or suggestions on how this feature could be implemented, please share them here.
+      render: Shell
+    validations:
+      required: false
+  - type: textarea
+    id: feature-related
+    attributes:
+      label: Related Issues
+      description: List any related issues here.
+      placeholder: Are there any related issues?
+      render: Shell
+    validations:
+      required: false
+  - type: input
+    id: feature-assignees
+    attributes:
+      label: Assignees
+      description: Who should be assigned to this issue?
+      placeholder: (If Known) Assign this issue to...
+    validations:
+      required: false
