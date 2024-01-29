@@ -37,6 +37,9 @@ ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_check_expired_lo
 # PR 122 - Should be in 33.4
 ADD https://raw.githubusercontent.com/ericvaandering/probes/675-dev-merge-and-update-rse-based-probes/cms/check_rse_files_rules /probes/cms/
 
+# PR 123 - Should be in 33.4
+ADD https://raw.githubusercontent.com/Panos512/probes/20240116_combines_space_probes/cms/check_used_space /probes/cms/
+
 # PR 125 - Should be in 33.4
 ADD https://raw.githubusercontent.com/haozturk/probes/CMSRucio-688-fix/cms/check_rule_counts /probes/cms/
 
