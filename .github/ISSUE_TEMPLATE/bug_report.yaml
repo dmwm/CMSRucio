@@ -1,0 +1,66 @@
+name: Bug Report
+description: Create a report to help us improve
+title: "[BUG] <title>"
+labels: ["bug", "needs triage"]
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Thanks for taking the time to report a bug in the project. Please fill out the information below to the best of your ability. If you have a possible solution or workaround, please describe it.
+    - type: textarea
+      id: bug-description
+      attributes:
+          label: Bug Description
+          description: A clear and concise description of what the bug is.
+          placeholder: Describe the bug
+          render: Shell
+      validations:
+          required: true
+
+    - type: textarea
+      id: bug-reproduction
+      attributes:
+          label: Reproduction Steps
+          description: Steps to reproduce the behavior.
+          placeholder: |
+              1. Go to '...'
+              2. Click on '....'
+              3. Scroll down to '....'
+              4. See error
+          render: Shell
+      validations:
+          required: false
+    - type: textarea
+      id: bug-expected
+      attributes:
+          label: Expected Behavior
+          description: A clear and concise description of what you expected to happen.
+          placeholder: Describe what you expected to happen.
+          render: Shell
+      validations:
+          required: false
+    - type: textarea
+      id: bug-solution
+      attributes:
+          label: Possible Solution
+          description: If you have a possible solution or workaround, please describe it.
+          placeholder: Kindly describe the solution or workaround if you have one.
+          render: Shell
+      validations:
+          required: false
+    - type: textarea
+      id: bug-related
+      attributes:
+          label: Related Issues
+          description: List any related issues here.
+          placeholder: Are there any related issues?
+          render: Shell
+      validations:
+          required: false
+    - type: input
+      id: bug-assignees
+      attributes:
+          label: Assignees
+          description: Assign this issue to the person responsible for addressing it, if known.
+      validations:
+          required: false

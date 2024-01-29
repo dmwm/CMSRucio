@@ -1,0 +1,19 @@
+name: Documentation Request
+description: Request documentation for a feature or topic
+title: "[DOC] <title>"
+labels: ["documentation", "needs triage"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to request documentation for a feature or topic in the project. Please fill out the information below to the best of your ability. If you have a possible solution or workaround, please describe it.
+  - type: textarea
+    id: doc-description
+    attributes:
+      label: Documentation Description
+      description: Description of the documentation request
+      placeholder: Describe the documentation request
+      render: Shell
+    validations:
+      required: true
