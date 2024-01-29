@@ -27,7 +27,7 @@ ADD https://raw.githubusercontent.com/ericvaandering/probes/hack_obsolete_replic
 ADD https://raw.githubusercontent.com/nsmith-/probes/hack_replicas/common/check_deletable_replicas /probes/common
 
 # TODO: Merge Donata's probes somewhere
-
+# This is removed by 122 or 123 from Panos
 ADD https://raw.githubusercontent.com/dmielaikaite/probes/dmielaik_probes/common/check_used_space /probes/common
 
 # Where from?
@@ -35,8 +35,10 @@ ADD https://raw.githubusercontent.com/dmielaikaite/probes/dmielaik_probes/common
 ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_check_expired_locked/common/check_expired_locked_rules /probes/common
 
 # PR 122 - Should be in 33.4
-
 ADD https://raw.githubusercontent.com/ericvaandering/probes/675-dev-merge-and-update-rse-based-probes/cms/check_rse_files_rules /probes/cms/
+
+# PR 125 - Should be in 33.4
+ADD https://raw.githubusercontent.com/haozturk/probes/CMSRucio-688-fix/cms/check_rule_counts /probes/cms/
 
 RUN chmod +x /probes/common/check_*
 RUN chmod +x /probes/cms/check_*
