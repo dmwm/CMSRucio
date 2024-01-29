@@ -3,7 +3,8 @@
 Class definition for the distances (links) among CMS RSEs.
 And script for updating the distances.
 """
-
+import gitlab
+import base64
 import argparse
 import json
 import logging
@@ -45,6 +46,12 @@ class LinksMatrix(object):
         self._get_matrix(distance, exclude)
 
     def _get_rselist(self, rselist=None):
+        try:
+            private_token = os.environ['GITLAB_TOKEN']
+            gl = gitlab.Gitlab('https://gitlab.cern.ch', private_token=private_token)
+        except Exception as e:
+            logging.warning(f'Could not connect to gitlab. Error: {str(e)}')
+            gl = None
 
         self.rselist = []
 
@@ -53,18 +60,32 @@ class LinksMatrix(object):
 
         for rse in rselist:
             attrs = self.rcli.list_rse_attributes(rse=rse)
-
+            pnn = attrs.get('pnn')
+            if pnn is None:
+                sites = []
+                try:
+                    project_rse = rse.split('_')[:3]
+                    project_rse = '_'.join(project_rse)
+                    project = gl.projects.get('SITECONF/'+project_rse)
+                    f = project.files.get('storage.json', 'master')
+                    sites = json.loads(base64.b64decode(f.content))
+                except Exception as e:
+                    logging.warning(f'No PNN for RSE {rse}. Trying to get it from gitlab. Error: {str(e)}')
+                for site in sites:
+                    if site.get('rse') in rse:
+                        pnn = site.get('site')
+                        break
             try:
                 self.rselist.append({
                     'rse': rse,
-                    'pnn': attrs.get('pnn'),
-                    'type': attrs['cms_type'],
-                    'country': attrs['country'],
-                    'region': attrs.get('region', None)
+                    'pnn': pnn,
+                    'type': attrs.get('cms_type'),
+                    'country': attrs.get('country'),
+                    'region': attrs.get('region')
                 })
-            except KeyError:
-                logging.warning('No expected attributes for RSE %s. Skipping',
-                                rse)
+            except Exception as e:
+                logging.warning(f'Could not get attributes for RSE {rse}. Error: {str(e)}')
+
 
     def _get_matrix(self, distance, exclude):
 
