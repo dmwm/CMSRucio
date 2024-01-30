@@ -46,23 +46,5 @@ To upload a dataset create a rule on it:
 - Execute: `python3 upload.py upload-dataset-yaml <yaml-file-path>`
 
 
-## Build Instructions
-
-### Prerequisite
-
-We will be using [poetry](https://python-poetry.org/) to build the package.
-
-### Create a wheel package
-```
-cd CMSRucio/UserDMTools/cmsrucio_import
-
-poetry build
-```
-### Installing from the wheel package
-```
-pip3 install --user dist/cmsrucio_import-0.1.0-py3-none-any.whl
-```
-
-
 
 
