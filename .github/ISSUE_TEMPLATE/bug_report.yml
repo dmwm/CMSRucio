@@ -1,6 +1,6 @@
 name: Bug Report
-description: Create a report to help us improve
-title: "[BUG] <title>"
+description: Create a Bug report to help us improve
+title: "Bug: "
 labels: ["bug", "needs triage"]
 body:
     - type: markdown
@@ -13,10 +13,8 @@ body:
           label: Bug Description
           description: A clear and concise description of what the bug is.
           placeholder: Describe the bug
-          render: Shell
       validations:
           required: true
-
     - type: textarea
       id: bug-reproduction
       attributes:
@@ -27,7 +25,6 @@ body:
               2. Click on '....'
               3. Scroll down to '....'
               4. See error
-          render: Shell
       validations:
           required: false
     - type: textarea
@@ -36,7 +33,6 @@ body:
           label: Expected Behavior
           description: A clear and concise description of what you expected to happen.
           placeholder: Describe what you expected to happen.
-          render: Shell
       validations:
           required: false
     - type: textarea
@@ -45,7 +41,6 @@ body:
           label: Possible Solution
           description: If you have a possible solution or workaround, please describe it.
           placeholder: Kindly describe the solution or workaround if you have one.
-          render: Shell
       validations:
           required: false
     - type: textarea
@@ -54,13 +49,5 @@ body:
           label: Related Issues
           description: List any related issues here.
           placeholder: Are there any related issues?
-          render: Shell
-      validations:
-          required: false
-    - type: input
-      id: bug-assignees
-      attributes:
-          label: Assignees
-          description: Assign this issue to the person responsible for addressing it, if known.
       validations:
           required: false

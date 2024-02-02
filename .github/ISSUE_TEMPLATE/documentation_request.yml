@@ -1,6 +1,6 @@
 name: Documentation Request
 description: Request documentation for a feature or topic
-title: "[DOC] <title>"
+title: "Documentation: "
 labels: ["documentation", "needs triage"]
 
 body:
@@ -14,6 +14,5 @@ body:
       label: Documentation Description
       description: Description of the documentation request
       placeholder: Describe the documentation request
-      render: Shell
     validations:
       required: true

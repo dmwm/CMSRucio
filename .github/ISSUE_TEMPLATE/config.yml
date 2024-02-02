@@ -1,6 +1,6 @@
 blank_issues_enabled: false
 contact_links:
-  - name: CMS Data Management Operations Support
+  - name: CMS Data Management Operations/User Support
     url: https://its.cern.ch/jira/projects/CMSTRANSF/summary
     about: Please report operational issues here.
   - name: Questions and Help
