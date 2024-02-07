@@ -2,27 +2,23 @@ FROM almalinux:9
 
 ARG RUCIO_VERSION
 
-RUN yum upgrade -y && \
-    yum clean all && \
-    rm -rf /var/cache/yum
+RUN dnf upgrade -y && \
+    dnf clean all && \
+    rm -rf /var/cache/dnf
 
-RUN yum install -y epel-release.noarch && \
-    yum clean all && \
-    rm -rf /var/cache/yum
+RUN dnf install -y epel-release.noarch && \
+    dnf clean all && \
+    rm -rf /var/cache/dnf
 
-RUN yum install -y yum-utils && \
-    yum clean all && \
-    rm -rf /var/cache/yum
-
-RUN yum-config-manager --set-enabled crb
+RUN dnf config-manager --set-enabled crb
 
 # FIXME: What is all this? We can't need it all
-RUN yum install -y python3 python3-pip pylint \
-                   httpd mod_wsgi libaio gcc python3-devel.x86_64 \
+RUN dnf install -y python3 python3-pip pylint \
+                   httpd mod_wsgi libaio gcc python3-devel \
                    wget unzip \
-                   mod_ssl openssl-devel.x86_64 bind-utils nano git && \
-    yum clean all && \
-    rm -rf /var/cache/yum
+                   mod_ssl openssl-devel bind-utils nano git && \
+    dnf clean all && \
+    rm -rf /var/cache/dnf
 
 WORKDIR /tmp
 
@@ -30,24 +26,23 @@ WORKDIR /tmp
 RUN curl -o /etc/yum.repos.d/ca.repo https://raw.githubusercontent.com/rucio/rucio/1.20.3/etc/docker/dev/ca.repo
 
 # Install WLCG repo for CMS VOMS
-
-RUN yum -y install http://linuxsoft.cern.ch/wlcg/el9/x86_64/wlcg-repo-1.0.0-1.el9.noarch.rpm && \
-    yum clean all && \
-    rm -rf /var/cache/yum
+RUN dnf -y install http://linuxsoft.cern.ch/wlcg/el9/x86_64/wlcg-repo-1.0.0-1.el9.noarch.rpm && \
+    dnf clean all && \
+    rm -rf /var/cache/dnf
 
 # Install sets of RPM
 # FIXME: This overlaps with above
 
-RUN yum-config-manager --save --setopt=wlcg.skip_if_unavailable=true \
-        && yum install -y which krb5-devel gridsite \
+RUN dnf config-manager --save --setopt=wlcg.skip_if_unavailable=true \
+        && dnf install -y which krb5-devel gridsite \
                    globus-proxy-utils voms-clients-java voms-clients-cpp wlcg-voms-cms \
-                   gfal2-all gfal2-util python3-gfal2 \
+                   gfal2-util gfal2-all gfal2-plugin-xrootd python3-gfal2 \
                    nordugrid-arc-client nordugrid-arc-plugins-gfal \
                    nordugrid-arc-plugins-globus nordugrid-arc-plugins-s3 \
                    nordugrid-arc-plugins-xrootd \
                    xrootd-client && \
-    yum clean all && \
-    rm -rf /var/cache/yum
+    dnf clean all && \
+    rm -rf /var/cache/dnf
 
 
 # Install Rucio and other stuff
