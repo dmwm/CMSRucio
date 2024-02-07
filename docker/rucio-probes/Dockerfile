@@ -43,6 +43,9 @@ ADD https://raw.githubusercontent.com/Panos512/probes/20240116_combines_space_pr
 # PR 125 - Should be in 33.4
 ADD https://raw.githubusercontent.com/haozturk/probes/CMSRucio-688-fix/cms/check_rule_counts /probes/cms/
 
+# PR 126 - Should be in 33.5
+ADD https://raw.githubusercontent.com/voetberg/probes/cms_rules_by_account_to_prom/cms/check_rules_states_by_account /probes/cms/
+
 RUN chmod +x /probes/common/check_*
 RUN chmod +x /probes/cms/check_*
 
