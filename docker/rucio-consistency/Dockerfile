@@ -1,52 +1,50 @@
-FROM centos:7
+FROM almalinux:9
 USER root
 
-RUN yum install -y epel-release.noarch\
-    && yum clean all \
-    && rm -rf /var/cache/yum
+RUN dnf install -y epel-release.noarch\
+    && dnf clean all \
+    && rm -rf /var/cache/dnf
 
 # PKI stuff
-RUN yum install -y https://repo.opensciencegrid.org/osg/3.5/osg-3.5-el7-release-latest.rpm\
-    && yum clean all \
-    && rm -rf /var/cache/yum
+RUN dnf install -y https://repo.opensciencegrid.org/osg/3.6/osg-3.6-el9-release-latest.rpm\
+    && dnf clean all \
+    && rm -rf /var/cache/dnf
 
-RUN yum install -y osg-pki-tools\
-    && yum clean all \
-    && rm -rf /var/cache/yum
+RUN dnf install -y osg-pki-tools\
+    && dnf clean all \
+    && rm -rf /var/cache/dnf
 
-#RUN rpm -i http://mirror.grid.uchicago.edu/pub/osg/3.3/el7/testing/x86_64/voms-2.0.14-1.3.osg33.el7.x86_64.rpm
-RUN rpm -i http://mirror.grid.uchicago.edu/pub/osg/3.5/el7/release/x86_64/voms-2.0.14-1.6.osg35.el7.x86_64.rpm\
-    && yum clean all \
-    && rm -rf /var/cache/yum
+RUN dnf install -y voms \
+    && dnf clean all \
+    && rm -rf /var/cache/dnf
 
-RUN rpm -i http://mirror.grid.uchicago.edu/pub/osg/3.5/el7/release/x86_64/voms-clients-cpp-2.0.14-1.6.osg35.el7.x86_64.rpm\
-    && yum clean all \
-    && rm -rf /var/cache/yum
+RUN dnf install -y voms-clients-cpp \
+    && dnf clean all \
+    && rm -rf /var/cache/dnf
 
 RUN mkdir -p /etc/grid-security \
     && rm -rf /etc/grid-security/certificates \
     && ln -s /cvmfs/grid.cern.ch/etc/grid-security/certificates /etc/grid-security/
 
 # Oracle client
-RUN yum install -y libaio\
-    && yum clean all \
-    && rm -rf /var/cache/yum
+RUN dnf install -y libaio\
+    && dnf clean all \
+    && rm -rf /var/cache/dnf
 
-RUN rpm -i https://download.oracle.com/otn_software/linux/instantclient/19600/oracle-instantclient19.6-basic-19.6.0.0.0-1.x86_64.rpm
+#RUN rpm -i https://download.oracle.com/otn_software/linux/instantclient/19600/oracle-instantclient19.6-basic-19.6.0.0.0-1.x86_64.rpm
 
 # xrootd client
-RUN curl -o /etc/yum.repos.d/xrootd-stable-slc7.repo https://xrootd.slac.stanford.edu/binaries/xrootd-stable-slc7.repo
-RUN yum install -y xrootd-libs xrootd-client\
-    && yum clean all \
-    && rm -rf /var/cache/yum
+RUN dnf install -y xrootd-libs xrootd-client\
+    && dnf clean all \
+    && rm -rf /var/cache/dnf
 
-# jobber
-RUN rpm -i https://github.com/dshearer/jobber/releases/download/v1.4.0/jobber-1.4.0-1.el7.x86_64.rpm
+## jobber
+#RUN rpm -i https://github.com/dshearer/jobber/releases/download/v1.4.0/jobber-1.4.0-1.el7.x86_64.rpm
 
 # Python and libs
-RUN yum install -y python3 python3-pip git \
-    && yum clean all \
-    && rm -rf /var/cache/yum
+RUN dnf install -y python3 python3-pip git \
+    && dnf clean all \
+    && rm -rf /var/cache/dnf
 
 RUN pip3 install --upgrade pip
 RUN pip3 install --upgrade setuptools
@@ -68,5 +66,3 @@ RUN chmod +x *.sh
 RUN git clone https://github.com/ivmfnal/cms_consistency.git
 
 CMD /bin/bash
-
-
