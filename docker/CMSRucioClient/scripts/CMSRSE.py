@@ -458,6 +458,10 @@ class CMSRSE:
                     # if we're here chances are that the prefix didn't have a prefixed "scheme://"
                     logging.debug("couldn't find a scheme when calculating special prefix")
 
+                # Make sure that prefix always ends with "/"
+                if prefix[len(prefix) - 1] != "/":
+                    prefix = prefix + "/"
+
                 proto['prefix'] = prefix
                 # Get rid of the TFC since were are using a prefix but don't get rid
                 # of the web_service_path if it is there
