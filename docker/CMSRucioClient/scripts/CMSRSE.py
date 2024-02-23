@@ -435,9 +435,9 @@ class CMSRSE:
                 for rule in tfc:
                     prefix_regex = re.compile(rule['path'])
                     if self.cms_type == "test":
-                        prefix_match = prefix_regex.match("/store/test/rucio")
+                        prefix_match = prefix_regex.match("/store/test/rucio/")
                     else:
-                        prefix_match = prefix_regex.match("/store/temp")
+                        prefix_match = prefix_regex.match("/store/temp/")
                     if prefix_match:
                         match_rule = rule['path']
                         g1 = prefix_match.group(1)
