@@ -12,24 +12,11 @@ client = Client()
 # and if this can be used to normalise that
 
 
-DRY_RUN = False
+DRY_RUN = True
 VERBOSE = False
-MAKE_QUADRATIC = False
 MAX_DDM_QUOTA = 1000
 
-STATIC_WEIGHT = 0.2
-FREE_WEIGHT = 0.5
-EXPIRED_WEIGHT = 0.3
-
-# Adding ddm_quota attribute to all disk RSEs
-# T3s do not have the "static" usage set, they are quasi-static
-RSE_EXPRESSION = "rse_type=DISK&cms_type=real&tier<3&tier>0"
-rses = [rse["rse"] for rse in client.list_rses(rse_expression=RSE_EXPRESSION)]
-ddm_quotas = {}
-overridden_ddm_quotas = {}
-
-
-def get_stats():
+def get_stats(ddm_quotas):
     values = list(ddm_quotas.values())
     print("  ====== STATISTICS   ======  ")
 
@@ -49,7 +36,8 @@ def get_stats():
     print("Std: ", std_dev)
 
 
-def get_sum_of_all_rse_statics():
+def get_sum_of_all_rse_statics(rse_expression):
+    rses = [rse["rse"] for rse in client.list_rses(rse_expression=rse_expression)]
     result = 0
     for rse in rses:
         static, _, _ = get_rse_info(rse)
@@ -79,9 +67,12 @@ def get_rse_info(rse):
     return static, rucio, expired
 
 
-def calculate_ddm_quotas():
+def calculate_ddm_quotas(rse_expression, static_weight, free_weight, expired_weight, make_quadratic):
 
-    total_static = get_sum_of_all_rse_statics()
+    total_static = get_sum_of_all_rse_statics(rse_expression)
+    rses = [rse["rse"] for rse in client.list_rses(rse_expression=rse_expression)]
+    ddm_quotas = {}
+    overridden_ddm_quotas = {}
 
     for rse in rses:
         static, rucio, expired = get_rse_info(rse)
@@ -90,28 +81,35 @@ def calculate_ddm_quotas():
         if static == 0:
             continue  # Skip if static is 0
 
+        # Apply penalty for special rses
+        rse_attributes = client.list_rse_attributes(rse)
+        if "ddm_quota_penalty" in rse_attributes:
+            static, rucio, expired = (x * float(rse_attributes["ddm_quota_penalty"]) for x in (static, rucio, expired))
+
         free = static - rucio
-        ddm_quota = STATIC_WEIGHT * (static / total_static) + FREE_WEIGHT * \
-            (free / static) + EXPIRED_WEIGHT * (expired / static)
-        if MAKE_QUADRATIC:
+        ddm_quota = static_weight * (static / total_static) + free_weight * \
+            (free / static) + expired_weight * (expired / static)
+        if make_quadratic:
             ddm_quota = ddm_quota ** 2
 
         # Override ddm_quota for operational purposes
-        rse_attributes = client.list_rse_attributes(rse)
         if "override_ddm_quota" in rse_attributes:
             overridden_ddm_quotas[rse] = rse_attributes["override_ddm_quota"]
             continue
 
         ddm_quotas[rse] = ddm_quota
+    return ddm_quotas, overridden_ddm_quotas
 
 
-def normalize_ddm_quotas():
+def normalize_ddm_quotas(ddm_quotas):
     weights = [value for value in ddm_quotas.values()]
     for rse, weight in ddm_quotas.items():
         ddm_quotas[rse] = int(((weight - min(weights)) / (max(weights) - min(weights))) * MAX_DDM_QUOTA)
 
+    return ddm_quotas
 
-def set_ddm_quotas():
+
+def set_ddm_quotas(ddm_quotas, overridden_ddm_quotas):
     # Set automatically calculated ddm quotas
     for rse, ddm_quota in ddm_quotas.items():
         if DRY_RUN:
@@ -128,14 +126,37 @@ def set_ddm_quotas():
             client.add_rse_attribute(rse, "ddm_quota", ddm_quota)
             print("Override ddm_quota for {} to {}".format(rse, ddm_quota))
 
+def run(rse_expression, static_weight, free_weight, expired_weight, make_quadratic):
+
+    # Calculate ddm_quotas for disk rses
+    # T3s do not have the "static" usage set, they are quasi-static
+    ddm_quotas, overridden_ddm_quotas = calculate_ddm_quotas(rse_expression = rse_expression,
+                         static_weight = 0.2,
+                         free_weight = 0.5, 
+                         expired_weight = 0.3,
+                         make_quadratic = True)
+    normalized_ddm_quotas = normalize_ddm_quotas(ddm_quotas)
+    set_ddm_quotas(normalized_ddm_quotas, overridden_ddm_quotas)
+    if VERBOSE:
+        get_stats(normalized_ddm_quotas)
 
 def main():
 
-    calculate_ddm_quotas()
-    normalize_ddm_quotas()
-    set_ddm_quotas()
-    if VERBOSE:
-        get_stats()
+    # Calculate ddm_quotas for disk rses
+    # T3s do not have the "static" usage set, they are quasi-static
+    run(rse_expression = "rse_type=DISK&cms_type=real&tier<3&tier>0",
+                         static_weight = 0.2,
+                         free_weight = 0.5, 
+                         expired_weight = 0.3,
+                         make_quadratic = True)
+
+    # Calculate ddm_quotas for tape rses
+    run(rse_expression = "rse_type=TAPE&wmcore_output_tape=True\cms_type=test",
+                         static_weight = 0.5,
+                         free_weight = 0.5, 
+                         expired_weight = 0,
+                         make_quadratic = False)
+
 
 
 if __name__ == "__main__":
