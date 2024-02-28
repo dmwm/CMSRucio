@@ -31,7 +31,7 @@ RUN dnf install -y libaio\
     && dnf clean all \
     && rm -rf /var/cache/dnf
 
-#RUN rpm -i https://download.oracle.com/otn_software/linux/instantclient/19600/oracle-instantclient19.6-basic-19.6.0.0.0-1.x86_64.rpm
+RUN rpm -i https://download.oracle.com/otn_software/linux/instantclient/2112000/el9/oracle-instantclient-basic-21.12.0.0.0-1.el9.x86_64.rpm
 
 # xrootd client
 RUN dnf install -y xrootd-libs xrootd-client\
@@ -39,7 +39,7 @@ RUN dnf install -y xrootd-libs xrootd-client\
     && rm -rf /var/cache/dnf
 
 ## jobber
-#RUN rpm -i https://github.com/dshearer/jobber/releases/download/v1.4.0/jobber-1.4.0-1.el7.x86_64.rpm
+RUN rpm -i https://github.com/dshearer/jobber/releases/download/v1.4.4/jobber-1.4.4-1.el8.x86_64.rpm
 
 # Python and libs
 RUN dnf install -y python3 python3-pip git \
