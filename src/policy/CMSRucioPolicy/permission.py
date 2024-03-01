@@ -362,8 +362,15 @@ def perm_add_rse_attribute(issuer, kwargs, *, session: "Optional[Session]" = Non
     :param session: The DB session to use
     :returns: True if account is allowed, otherwise False
     """
-    if _is_root(issuer) or has_account_attribute(account=issuer, key='admin', session=session):
+    if _is_root(issuer):
         return True
+
+    if _restricted_rse_attribute(kwargs['rse'], kwargs['key'], kwargs['value']):
+        return False
+
+    if has_account_attribute(account=issuer, key='admin', session=session):
+        return True
+
     return False
 
 
@@ -1352,4 +1359,27 @@ def _is_cms_site_admin(rse_id, issuer, session):
     site_admins = rse_attr.get('site_admins', None)
     if site_admins and issuer.external in site_admins.split(','):
         return True
+    return False
+
+
+def _restricted_rse_attribute(rse, key, value=None):
+    """
+    Check if for the given RSE the given attribute is allowed
+
+    :param rse: the RSE name.
+    :param key: the attribute key.
+    :param value: the attribute value.
+    :return: True if the attribute is restricted, False otherwise.
+    """
+
+    # Add restricted attributes to this list
+    # Use None as value to restrict the key regardless of the value
+
+    restricted_attributes = [
+        ('T2_US_MIT_Tape', 'archive_timeout', None)
+    ]
+    for rse_name, attribute_key, attribute_value in restricted_attributes:
+        if rse == rse_name and key == attribute_key and (attribute_value == value or attribute_value is None):
+            return True
+
     return False
