@@ -1,24 +1,20 @@
-FROM almalinux:9
+FROM centos:7
 
-ARG RUCIO_VERSION
+RUN yum upgrade -y && \
+    yum clean all && \
+    rm -rf /var/cache/yum
 
-RUN dnf upgrade -y && \
-    dnf clean all && \
-    rm -rf /var/cache/dnf
-
-RUN dnf install -y epel-release.noarch && \
-    dnf clean all && \
-    rm -rf /var/cache/dnf
-
-RUN dnf config-manager --set-enabled crb
+RUN yum install -y epel-release.noarch && \
+    yum clean all && \
+    rm -rf /var/cache/yum
 
 # FIXME: What is all this? We can't need it all
-RUN dnf install -y python3 python3-pip pylint \
-                   httpd mod_wsgi libaio gcc python3-devel \
-                   wget unzip \
-                   mod_ssl openssl-devel bind-utils nano git && \
-    dnf clean all && \
-    rm -rf /var/cache/dnf
+RUN yum install -y python3 python3-pip pylint \
+                   httpd mod_wsgi libaio gcc python-devel.x86_64 \
+                   install wget unzip \
+                   mod_ssl openssl-devel.x86_64 bind-utils nano git && \
+    yum clean all && \
+    rm -rf /var/cache/yum
 
 WORKDIR /tmp
 
@@ -26,30 +22,31 @@ WORKDIR /tmp
 RUN curl -o /etc/yum.repos.d/ca.repo https://raw.githubusercontent.com/rucio/rucio/1.20.3/etc/docker/dev/ca.repo
 
 # Install WLCG repo for CMS VOMS
-RUN dnf -y install http://linuxsoft.cern.ch/wlcg/el9/x86_64/wlcg-repo-1.0.0-1.el9.noarch.rpm && \
-    dnf clean all && \
-    rm -rf /var/cache/dnf
+
+RUN yum -y install http://linuxsoft.cern.ch/wlcg/centos7/x86_64/wlcg-repo-1.0.0-1.el7.noarch.rpm && \
+    yum clean all && \
+    rm -rf /var/cache/yum
 
 # Install sets of RPM
 # FIXME: This overlaps with above
 
-RUN dnf config-manager --save --setopt=wlcg.skip_if_unavailable=true \
-        && dnf install -y which krb5-devel gridsite \
-                   globus-proxy-utils voms-clients-java voms-clients-cpp wlcg-voms-cms \
-                   gfal2-util gfal2-all gfal2-plugin-xrootd python3-gfal2 \
+RUN yum-config-manager --save --setopt=wlcg.skip_if_unavailable=true \
+        && yum install -y which krb5-devel gridsite \
+                   lcg-CA globus-proxy-utils voms-clients-java voms-clients-cpp wlcg-voms-cms \
+                   gfal2-python gfal2-all gfal2-util gfal2-python3 \
                    nordugrid-arc-client nordugrid-arc-plugins-gfal \
                    nordugrid-arc-plugins-globus nordugrid-arc-plugins-s3 \
                    nordugrid-arc-plugins-xrootd \
                    xrootd-client && \
-    dnf clean all && \
-    rm -rf /var/cache/dnf
+    yum clean all && \
+    rm -rf /var/cache/yum
 
 
 # Install Rucio and other stuff
 
 RUN pip3 install --upgrade pip
 RUN pip3 install --upgrade setuptools
-RUN pip3 -v install rucio-clients==$RUCIO_VERSION
+RUN pip3 -v install rucio-clients
 RUN pip3 install python-gitlab
 RUN pip3 install liboidcagent
 
@@ -78,8 +75,8 @@ RUN mkdir -p /etc/grid-security ; ln -s /cvmfs/grid.cern.ch/etc/grid-security/ce
 # COPY scripts /root/CMSRucio/docker/CMSRucioClient/scripts
 
 # Our schema
-ADD https://raw.githubusercontent.com/ericvaandering/rucio/cms_nano12/lib/rucio/common/schema/cms.py /usr/lib/python3.9/site-packages/rucio/common/schema/cms.py
-RUN python3 -m compileall /usr/lib/python3.9/site-packages/rucio/common/schema
+ADD https://raw.githubusercontent.com/ericvaandering/rucio/cms_nano12/lib/rucio/common/schema/cms.py /usr/lib/python2.7/site-packages/rucio/common/schema/cms.py
+RUN python -m compileall /usr/lib/python2.7/site-packages/rucio/common/schema
 
 ENV X509_USER_PROXY=/tmp/x509up
 ENTRYPOINT ["/bin/bash", "-c", "sleep infinity"]
