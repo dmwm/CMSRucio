@@ -574,7 +574,7 @@ def perm_add_did(issuer, kwargs, *, session: "Optional[Session]" = None):
             if rule['account'] != issuer:
                 return False
 
-    if kwargs['scope'].external != u'cms':
+    if kwargs['scope'].external != 'cms' and not has_account_attribute(account=issuer, key='admin', session=session):
         if kwargs['type'] == 'DATASET':
             if '/USER#' not in kwargs['name']:
                 return False
@@ -597,6 +597,8 @@ def perm_add_dids(issuer, kwargs, *, session: "Optional[Session]" = None):
     :param session: The DB session to use
     :returns: True if account is allowed, otherwise False
     """
+    #TODO: Check scope ownership for bulk add operation too
+    
     # Check the accounts of the issued rules
     if not _is_root(issuer) and not has_account_attribute(account=issuer, key='admin', session=session):
         for did in kwargs['dids']:
