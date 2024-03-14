@@ -54,7 +54,7 @@ R_SCOPE = {"description": "Scope name",
            "pattern": "\\w"}
 
 CMS_LFN_LENGTH = 500
-CMS_DATASET_CORE = r'/[a-zA-Z0-9\-_]{1,99}/[a-zA-Z0-9\.\-_]{1,199}/[A-Z\-]{1,50}'
+CMS_DATASET_CORE = r'/[a-zA-Z0-9\-_]{1,99}/[a-zA-Z0-9\.\-_]{1,199}/[A-Z0-9\-]{1,50}'
 CMS_BLOCK_PART = r'[a-zA-Z0-9\.\-_]{1,100}'
 
 CMS_DATASET = r'^%s$' % CMS_DATASET_CORE
