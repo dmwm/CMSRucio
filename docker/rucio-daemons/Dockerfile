@@ -26,16 +26,6 @@ RUN rmdir /etc/grid-security/certificates && ln -s /cvmfs/grid.cern.ch/etc/grid-
 
 ADD docker/rucio-daemons/cms-entrypoint.sh /
 
-# Eric patch for cache-consumer (revisit if ever comes up again)
-
-# ADD https://raw.githubusercontent.com/ericvaandering/rucio/fix_cache_consumer/lib/rucio/daemons/cache/consumer.py /usr/local/lib/python3.6/site-packages/rucio/daemons/cache/consumer.py
-# RUN python3 -m compileall /usr/local/lib/python3.6/site-packages/rucio/daemons/cache
-# ADD https://raw.githubusercontent.com/ericvaandering/rucio/fix_cache_consumer/lib/rucio/core/volatile_replica.py /usr/local/lib/python3.6/site-packages/rucio/core/volatile_replica.py
-# RUN python3 -m compileall /usr/local/lib/python3.6/site-packages/rucio/core
-# ADD https://raw.githubusercontent.com/ericvaandering/rucio/fix_cache_consumer/lib/rucio/common/stomp_utils.py /usr/local/lib/python3.6/site-packages/rucio/common/stomp_utils.py
-# RUN python3 -m compileall /usr/local/lib/python3.6/site-packages/rucio/common
-# ADD https://raw.githubusercontent.com/ericvaandering/containers/add_preparer/daemons/rucio.cfg.j2 /tmp/rucio.cfg.j2
-
 # Cannot make patch directory unless there are patches
 #RUN mkdir -p /patch
 
