@@ -67,7 +67,7 @@ NAME = {"description": "Data Identifier name",
         "type": "string",
         "pattern": r"%s|%s|%s" % (CMS_DATASET, CMS_BLOCK, CMS_LFN)}
 
-NAME_LENGTH = max(CMS_LFN_LENGTH, CMS_BLOCK_LENGTH)
+NAME_LENGTH = CMS_LFN_LENGTH
 
 # read name
 R_NAME = NAME
