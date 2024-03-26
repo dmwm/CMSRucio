@@ -11,7 +11,7 @@ jobs:
     name: Build and Push CMS Rucio Release Images
     strategy:
       matrix:
-        image: [rucio-probes, rucio-daemons, rucio-server, rucio-ui]
+        image: [rucio-probes, rucio-daemons, rucio-server, rucio-ui, rucio_client]
       fail-fast: False
 
     steps:
