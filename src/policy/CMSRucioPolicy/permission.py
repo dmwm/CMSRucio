@@ -214,9 +214,9 @@ def _check_for_auto_approve_eligibility(issuer, rses, kwargs, session: "Optional
 
     try:
         global_usage_per_account = float(config_get(
-            'rules', 'global_usage_per_account', raise_exception=True, default=1e15))
+            'rules', 'global_usage_per_account', raise_exception=True, default=500e12))
     except (NoOptionError, NoSectionError, RuntimeError):
-        global_usage_per_account = 1e15
+        global_usage_per_account = 500e12
 
     try:
         rule_lifetime_threshold = int(config_get('rules', 'rule_lifetime_threshold',
