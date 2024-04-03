@@ -60,13 +60,11 @@ RUN curl -o /etc/ca.crt https://cafiles.cern.ch/cafiles/certificates/CERN%20Root
 WORKDIR /root
 RUN git clone https://github.com/rucio/rucio.git
 
-COPY scripts /scripts
-COPY loadtest /loadtest
+COPY docker/rucio-client/scripts /scripts
+COPY docker/rucio-client/loadtest /loadtest
 
-COPY rucio-testbed.cfg /opt/rucio-testbed/etc/rucio.cfg
-COPY rucio-dev.cfg /opt/rucio-dev/etc/rucio.cfg
-COPY rucio-int.cfg /opt/rucio-int/etc/rucio.cfg
-COPY rucio-prod.cfg /opt/rucio-prod/etc/rucio.cfg
+ADD docker/rucio-client/rucio-int.cfg /opt/rucio-int/etc/rucio.cfg
+ADD docker/rucio-client/rucio-prod.cfg /opt/rucio-prod/etc/rucio.cfg
 
 # Pull some useful stuff out of git
 WORKDIR /root
