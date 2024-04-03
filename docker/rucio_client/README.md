@@ -1,15 +1,34 @@
+# CMS rucio_client
+
 N.B. We are in the process of changing over from docker and dockerhub to podmand and CERN's Harbor registry. 
 The documention below reflects this state of flux. For new builds, please switch the build and instructions to Harbor.
 
-Build and run like so where /tmp/x509up is a proxy generated with the DN that matches account [username]
+## Building
+To build the image, the following environment variables need to be set:
+```
+export RUCIO_VERSION=32.3.1
+export CMS_VERSION=${RUCIO_VERSION}.cms1
+export HARBOR=registry.cern.ch/cmsrucio
+```
 
-    podman build -t registry.cern.ch/cmsrucio/rucio_client:latest .
-    podman push registry.cern.ch/cmsrucio/rucio_client:latest
+Then while in the root `CMSRucio` directory, run:
+```
+podman build --build-arg RUCIO_VERSION=$RUCIO_VERSION -f docker/rucio_client/Dockerfile -t $HARBOR/rucio_client:release-$CMS_VERSION .
+```
 
-    docker build . -f Dockerfile.trace -t ericvaandering/rucio-trace
-    docker push ericvaandering/rucio-trace
+To use the `almalinux:9-minimal` base:
+```
+podman build --build-arg RUCIO_VERSION=$RUCIO_VERSION -f docker/rucio_client/Dockerfile.minimal -t $HARBOR/rucio_client:release-minimal-$CMS_VERSION .
+```
 
+### Old rucio-trace instructions
+```
+docker build . -f Dockerfile.trace -t ericvaandering/rucio-trace
+docker push ericvaandering/rucio-trace
+```
     
+
+## Running 
 To run (no need to build, Eric does this occassionally):
 
     docker pull cmssw/rucio_client
@@ -18,6 +37,8 @@ To run (no need to build, Eric does this occassionally):
     docker cp ~/.globus/usercert.pem client:/tmp/usercert.pem
     docker cp ~/.globus/userkey.pem client:/tmp/userkey.pem
     docker exec -it client /bin/bash
+
+Grid certs will also need to be added if running locally.
 
 Inside container generate a proxy and connect to the Rucio server
 
