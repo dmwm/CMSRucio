@@ -1,4 +1,4 @@
-/docker/CMSRucioClient/sqlcl/
+/docker/rucio_client/sqlcl/
 *.pyc
 venv/
 dist
