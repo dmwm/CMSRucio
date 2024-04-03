@@ -25,7 +25,7 @@ jobs:
 
       - name: Build the Docker Image
         run: |
-          cd docker/CMSRucioClient && docker build . \
+          cd docker/rucio_client && docker build . \
           --file Dockerfile.loadtest \
           --tag registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/rucio-loadtest-client:${{ env.tag }}
       
