@@ -50,7 +50,7 @@ spec:
                     secretKeyRef:
                       name: "rucio-secrets"
                       key: monit_token
-              command: ['/root/CMSRucio/docker/CMSRucioClient/scripts/k8s_sync_sites.sh']
+              command: ['/root/CMSRucio/docker/rucio_client/scripts/k8s_sync_sites.sh']
           restartPolicy: Never
 ---
 apiVersion: batch/v1
@@ -115,5 +115,5 @@ spec:
                       name: "rucio-secrets"
                       key: oidc_iam_client_secret
                       optional: true
-              command: ['/root/CMSRucio/docker/CMSRucioClient/scripts/k8s_sync_users_links.sh']
+              command: ['/root/CMSRucio/docker/rucio_client/scripts/k8s_sync_users_links.sh']
           restartPolicy: Never
