@@ -435,9 +435,9 @@ class CMSRSE:
                 for rule in tfc:
                     prefix_regex = re.compile(rule['path'])
                     if self.cms_type == "test":
-                        prefix_match = prefix_regex.match("/store/test/rucio")
+                        prefix_match = prefix_regex.match("/store/test/rucio/")
                     else:
-                        prefix_match = prefix_regex.match("/store/temp")
+                        prefix_match = prefix_regex.match("/store/temp/")
                     if prefix_match:
                         match_rule = rule['path']
                         g1 = prefix_match.group(1)
@@ -457,6 +457,10 @@ class CMSRSE:
                 else:
                     # if we're here chances are that the prefix didn't have a prefixed "scheme://"
                     logging.debug("couldn't find a scheme when calculating special prefix")
+
+                # Make sure that prefix always ends with "/"
+                if prefix[len(prefix) - 1] != "/":
+                    prefix = prefix + "/"
 
                 proto['prefix'] = prefix
                 # Get rid of the TFC since were are using a prefix but don't get rid
