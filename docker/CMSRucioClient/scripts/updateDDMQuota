@@ -122,6 +122,9 @@ def set_dm_weights(dm_weights):
             print("DRY-RUN: Set dm_weight for {} to {}".format(rse, dm_weight))
         else:
             client.add_rse_attribute(rse, "dm_weight", dm_weight)
+            # Keep setting ddm_quota for disk rses until we deprecate it
+            if "Tape" not in rse:
+                client.add_rse_attribute(rse, "ddm_quota", dm_weight)
             print("Set dm_weight for {} to {}".format(rse, dm_weight))
 
 def run(rse_expression, static_weight, free_weight, expired_weight, make_quadratic):
