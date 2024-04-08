@@ -46,7 +46,7 @@ RUN yum-config-manager --save --setopt=wlcg.skip_if_unavailable=true \
 
 RUN pip3 install --upgrade pip
 RUN pip3 install --upgrade setuptools
-RUN pip3 install rucio-clients
+RUN pip3 -v install rucio-clients
 RUN pip3 install python-gitlab
 RUN pip3 install liboidcagent
 

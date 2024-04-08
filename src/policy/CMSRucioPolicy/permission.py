@@ -315,6 +315,10 @@ def perm_add_rule(issuer, kwargs, *, session: "Optional[Session]" = None):
             if rse_attr.get('requires_approval', False):
                 return False
 
+    # If asked for approval, rse_expression can only be a single RSE
+    if kwargs["activity"] != "User AutoApprove" and kwargs["ask_approval"] and len(rses) != 1:
+        return False
+
     if kwargs["activity"] == "User AutoApprove":
         return _check_for_auto_approve_eligibility(issuer, rses, kwargs, session=session)
 
@@ -362,8 +366,15 @@ def perm_add_rse_attribute(issuer, kwargs, *, session: "Optional[Session]" = Non
     :param session: The DB session to use
     :returns: True if account is allowed, otherwise False
     """
-    if _is_root(issuer) or has_account_attribute(account=issuer, key='admin', session=session):
+    if _is_root(issuer):
         return True
+
+    if _restricted_rse_attribute(kwargs['rse'], kwargs['key'], kwargs['value']):
+        return False
+
+    if has_account_attribute(account=issuer, key='admin', session=session):
+        return True
+
     return False
 
 
@@ -563,7 +574,7 @@ def perm_add_did(issuer, kwargs, *, session: "Optional[Session]" = None):
             if rule['account'] != issuer:
                 return False
 
-    if kwargs['scope'].external != u'cms':
+    if kwargs['scope'].external != 'cms' and not has_account_attribute(account=issuer, key='admin', session=session):
         if kwargs['type'] == 'DATASET':
             if '/USER#' not in kwargs['name']:
                 return False
@@ -586,6 +597,8 @@ def perm_add_dids(issuer, kwargs, *, session: "Optional[Session]" = None):
     :param session: The DB session to use
     :returns: True if account is allowed, otherwise False
     """
+    #TODO: Check scope ownership for bulk add operation too
+    
     # Check the accounts of the issued rules
     if not _is_root(issuer) and not has_account_attribute(account=issuer, key='admin', session=session):
         for did in kwargs['dids']:
@@ -1352,4 +1365,27 @@ def _is_cms_site_admin(rse_id, issuer, session):
     site_admins = rse_attr.get('site_admins', None)
     if site_admins and issuer.external in site_admins.split(','):
         return True
+    return False
+
+
+def _restricted_rse_attribute(rse, key, value=None):
+    """
+    Check if for the given RSE the given attribute is allowed
+
+    :param rse: the RSE name.
+    :param key: the attribute key.
+    :param value: the attribute value.
+    :return: True if the attribute is restricted, False otherwise.
+    """
+
+    # Add restricted attributes to this list
+    # Use None as value to restrict the key regardless of the value
+
+    restricted_attributes = [
+        ('T2_US_MIT_Tape', 'archive_timeout', None)
+    ]
+    for rse_name, attribute_key, attribute_value in restricted_attributes:
+        if rse == rse_name and key == attribute_key and (attribute_value == value or attribute_value is None):
+            return True
+
     return False

@@ -20,7 +20,7 @@ cat $RUCIO_HOME/etc/rucio.cfg
 
 set -x
 
-cd docker/CMSRucioClient/scripts/
+cd docker/rucio_client/scripts/
 if [ "$RUCIO_HOME" = "/opt/rucio-int" ]
   then
   exit 0

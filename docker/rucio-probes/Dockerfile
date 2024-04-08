@@ -28,23 +28,28 @@ ADD https://raw.githubusercontent.com/nsmith-/probes/hack_replicas/common/check_
 
 # TODO: Merge Donata's probes somewhere
 # This is removed by 122 or 123 from Panos
-ADD https://raw.githubusercontent.com/dmielaikaite/probes/dmielaik_probes/common/check_used_space /probes/common
+# ADD https://raw.githubusercontent.com/dmielaikaite/probes/dmielaik_probes/common/check_used_space /probes/common
 
 # Where from?
 # Supplanted in PR115 ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_check_expired_rules/common/check_expired_rules /probes/common
 ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_check_expired_locked/common/check_expired_locked_rules /probes/common
 
-# PR 122 - Should be in 33.4
-ADD https://raw.githubusercontent.com/ericvaandering/probes/675-dev-merge-and-update-rse-based-probes/cms/check_rse_files_rules /probes/cms/
+# PR 130 - Should be in 33.7
+ADD https://raw.githubusercontent.com/haozturk/probes/720-fix/cms/check_rule_counts /probes/cms/
 
-# PR 123 - Should be in 33.4
-ADD https://raw.githubusercontent.com/Panos512/probes/20240116_combines_space_probes/cms/check_used_space /probes/cms/
-
-# PR 125 - Should be in 33.4
-ADD https://raw.githubusercontent.com/haozturk/probes/CMSRucio-688-fix/cms/check_rule_counts /probes/cms/
-
-# PR 126 - Should be in 33.5
+# PR 126 - Should be in 33.7
 ADD https://raw.githubusercontent.com/rucio/probes/cms_rules_by_account_to_prom/cms/check_rules_states_by_account /probes/cms/
+
+# PR 132 - Not accepted into rucio/probes yet
+ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_expired_dids /probes
+ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_fts_backlog /probes
+ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_messages_to_submit /probes
+ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_new_dids /probes
+ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_stuck_rules /probes
+ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_transfer_queues_status /probes
+ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_unevaluated_dids /probes
+ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_unlocked_replicas /probes
+ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_updated_dids /probes
 
 RUN chmod +x /probes/common/check_*
 RUN chmod +x /probes/cms/check_*
