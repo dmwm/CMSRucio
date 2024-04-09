@@ -5,10 +5,12 @@ from rucio.client import Client
 from tabulate import tabulate
 client = Client()
 
-# See LINK for documentation and please update it if you change the logic
+# See the following link for documentation and please update it if you change the logic
+# https://cmsdmops.docs.cern.ch/Operators/ManageDMWeight/
 
 DRY_RUN = False
 MAX_DM_WEIGHT = 100
+MIN_DM_WEIGHT = 1
 stats = {}
 
 def print_results():
@@ -97,7 +99,6 @@ def calculate_dm_weights(rse_expression, static_weight, free_weight, expired_wei
 
 
 def normalize_dm_weights(dm_weights):
-    # TODO: Don't take 0 values into normalization
     weights = [value for value in dm_weights.values()]
     min_positive_weight = min([n for n in weights if n > 0])
     for rse, weight in dm_weights.items():
@@ -108,6 +109,9 @@ def normalize_dm_weights(dm_weights):
         else:
             # This normalization sets the lowest dm_weight to 0
             dm_weight = int(((weight - min_positive_weight) / (max(weights) - min_positive_weight)) * MAX_DM_WEIGHT)
+            # Make the lowest dm_weight non-zero
+            if dm_weight == 0:
+                dm_weight = MIN_DM_WEIGHT
             #dm_weight = int((weight/sum(weights)) * MAX_DM_WEIGHT)
         dm_weights[rse] = dm_weight
         stats[rse]["dm_weight"] = dm_weight
@@ -152,7 +156,7 @@ def main():
     
 
     # Calculate dm_weights for tape rses
-    run(rse_expression = "rse_type=TAPE&wmcore_output_tape=True\cms_type=test",
+    run(rse_expression = "rse_type=TAPE&cms_type=real&wmcore_output_tape=True",
                          static_weight = 0.5,
                          free_weight = 0.5, 
                          expired_weight = 0,
