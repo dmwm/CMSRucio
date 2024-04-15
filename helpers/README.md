@@ -45,3 +45,18 @@ This is to test HTTP REST API readiness for all our Tapes.
 
 PS: Start with a small functional test transfer, the default dataset is a good example.
 If it works, then try with a larger dataset for stress testing.
+
+
+---- 
+
+Adding scripts for retrieving file locality information on buffer and tape.
+
+```bash
+curl -X POST --cert $X509_USER_PROXY --key $X509_USER_PROXY --capath /etc/grid-security/certificates https://<hostname>:<port>/api/v1/tape/archiveinfo> \
+--data '{"paths":[
+<file_path1>,
+<file_path2>,
+]}' | jq
+```
+
+The document for rest api specification can be found [here](https://cernbox.cern.ch/pdf-viewer/public/vLhBpHDdaXJSqwW/WLCG%20Tape%20REST%20API%20reference%20document.pdf)
