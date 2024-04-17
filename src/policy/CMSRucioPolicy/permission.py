@@ -326,14 +326,22 @@ def perm_add_rule(issuer, kwargs, *, session: "Optional[Session]" = None):
     all_temp = True
     for rse in rses:
         rse_attr = list_rse_attributes(rse_id=rse['id'], session=session)
-        rse_type = rse_attr.get('cms_type', None)
-        if rse_type not in ['temp']:
+        cms_type = rse_attr.get('cms_type', None)
+        if cms_type not in ['temp']:
             all_temp = False
 
     if all_temp and kwargs['lifetime'] is not None and kwargs['lifetime'] < 31 * 24 * 60 * 60:
         return True
 
-    # Non admin users can create rules without the ability to lock them
+    # Check if any of the rses is a tape RSE (This does not include the _Test and _Temp RSEs)
+    rse_names = [rse['rse'] for rse in rses]
+    any_tape = any(name.endswith('_Tape') for name in rse_names)
+
+    if any_tape and kwargs['lifetime'] is not None:
+        return False
+
+    # Non admin users cannot create rules with locked flag
+    # A locked rule cannot be deleted; and is not removed ever after the rule expires
     if kwargs['account'] == issuer and not kwargs['locked']:
         return True
 
