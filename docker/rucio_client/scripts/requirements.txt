@@ -1,0 +1,5 @@
+# for setOneRucioFromGitlab, setRucioFromGitlab, cmslinks.py
+python-gitlab~=4.4.0
+
+# for syncaccount_oidc.py
+liboidcagent~=0.6.0
