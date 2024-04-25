@@ -60,3 +60,15 @@ curl -X POST --cert $X509_USER_PROXY --key $X509_USER_PROXY --capath /etc/grid-s
 ```
 
 The document for rest api specification can be found [here](https://cernbox.cern.ch/pdf-viewer/public/vLhBpHDdaXJSqwW/WLCG%20Tape%20REST%20API%20reference%20document.pdf)
+
+
+### resurrect_dids.py
+
+These are a set of scripts used to resurrect removed dids from the DELETED_DIDS table and then restore them in Rucio.
+In order to do that one has to:
+
+1. Ressurect the DIDs 
+2. Re-link DIDs (attach blocks to datasets and files to blocks)
+3. Make sure that the files actually exist in some RSE (possibly using gfal-stat)
+4. Manually add a replica that points to the existing file in the above found RSE
+
