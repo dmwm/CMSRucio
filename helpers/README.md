@@ -28,7 +28,7 @@ This is to test HTTP REST API readiness for all our Tapes.
         --name NAME
         can be specified if the default scope and name are not desired.
     ```
-6. For a Read Test `python3 test_http_tape_rest_api.py --rse RSENAME --mode read --ruleid RULEID`
+6. For a Read Test `python3 test_http_tape_rest_api.py --readtorse RSENAME --mode read --ruleid RULEID`
     ```    
     where RULEID is the rule id of the file that was written in the write test.
     optionally:
