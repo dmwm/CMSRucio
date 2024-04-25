@@ -1,7 +1,3 @@
 FROM registry.cern.ch/cmsrucio/rucio_client:latest
 
 COPY loadtest /loadtest
-
-ENTRYPOINT ["/loadtest/loadtest.py"]
-
-
