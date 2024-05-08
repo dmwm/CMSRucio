@@ -10,6 +10,12 @@ image:
   # Overrides the image tag whose default is the chart appVersion.
   tag: "latest"
 
+jobber:
+  resultSinks:
+    - &stdoutSink
+      type: stdout
+      data: [stdout, stderr]
+
 consistency:
   schema: "CMS_RUCIO_PROD"
   logLevel: "INFO"
@@ -18,7 +24,8 @@ consistency:
   defaultRoot: "/path/to/nowhere"
   rucioCfgSecret: "this-one"
   filter: ""
-  sites: {}
+  sites:
+    {}
     # Specify the names of the sites to check and an interval. Recommended intervals are 1, 7, 14, 31 (days)
     # in which case they are run at random days. Any other integer will be run on days of the month divisible
     # (14 day intervals will run in the first and third week of the month)
@@ -33,8 +40,8 @@ scratchStorageClass:
   create: false
 
 reportStorageClass:
-  #osShareID: fill in hash here
-  #osShareAccessID: fill in hash here
+  osShareID: abc
+  osShareAccessID: def
 
 serviceAccount:
   # Specifies whether a service account should be created
@@ -47,10 +54,12 @@ serviceAccount:
 
 podAnnotations: {}
 
-podSecurityContext: {}
+podSecurityContext:
+  {}
   # fsGroup: 2000
 
-securityContext: {}
+securityContext:
+  {}
   # capabilities:
   #   drop:
   #   - ALL
@@ -64,7 +73,8 @@ service:
 
 ingress:
   enabled: false
-  annotations: {}
+  annotations:
+    {}
     # kubernetes.io/ingress.class: nginx
     # kubernetes.io/tls-acme: "true"
   hosts:
@@ -75,7 +85,8 @@ ingress:
   #    hosts:
   #      - chart-example.local
 
-resources: {}
+resources:
+  {}
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
   # resources, such as Minikube. If you do want to specify resources, uncomment the following
