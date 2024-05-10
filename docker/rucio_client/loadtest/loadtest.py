@@ -238,6 +238,12 @@ def update_loadtest(
                 }
             ):
                 client.update_replication_rule(other_rule["id"], {"lifetime": 0})
+        
+        except ReplicationRuleCreationTemporaryFailed as e:
+            logger.error(
+                f"Previous replica has not be deleted from the destination rse {dest_rse} for files in dataset {dataset}", e
+                )
+                
         return False
     if rule["state"] == "SUSPENDED":
         logger.debug(
