@@ -41,19 +41,11 @@ data:
         maxHistories: 1
 
     resultSinks:
-      #- &programSink
-      #  type: program
-      #  path: /home/handleError.sh
-
-      #- &systemEmailSink
-      #  type: system-email
-
-      #- &filesystemSink
-      #  type: filesystem
-      #  path: /path/to/dir
-      #  data: [stdout, stderr]
-      #  maxAgeDays: 10
-
+{{- range .Values.jobber.resultSinks }}
+        - type: {{ .type }}
+          data: {{ .data }}
+{{- end }}
+        
     jobs:
       ## This section must contain a YAML sequence of maps like the following:
       #Job:
