@@ -26,13 +26,15 @@ def global_approval(rule, did, session) -> bool:
     :returns: True if the rule should be auto approved, False otherwise
     """
 
-    auto_approve_activity = 'User AutoApprove'
+    auto_approve_activities = ["User AutoApprove", "Analysis TapeRecall"]
 
     # All checks are performed at rule creation
     # The approval conditions are define in _check_for_auto_approve_eligibility function in the permissions module
     # Check activity is User AutoApprove
+    # Analysis TapeRecall is also auto approved - This is used by CRAB to recall data from tape on behalf of the user
+    # The accounting is handled in crabserver
 
-    if rule['activity'] == auto_approve_activity:
+    if rule["activity"] in auto_approve_activities:
         return True
 
     return False

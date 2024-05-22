@@ -322,6 +322,9 @@ def perm_add_rule(issuer, kwargs, *, session: "Optional[Session]" = None):
     if kwargs["activity"] == "User AutoApprove":
         return _check_for_auto_approve_eligibility(issuer, rses, kwargs, session=session)
 
+    if kwargs["activity"] == "Analysis TapeRecall" and issuer.external == "crab_tape_recall":
+        return True
+
     # Anyone can use _Temp RSEs if a lifetime is set and under a month
     all_temp = True
     for rse in rses:
