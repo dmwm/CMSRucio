@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import re
+import sys
 
 from rucio.client import Client
 
@@ -71,10 +72,21 @@ class LinksMatrix(object):
                     sites = json.loads(base64.b64decode(f.content))
                 except Exception as e:
                     logging.warning(f'No PNN for RSE {rse}. Trying to get it from gitlab. Error: {str(e)}')
+                    continue
                 for site in sites:
-                    if site.get('rse') in rse:
-                        pnn = site.get('site')
-                        break
+                    # Error handling in case there are issues retrieving info from sites' dicts
+                    try:
+                        if site.get('rse') in rse:
+                            pnn = site.get('site')
+                            break
+                    except Exception as e:
+                        logging.warning(f'Problem getting PNN from gitlab for RSE {rse} SITE {site.get("site")}. Error: {str(e)}')
+            
+            # If PNN could be retrieved skip to the next RSE (do not add entry to the list)
+            if pnn is None:
+                logging.warning(f'No PNN found in github for RSE {rse}.')
+                continue
+            
             try:
                 self.rselist.append({
                     'rse': rse,
@@ -161,7 +173,7 @@ class LinksMatrix(object):
 
         for src in self.rselist:
             srse = src['rse']
-            logging.info("Setting links from %s to %s other RSEs.", srse, len(self.rselist))
+            logging.debug("Setting links from %s to %s other RSEs.", srse, len(self.rselist))
             for dest in self.rselist:
                 drse = dest['rse']
 
@@ -169,7 +181,7 @@ class LinksMatrix(object):
                     continue
 
                 if (srse in CTA_RSES and drse not in CERN_RSES) or (drse in CTA_RSES and srse not in CERN_RSES):
-                    logging.info("Not setting link from %s to %s", srse, drse)
+                    logging.debug("Not setting link from %s to %s", srse, drse)
                     continue
 
                 count['checked'].append([srse, drse])
@@ -179,24 +191,21 @@ class LinksMatrix(object):
                 if srse in self.links and drse in self.links[srse] and self.links[srse][drse] >= 0:
                     if not link:
                         pars = {'distance': self.links[srse][drse]}
-                        if dry:
-                            logging.info("adding link from %s to %s with %s. Dry Run", srse, drse, str(pars))
-                        else:
+                        logging.info("ADD link from %s to %s with %s.", srse, drse, str(pars))
+                        if not dry:
                             self.rcli.add_distance(srse, drse, pars)
-
                         count['created'].append([srse, drse])
+                    
                     elif link and overwrite:
-                        if dry:
-                            logging.info("setting distance %s for link from %s to %s. Dry run.",
-                                         self.links[srse][drse], srse, drse)
-                        else:
-                            self.rcli.update_distance(srse, drse, {'distance': self.links[srse][drse]})
-                        count['updated'].append([srse, drse])
+                        if link[0]['distance'] != self.links[srse][drse]:
+                            logging.info("SET distance from %s to %s for link from %s to %s.", link[0]['distance'], self.links[srse][drse], srse, drse)
+                            if not dry:                            
+                                self.rcli.update_distance(srse, drse, {'distance': self.links[srse][drse]})
+                            count['updated'].append([srse, drse])
 
                 elif link and disable:
-                    if dry:
-                        logging.info("disabling link from %s to %s. Dry run", srse, drse)
-                    else:
+                    logging.info("DISABLE link from %s to %s.", srse, drse)
+                    if not dry:
                         self.rcli.update_distance(srse, drse, {'distance': None, })
                     count['disabled'].append([srse, drse])
 
@@ -235,10 +244,12 @@ if __name__ == '__main__':
 
     OPTIONS = PARSER.parse_args()
 
+    # Configure logger
+    # Redirecting stream to stdout so the logs are visible in container logs
     if OPTIONS.debug:
-        logging.basicConfig(level=logging.DEBUG)
+        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
     else:
-        logging.basicConfig(level=logging.INFO)
+        logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
     if OPTIONS.exclude:
         OPTIONS.exclude = json.loads(OPTIONS.exclude.replace("'", '"'))
