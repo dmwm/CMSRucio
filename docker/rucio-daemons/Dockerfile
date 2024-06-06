@@ -32,7 +32,4 @@ RUN mkdir -p /patch
 # Patch for auto approve plugin rucio/pull/6215
 #ADD https://github.com/rucio/rucio/pull/6215.patch /patch/6215.patch
 
-# Patch for rucio/pull/6444 to see if it'll fix the issue of conveyor-finisher not marking suspicious replicas
-ADD https://github.com/rucio/rucio/pull/6444.patch /patch/6444.patch 
-
 ENTRYPOINT ["/cms-entrypoint.sh"]
