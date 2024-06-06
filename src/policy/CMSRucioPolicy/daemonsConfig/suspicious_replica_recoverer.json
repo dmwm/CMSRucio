@@ -1,0 +1,12 @@
+[
+    {
+        "action": "ignore",
+        "datatype": ["RAW"],
+        "scope": []
+    },
+    {
+        "action": "declare bad",
+        "datatype": [],
+        "scope": []
+    }
+]
