@@ -27,7 +27,7 @@ RUN rmdir /etc/grid-security/certificates && ln -s /cvmfs/grid.cern.ch/etc/grid-
 ADD docker/rucio-daemons/cms-entrypoint.sh /
 
 # Cannot make patch directory unless there are patches
-RUN mkdir -p /patch
+#RUN mkdir -p /patch
 
 # Patch for auto approve plugin rucio/pull/6215
 #ADD https://github.com/rucio/rucio/pull/6215.patch /patch/6215.patch
