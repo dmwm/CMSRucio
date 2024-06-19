@@ -11,7 +11,7 @@ ARG RUCIO_VERSION
 FROM rucio/probes:$RUCIO_VERSION
 
 # For now CMS versions use python3 explicitly. Can be removed when main container goes to python3
-#RUN ln -s /usr/bin/python3 /usr/local/bin/python
+RUN ln -s /usr/bin/python3 /usr/local/bin/python
 
 # Add CMS policy package
 RUN mkdir -p /opt/rucio/policy/CMSRucioPolicy
@@ -19,21 +19,21 @@ COPY src/policy/CMSRucioPolicy /opt/rucio/policy/CMSRucioPolicy
 # Make it search the policy directory. Needs a change for python upgrades
 RUN echo "/opt/rucio/policy" > /usr/local/lib/python3.9/site-packages/policy.pth
 
-# Temporary additions
 
-# Until Fernando ports to SQLAlchemy and/or merged
+ADD https://raw.githubusercontent.com/dynamic-entropy/probes/30daccd5c735136e812c84d85e091b438d820f7c/common/check_deletable_replicas /probes/common
+ADD https://raw.githubusercontent.com/dynamic-entropy/probes/30daccd5c735136e812c84d85e091b438d820f7c/common/check_obsolete_replicas /probes/common
 
-ADD https://raw.githubusercontent.com/ericvaandering/probes/hack_obsolete_replicas/common/check_obsolete_replicas /probes/common
-ADD https://raw.githubusercontent.com/nsmith-/probes/hack_replicas/common/check_deletable_replicas /probes/common
+# TODO: Remove Tooo old? Was there a PR for them in rucio probes?
+#ADD https://raw.githubusercontent.com/ericvaandering/probes/hack_obsolete_replicas/common/check_obsolete_replicas /probes/common
+#ADD https://raw.githubusercontent.com/nsmith-/probes/hack_replicas/common/check_deletable_replicas /probes/common
 
-# TODO: Merge Donata's probes somewhere
-# This is removed by 122 or 123 from Panos
-# ADD https://raw.githubusercontent.com/dmielaikaite/probes/dmielaik_probes/common/check_used_space /probes/common
 
 # Where from?
 # Supplanted in PR115 ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_check_expired_rules/common/check_expired_rules /probes/common
 ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_check_expired_locked/common/check_expired_locked_rules /probes/common
 
+
+# TODO: Most of these don't work either, each with a different error - different reasons than above
 # PR 132 - Not accepted into rucio/probes yet
 ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_expired_dids /probes/common
 ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_fts_backlog /probes/common
