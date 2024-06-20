@@ -19,8 +19,8 @@ DOMAINS_BY_TYPE = {
                 'delete': 1},
         'lan': {'read': 0, 'write': 0, 'delete': 0}},
     'int-real': {
-        'wan': {'read': 1, 'write': 0, 'third_party_copy_write': 1, 'third_party_copy_read': 1,
-                'delete': 0},
+        'wan': {'read': 1, 'write': 1, 'third_party_copy_write': 1, 'third_party_copy_read': 1,
+                'delete': 1},
         'lan': {'read': 0, 'write': 0, 'delete': 0}},
     'test': {
         'wan': {'read': 1, 'write': 1, 'third_party_copy_write': 1, 'third_party_copy_read': 1,
@@ -355,6 +355,9 @@ class CMSRSE:
             # if we are building a _Test instance add the specia prefix
             if self.cms_type == "test":
                 prefix = prefix + "store/test/rucio/"
+
+            elif self.cms_type == "int-real":
+                prefix = prefix + "store/test/rucio/int/"
 
             elif self.cms_type == "temp":
                 prefix = prefix + "store/temp/"

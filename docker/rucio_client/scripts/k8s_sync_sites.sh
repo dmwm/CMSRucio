@@ -23,6 +23,7 @@ set -x
 cd docker/rucio_client/scripts/
 if [ "$RUCIO_HOME" = "/opt/rucio-int" ]
   then
+  ./setRucioFromGitlab --type int-real 
   exit 0
 fi
 
