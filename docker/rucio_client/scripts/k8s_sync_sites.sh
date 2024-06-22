@@ -11,7 +11,6 @@ voms-proxy-init -voms cms  -cert /tmp/cert.pem -key /tmp/key.pem
 voms-proxy-info
 
 cd /root/CMSRucio
-git pull origin master
 export RUCIO_ACCOUNT=root
 
 echo Using config file in $RUCIO_HOME
