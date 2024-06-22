@@ -14,7 +14,7 @@ RUN dnf config-manager --set-enabled crb
 
 # FIXME: What is all this? We can't need it all
 RUN dnf install -y python3 python3-pip libaio gcc python3-devel \
-                   wget unzip openssl-devel bind-utils nano git && \
+    wget unzip openssl-devel bind-utils nano git && \
     dnf clean all && \
     rm -rf /var/cache/dnf
 
@@ -32,9 +32,10 @@ RUN dnf -y install http://linuxsoft.cern.ch/wlcg/el9/x86_64/wlcg-repo-1.0.0-1.el
 # FIXME: This overlaps with above
 
 RUN dnf config-manager --save --setopt=wlcg.skip_if_unavailable=true \
-        && dnf install -y which krb5-devel gridsite \
-                   globus-proxy-utils voms-clients-cpp wlcg-voms-cms \
-                   gfal2-util gfal2-all gfal2-plugin-xrootd python3-gfal2 && \
+    && dnf install -y which krb5-devel gridsite \
+    globus-proxy-utils voms-clients-cpp wlcg-voms-cms \
+    wlcg-iam-vomses-cms \
+    gfal2-util gfal2-all gfal2-plugin-xrootd python3-gfal2 && \
     dnf clean all && \
     rm -rf /var/cache/dnf
 
