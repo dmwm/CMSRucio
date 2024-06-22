@@ -59,7 +59,7 @@ RUN git clone https://github.com/rucio/rucio.git
 # Pull some useful stuff out of git
 WORKDIR /root
 RUN git clone https://github.com/dmwm/CMSRucio.git
-RUN git checkout CMSRUCIO_GITTAG
+RUN git checkout $CMSRUCIO_GITTAG
 
 RUN mkdir -p /etc/grid-security ; ln -s /cvmfs/grid.cern.ch/etc/grid-security/certificates /etc/grid-security/
 
