@@ -35,7 +35,7 @@ jobs:
 
       - name: Build the Docker Image
         run: |
-          buildah build --build-arg RUCIO_VERSION=${{ env.rucio_version }} --file docker/${{ matrix.image }}/Dockerfile --tag registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/${{ matrix.image }}:${{ env.tag }} .
+          buildah build --build-arg RUCIO_VERSION=${{ env.rucio_version }} --build-arg CMSRUCIO_GITTAG=${{ env.tag }} --file docker/${{ matrix.image }}/Dockerfile --tag registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/${{ matrix.image }}:${{ env.tag }} .
 
       - name: Push the Docker Image
         run: |

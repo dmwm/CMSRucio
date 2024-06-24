@@ -1,6 +1,7 @@
 FROM almalinux:9
 
 ARG RUCIO_VERSION
+ARG CMSRUCIO_GITTAG
 
 RUN dnf upgrade -y && \
     dnf clean all && \
@@ -58,6 +59,7 @@ RUN git clone https://github.com/rucio/rucio.git
 # Pull some useful stuff out of git
 WORKDIR /root
 RUN git clone https://github.com/dmwm/CMSRucio.git
+RUN cd CMSRucio && git checkout $CMSRUCIO_GITTAG
 
 RUN mkdir -p /etc/grid-security ; ln -s /cvmfs/grid.cern.ch/etc/grid-security/certificates /etc/grid-security/
 
