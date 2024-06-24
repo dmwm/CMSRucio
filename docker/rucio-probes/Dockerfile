@@ -41,8 +41,8 @@ ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manag
 ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_updated_dids /probes/common
 
 # PR 136 - Can be merged when working
-ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_check_expired_locked/cms/check_deletable_replicas /probes/cms
-ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_check_expired_locked/cms/check_obsolete_replicas /probes/cms
+ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_usage_probes/cms/check_deletable_replicas /probes/cms
+ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_usage_probes/cms/check_obsolete_replicas /probes/cms
 
 RUN chmod +x /probes/common/check_*
 RUN chmod +x /probes/cms/check_*
