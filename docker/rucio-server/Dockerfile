@@ -24,9 +24,10 @@ ADD docker/rucio-server/install_mail_templates.sh /tmp/
 RUN /tmp/install_mail_templates.sh
 
 # Cannot make patch directory unless there are patches
-#RUN mkdir -p /patch
+RUN mkdir -p /patch
 
 # Patch for auto approve plugin rucio/pull/6215
 #ADD https://github.com/rucio/rucio/pull/6215.patch /patch/6215.patch
+ADD https://github.com/rucio/rucio/pull/6844.patch /patch/6844.patch
 
 ENTRYPOINT ["/cms-entrypoint.sh"]
