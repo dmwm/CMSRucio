@@ -33,5 +33,6 @@ RUN mkdir -p /patch
 #ADD https://github.com/rucio/rucio/pull/6215.patch /patch/6215.patch
 
 ADD https://github.com/rucio/rucio/pull/6844.patch /patch/6844.patch
+ADD https://raw.githubusercontent.com/labkode/rucio/patches/logging.patch /patch/mypatch.patch
 
 ENTRYPOINT ["/cms-entrypoint.sh"]
