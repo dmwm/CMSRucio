@@ -11,7 +11,6 @@ voms-proxy-init -voms cms  -cert /tmp/cert.pem -key /tmp/key.pem
 voms-proxy-info
 
 cd /root/CMSRucio
-git pull origin master
 export RUCIO_ACCOUNT=root
 
 echo Using config file in $RUCIO_HOME
@@ -23,6 +22,8 @@ set -x
 cd docker/rucio_client/scripts/
 if [ "$RUCIO_HOME" = "/opt/rucio-int" ]
   then
+  echo "Syncing Integration sites from JSON"
+  ./setRucioFromGitlab --type int-real 
   exit 0
 fi
 
