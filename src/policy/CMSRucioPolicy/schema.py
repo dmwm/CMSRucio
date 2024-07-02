@@ -42,7 +42,7 @@ ACTIVITY = {"description": "Activity name",
                      "Analysis Input", "Analysis Output", "Staging",
                      "T0 Export", "T0 Tape", "Upload/Download (Job)",
                      "Upload/Download (User)", "User AutoApprove",
-                     "User Subscriptions", "Data Challenge", "Analysis TapeRecall"]}
+                     "User Subscriptions", "Data Challenge", "Analysis TapeRecall", "Manual Transfers"]}
 
 
 SCOPE_LENGTH = 25
