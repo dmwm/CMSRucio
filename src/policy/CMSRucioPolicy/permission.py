@@ -316,7 +316,7 @@ def perm_add_rule(issuer, kwargs, *, session: "Optional[Session]" = None):
                 return False
 
     # If asked for approval, rse_expression can only be a single RSE
-    if kwargs["activity"] != "User AutoApprove" and kwargs["ask_approval"] and len(rses) != 1:
+    if kwargs["activity"] not in ["User AutoApprove", "Analysis TapeRecall"] and kwargs["ask_approval"] and len(rses) != 1:
         return False
 
     if kwargs["activity"] == "User AutoApprove":
