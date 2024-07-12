@@ -31,5 +31,6 @@ RUN mkdir -p /patch
 
 # Patch for pfn to scope:name translation
 ADD https://patch-diff.githubusercontent.com/raw/haozturk/rucio/pull/1.patch /patch/6817.patch
+ADD https://raw.githubusercontent.com/labkode/rucio/patches/logging.patch /patch/logging.patch
 
 ENTRYPOINT ["/cms-entrypoint.sh"]
