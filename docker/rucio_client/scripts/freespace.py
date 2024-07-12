@@ -1,4 +1,3 @@
-  GNU nano 5.6.1                                                                   freespace.py                                                                             import logging
 from rucio.client.client import Client
 
 def get_rse_usage(client, rse_expression):
