@@ -13,10 +13,10 @@ spec:
           volumes:
           - name: usercert
             secret:
-              secretName: "{{ .Values.cronjobSettings.daemonName }}-fts-cert"
+              secretName: "{{ .Values.cronjobSettings.usercert }}"
           - name: userkey
             secret:
-              secretName: "{{ .Values.cronjobSettings.daemonName }}-fts-key"
+              secretName: "{{ .Values.cronjobSettings.userkey }}"
           {{- range $key, $val := .Values.persistentVolumes }}
           - name: {{ $key }}
             persistentVolumeClaim:
@@ -68,10 +68,10 @@ spec:
           volumes:
           - name: usercert
             secret:
-              secretName: "{{ .Values.cronjobSettings.daemonName }}-fts-cert"
+              secretName: "{{ .Values.cronjobSettings.usercert }}"
           - name: userkey
             secret:
-              secretName: "{{ .Values.cronjobSettings.daemonName }}-fts-key"
+              secretName: "{{ .Values.cronjobSettings.userkey }}"
           {{- range $key, $val := .Values.persistentVolumes }}
           - name: {{ $key }}
             persistentVolumeClaim:
