@@ -50,6 +50,9 @@ spec:
                     secretKeyRef:
                       name: "rucio-secrets"
                       key: monit_token
+{{- with .Values.cronjobSettings.additionalEnvs }}
+{{ toYaml . | indent 16 }}
+{{- end }}
               command: ['/root/CMSRucio/docker/rucio_client/scripts/k8s_sync_sites.sh']
           restartPolicy: Never
 ---
@@ -115,5 +118,8 @@ spec:
                       name: "rucio-secrets"
                       key: oidc_iam_client_secret
                       optional: true
+{{- with .Values.cronjobSettings.additionalEnvs }}
+{{ toYaml . | indent 16 }}
+{{- end }}
               command: ['/root/CMSRucio/docker/rucio_client/scripts/k8s_sync_users_links.sh']
           restartPolicy: Never
