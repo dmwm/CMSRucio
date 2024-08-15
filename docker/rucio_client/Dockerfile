@@ -36,7 +36,7 @@ RUN dnf config-manager --save --setopt=wlcg.skip_if_unavailable=true \
     && dnf install -y which krb5-devel gridsite \
     globus-proxy-utils voms-clients-cpp wlcg-voms-cms \
     wlcg-iam-vomses-cms \
-    gfal2-util gfal2-all gfal2-plugin-xrootd python3-gfal2 && \
+    python3-gfal2-util gfal2-all python3-gfal2 && \
     dnf clean all && \
     rm -rf /var/cache/dnf
 
