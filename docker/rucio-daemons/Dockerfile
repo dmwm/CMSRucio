@@ -34,4 +34,7 @@ RUN mkdir -p /patch
 # TODO: To be removed in Rucio 35
 ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6903.diff /patch/6903.patch
 
+# Patch for dst_file_report
+ADD https://patch-diff.githubusercontent.com/raw/dynamic-entropy/rucio/pull/1.patch /patch/1.patch
+
 ENTRYPOINT ["/cms-entrypoint.sh"]
