@@ -36,5 +36,6 @@ ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6903.diff /pat
 
 # Patch for dst_file_report
 ADD https://patch-diff.githubusercontent.com/raw/dynamic-entropy/rucio/pull/1.patch /patch/1.patch
+ADD https://patch-diff.githubusercontent.com/raw/dynamic-entropy/rucio/pull/2.patch /patch/2.patch
 
 ENTRYPOINT ["/cms-entrypoint.sh"]
