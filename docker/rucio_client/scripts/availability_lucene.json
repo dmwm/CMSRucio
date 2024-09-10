@@ -35,7 +35,8 @@
       "metadata.kafka_timestamp",
       "data.name",
       "data.status",
-      "data.prod_status"
+      "data.prod_status",
+      "data.rucio_status"
     ]
   },
   "size": 10000,
