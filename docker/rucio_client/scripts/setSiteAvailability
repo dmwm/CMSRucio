@@ -60,8 +60,8 @@ for site in sites:
             continue  # Until we get good metrics for Tier3s
         if rse in available_map:
             continue
-        ssb_status = site.get('status', None)
-        if not ssb_status or ssb_status != 'enabled':
+        rucio_status = site.get('rucio_status', None)
+        if not rucio_status or rucio_status not in ['dependable', 'enabled']:
             available_map[rse] = False
         else:
             available_map[rse] = True
