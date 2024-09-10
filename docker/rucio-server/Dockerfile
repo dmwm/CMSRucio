@@ -28,6 +28,6 @@ RUN mkdir -p /patch
 
 # Patch for dst_file_report
 ADD https://patch-diff.githubusercontent.com/raw/dynamic-entropy/rucio/pull/1.patch /patch/1.patch
-ADD https://patch-diff.githubusercontent.com/raw/dynamic-entropy/rucio/pull/2.patch /patch/2.patch
+ADD https://patch-diff.githubusercontent.com/raw/ericvaandering/rucio/pull/10.patch /patch/10.patch
 
 ENTRYPOINT ["/cms-entrypoint.sh"]
