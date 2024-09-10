@@ -4,7 +4,7 @@
 
 from CMSRucioPolicy.algorithms import lfn2pfn, auto_approve
 
-SUPPORTED_VERSION = ["32", "33", "34"]
+SUPPORTED_VERSION = ["32", "33", "34", "35"]
 
 
 def get_algorithms():
