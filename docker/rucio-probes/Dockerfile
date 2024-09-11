@@ -40,7 +40,8 @@ ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manag
 ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_unlocked_replicas /probes/common
 ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_updated_dids /probes/common
 
-# PR 136 - Can be merged when working
+# PR 136 which was closed in favor of #145, which should be watched.
+# N.b. they will not move to the CMS VO, so we need a change to flux as well
 ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_usage_probes/cms/check_deletable_replicas /probes/cms
 ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_usage_probes/cms/check_obsolete_replicas /probes/cms
 
