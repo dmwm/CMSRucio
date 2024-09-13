@@ -38,4 +38,7 @@ RUN mkdir -p /patch
 ADD https://patch-diff.githubusercontent.com/raw/dynamic-entropy/rucio/pull/1.patch /patch/1.patch
 ADD https://patch-diff.githubusercontent.com/raw/ericvaandering/rucio/pull/10.patch /patch/10.patch
 
+# Patch for get-rse-info command for tapes
+# Most probably not needed here at all, json serialisation should not be needed in daemons
+ADD https://patch-diff.githubusercontent.com/raw/dynamic-entropy/rucio/pull/3.patch /patch/3.patch
 ENTRYPOINT ["/cms-entrypoint.sh"]
