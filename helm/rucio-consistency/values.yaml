@@ -17,6 +17,14 @@ jobber:
       data: [stdout, stderr]
 
 consistency:
+  prometheus_servers: ""
+  prometheus_prefix: ""
+  prometheus_labels: ""
+  rucio_host: ""
+  auth_host: ""
+  auth_type: ""
+  ca_cert: ""
+  request_retries: ""
   schema: "CMS_RUCIO_PROD"
   logLevel: "INFO"
   scratchSize: 100Gi
