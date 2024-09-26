@@ -41,4 +41,7 @@ ADD https://patch-diff.githubusercontent.com/raw/ericvaandering/rucio/pull/10.pa
 # Patch for get-rse-info command for tapes
 # Most probably not needed here at all, json serialisation should not be needed in daemons
 ADD https://patch-diff.githubusercontent.com/raw/dynamic-entropy/rucio/pull/3.patch /patch/3.patch
+
+# To be removed once this PR is available in our rucio version
+ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/7106.patch /patch/7106.patch
 ENTRYPOINT ["/cms-entrypoint.sh"]
