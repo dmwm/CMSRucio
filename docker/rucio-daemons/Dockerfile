@@ -29,18 +29,11 @@ ADD docker/rucio-daemons/cms-entrypoint.sh /
 # Cannot make patch directory unless there are patches
 RUN mkdir -p /patch
 
-# Patch for overwrite when only on disk in Rucio
-# Required for additional checks that were introduced in the latest CMS FTS as a result of overwrite-when-only-on-disk implementation in FTS
-# TODO: To be removed in Rucio 35
-# ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/6903.diff /patch/6903.patch
-
-# Patch for dst_file_report
+# Patch for dst_file_report: Remove when https://github.com/rucio/rucio/pull/7081 is available
 ADD https://patch-diff.githubusercontent.com/raw/dynamic-entropy/rucio/pull/1.patch /patch/1.patch
-ADD https://patch-diff.githubusercontent.com/raw/ericvaandering/rucio/pull/10.patch /patch/10.patch
 
-# Patch for get-rse-info command for tapes
-# Most probably not needed here at all, json serialisation should not be needed in daemons
-ADD https://patch-diff.githubusercontent.com/raw/dynamic-entropy/rucio/pull/3.patch /patch/3.patch
+# Patch for directory scoped token support
+ADD https://patch-diff.githubusercontent.com/raw/dynamic-entropy/rucio/pull/4.patch /patch/token.patch
 
 # To be removed once this PR is available in our rucio version
 ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/7106.patch /patch/7106.patch

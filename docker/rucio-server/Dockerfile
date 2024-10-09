@@ -26,11 +26,11 @@ RUN /tmp/install_mail_templates.sh
 # Cannot make patch directory unless there are patches
 RUN mkdir -p /patch
 
-# Patch for dst_file_report
+# Patch for dst_file_report: Remove when https://github.com/rucio/rucio/pull/7081 is available
 ADD https://patch-diff.githubusercontent.com/raw/dynamic-entropy/rucio/pull/1.patch /patch/1.patch
-ADD https://patch-diff.githubusercontent.com/raw/ericvaandering/rucio/pull/10.patch /patch/10.patch
 
-# Patch for get-rse-info command for tapes
-ADD https://patch-diff.githubusercontent.com/raw/dynamic-entropy/rucio/pull/3.patch /patch/3.patch
+# Patch for directory scoped token support
+ADD https://patch-diff.githubusercontent.com/raw/dynamic-entropy/rucio/pull/4.patch /patch/token.patch
+
 
 ENTRYPOINT ["/cms-entrypoint.sh"]
