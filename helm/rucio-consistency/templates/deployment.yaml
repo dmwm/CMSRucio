@@ -61,7 +61,7 @@ spec:
             - name: CA_CERT
               value: {{ .Values.consistency.ca_cert }}
             - name: REQUEST_RETRIES
-              value: {{ .Values.consistency.request_retries }}                                                                                             
+              value: {{ .Values.consistency.request_retries | quote }}                                                                                             
           command: ["/consistency/run.sh"]
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
