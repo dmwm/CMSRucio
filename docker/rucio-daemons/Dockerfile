@@ -37,4 +37,7 @@ ADD https://patch-diff.githubusercontent.com/raw/dynamic-entropy/rucio/pull/4.pa
 
 # To be removed once this PR is available in our rucio version
 ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/7106.patch /patch/7106.patch
+
+# Patch for BB8 Daemon
+ADD https://patch-diff.githubusercontent.com/raw/amanrique1/rucio/pull/1.patch /patch/bb8.patch
 ENTRYPOINT ["/cms-entrypoint.sh"]
