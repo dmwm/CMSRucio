@@ -1392,9 +1392,7 @@ def _restricted_rse_attribute(rse, key, value=None):
     # Add restricted attributes to this list
     # Use None as value to restrict the key regardless of the value
 
-    restricted_attributes = [
-        ('T2_US_MIT_Tape', 'archive_timeout', None)
-    ]
+    restricted_attributes = []
     for rse_name, attribute_key, attribute_value in restricted_attributes:
         if rse == rse_name and key == attribute_key and (attribute_value == value or attribute_value is None):
             return True
