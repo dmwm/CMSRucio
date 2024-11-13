@@ -1,0 +1,3 @@
+[submodule "docker/rucio-tracers"]
+	path = docker/rucio-tracers
+	url = https://github.com/dmwm/rucio-tracers
