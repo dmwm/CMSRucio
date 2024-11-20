@@ -65,7 +65,12 @@ def check_file_integrity(pfn: str, adler: str) -> bool:
             return integrity
     except Exception as e:
         logging.error(f"Error during file integrity check: {e}")
-        return False
+        if '404' in e:
+            # declare replica as bad
+            return False
+        else:
+            # Keep replica for manual evaluation
+            return True
     finally:
         try:
             os.remove(local_path)
