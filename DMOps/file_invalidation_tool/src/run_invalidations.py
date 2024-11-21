@@ -1,3 +1,4 @@
+import os
 import logging
 import argparse
 import subprocess
@@ -23,13 +24,19 @@ def check_arguments():
     Parse and check the arguments provided, and perform various validations based on the running mode.
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('running_mode', type=RunningMode, help='Running mode: --global, --only-dbs, --only-rucio, --site-invalidation, checksum-validation ')
+    parser.add_argument('running_mode', type=RunningMode, help='Running mode: global, only-dbs, only-rucio, site-invalidation, integrity-validation')
+    parser.add_argument('--user', type=str, help='Kerberos user')
     parser.add_argument('--dry-run', action='store_true', help='Test the script without deleting anything')
     parser.add_argument('--erase-mode', action='store_true', help='Erase empty datasets and containers')
     parser.add_argument('--rse', type=str, help='Site name on which to perform the invalidations')
     parser.add_argument('--reason', type=str, help='Comment for the deletion')
 
     args = parser.parse_args()
+
+    if args.running_mode != RunningMode.INTEGRITY_VALIDATION:
+        if not args.user or not args.user.strip():
+            raise ValueError("The 'user' argument cannot be null or empty.")
+        os.environ["USER"] = args.user
 
     if not args.running_mode == RunningMode.INTEGRITY_VALIDATION and not args.reason:
         raise ValueError('Reason is required.')

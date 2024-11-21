@@ -4,7 +4,6 @@ FROM registry.cern.ch/cmsmonitoring/cmsmon-spark:v0.5.0.1
 ENV PYCURL_SSL_LIBRARY=nss \
     X509_USER_CERT=/certs/usercert.pem \
     X509_USER_KEY=/certs/userkey.pem \
-    USER=dmtops \
     RUCIO_CONFIG=/cvmfs/cms.cern.ch/rucio/rucio.cfg \
     RUCIO_ACCOUNT=transfer_ops \
     DRIVERPORT=5001 \
