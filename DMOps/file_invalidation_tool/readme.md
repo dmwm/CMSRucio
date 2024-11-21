@@ -11,11 +11,11 @@ The tool has 5 running modes.  It's important that your cert and key (decrypted)
 
 | Running Mode | Description | Tool Mode | Input File | Params | Auth Requirements |
 | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- |
-| Global Invalidation | Invalidate all files from received files, datasets or containers list on Rucio and DBS | `global` | `<filename>.txt`: txt file containing list of files, datasets or containers | `--reason <reason>`: comment for invalidation<br>`--dry-run`(**optional**): Simulate the execution without actually performing the file invalidation<br>`--erase-mode`(**optional**): Erase empty DIDs | `./certs/usercert.pem`<br>`./certs/userkey.pem`<br>`./secrets/dmtops.keytab`|
-| DBS Invalidation | Invalidate all files from received files, datasets or containers list only on DBS | `only-dbs` | `<filename>.txt`: txt file containing list of files, datasets or containers | `--reason <reason>`: comment for invalidation<br>`--dry-run`(**optional**): Simulate the execution without actually performing the file invalidation<br>`--erase-mode`(**optional**): Erase empty DIDs | `./certs/usercert.pem`<br>`./certs/userkey.pem`<br>`./secrets/dmtops.keytab`|
-| Rucio Invalidation | Invalidate all files from received files, datasets or containers list only on Rucio | `only-rucio` | `<filename>.txt`: txt file containing list of files, datasets or containers | `--reason <reason>`: comment for invalidation<br>`--dry-run`(**optional**): Simulate the execution without actually performing the file invalidation<br>`--erase-mode`(**optional**): Erase empty DIDs | `./certs/usercert.pem`<br>`./certs/userkey.pem`<br>`./secrets/dmtops.keytab`|
+| Global Invalidation | Invalidate all files from received files, datasets or containers list on Rucio and DBS | `global` | `<filename>.txt`: txt file containing list of files, datasets or containers | `--user <kerberos_username>`: Kerberos user for spark jobs<br>`--reason <reason>`: comment for invalidation<br>`--dry-run`(**optional**): Simulate the execution without actually performing the file invalidation<br>`--erase-mode`(**optional**): Erase empty DIDs | `./certs/usercert.pem`<br>`./certs/userkey.pem`<br>`./secrets/<user>.keytab`|
+| DBS Invalidation | Invalidate all files from received files, datasets or containers list only on DBS | `only-dbs` | `<filename>.txt`: txt file containing list of files, datasets or containers |`--user <kerberos_username>`: Kerberos user for spark jobs<br>`--reason <reason>`: comment for invalidation<br>`--dry-run`(**optional**): Simulate the execution without actually performing the file invalidation<br>`--erase-mode`(**optional**): Erase empty DIDs | `./certs/usercert.pem`<br>`./certs/userkey.pem`<br>`./secrets/<user>.keytab`|
+| Rucio Invalidation | Invalidate all files from received files, datasets or containers list only on Rucio | `only-rucio` | `<filename>.txt`: txt file containing list of files, datasets or containers | `--user <kerberos_username>`: Kerberos user for spark jobs<br>`--reason <reason>`: comment for invalidation<br>`--dry-run`(**optional**): Simulate the execution without actually performing the file invalidation<br>`--erase-mode`(**optional**): Erase empty DIDs | `./certs/usercert.pem`<br>`./certs/userkey.pem`<br>`./secrets/<user>.keytab`|
 | Integrity Validation | Validate integrity of files in the given RSE | `integrity-validation` | `<filename>.csv`: csv file containing list of files and RSE [FILENAME,RSE_EXPRESSION] | `--dry-run`(**optional**): Simulate the execution without actually performing the file invalidation in case of being corrupted | `./certs/usercert.pem`<br>`./certs/userkey.pem`|
-| Site Invalidation | Invalidate in Rucio all files from received list at a specific site | `site-invalidation` | `<filename>.txt`: txt file containing list of files, datasets or containers | `--rse <rse>`: RSE to invalidate at<br>`--reason <reason>`: comment for invalidation<br>`--dry-run`(**optional**): Simulate the execution without actually performing the file invalidation | `./certs/usercert.pem`<br>`./certs/userkey.pem`<br>`./secrets/dmtops.keytab`|
+| Site Invalidation | Invalidate in Rucio all files from received list at a specific site | `site-invalidation` | `<filename>.txt`: txt file containing list of files, datasets or containers | `--user <kerberos_username>`: Kerberos user for spark jobs<br>`--rse <rse>`: RSE to invalidate at<br>`--reason <reason>`: comment for invalidation<br>`--dry-run`(**optional**): Simulate the execution without actually performing the file invalidation | `./certs/usercert.pem`<br>`./certs/userkey.pem`<br>`./secrets/<user>.keytab`|
 
 > **Note:** The userkey.pem should be decrypted.
 
@@ -93,7 +93,7 @@ docker run -P \
       -v "$(pwd)/certs:/certs" \
       -v "$(pwd)/secrets:/secrets" \
       --mount type=bind,source=/cvmfs/,target=/cvmfs/,readonly \
-      --network host --rm registry.cern.ch/cmsrucio/file_invalidation_tool [global | only-dbs | only-rucio] --reason <reason>
+      --network host --rm registry.cern.ch/cmsrucio/file_invalidation_tool [global | only-dbs | only-rucio] --user <username> --reason <reason>
     ```
 
     ```Bash
@@ -110,7 +110,7 @@ docker run -P \
       -v "$(pwd)/certs:/certs" \
       -v "$(pwd)/secrets:/secrets" \
       --mount type=bind,source=/cvmfs/,target=/cvmfs/,readonly \
-      --network host --rm registry.cern.ch/cmsrucio/file_invalidation_tool site-invalidation --rse <rse>  --reason <reason>
+      --network host --rm registry.cern.ch/cmsrucio/file_invalidation_tool site-invalidation --rse <rse> --user <username>  --reason <reason>
     ```
 ## Additional Notes
 
