@@ -50,3 +50,7 @@ RUN chmod +x /probes/cms/check_*
 
 # Temporary while we are adding variables to the config. Push to rucio-containers
 ADD https://raw.githubusercontent.com/ericvaandering/containers/probes_prom/probes/rucio.cfg.j2 /tmp/
+
+# To be removed once the PR is available in our rucio version
+# Patch for rules volume (https://github.com/dmwm/CMSRucio/issues/747, https://github.com/rucio/probes/pull/151)
+ADD https://patch-diff.githubusercontent.com/raw/rucio/probes/pull/151.patch /patch/151.patch
