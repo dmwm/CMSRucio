@@ -21,7 +21,7 @@ from sqlalchemy.sql import func
 from typing import TYPE_CHECKING
 
 import rucio.core.scope
-from rucio.common.config import config_get
+from rucio.common.config import config_get, config_get_int
 from rucio.common.exception import InvalidRSEExpression
 from rucio.common.types import InternalScope
 from rucio.core.account import has_account_attribute
@@ -717,9 +717,9 @@ def perm_update_rule(issuer, kwargs, *, session: "Optional[Session]" = None):
         if rule['activity'] == 'User AutoApprove':
             try:
                 # Default single extension duration - 1 month
-                extended_lifetime_limit = config_get("rules", "extended_lifetime_limit")
+                extended_lifetime_limit = config_get_int("rules", "extended_lifetime_limit")
                 # Total lifetime including all extensions cannot exceed 1 year
-                single_extension_limit = config_get("rules", "single_extension_limit")
+                single_extension_limit = config_get_int("rules", "single_extension_limit")
             except (NoOptionError, NoSectionError):
                 extended_lifetime_limit = 31536000
                 single_extension_limit = 2592000
