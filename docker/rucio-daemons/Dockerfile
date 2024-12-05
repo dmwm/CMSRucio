@@ -41,7 +41,4 @@ ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/7106.patch /pa
 # Patch for deep flag
 ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/7170.diff /patch/7170.patch
 
-# Patch for reaper improvement. To be removed once it's merged to 36 and 36 is deployed
-ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/7199.diff /patch/7199.patch
-
 ENTRYPOINT ["/cms-entrypoint.sh"]
