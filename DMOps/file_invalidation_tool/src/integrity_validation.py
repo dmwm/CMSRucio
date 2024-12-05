@@ -65,7 +65,7 @@ def check_file_integrity(pfn: str, adler: str) -> bool:
             return integrity
     except Exception as e:
         logging.error(f"Error during file integrity check: {e}")
-        if '404' in e:
+        if '404' in str(e):
             # declare replica as bad
             return False
         else:
