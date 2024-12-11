@@ -53,4 +53,4 @@ ADD https://raw.githubusercontent.com/ericvaandering/containers/probes_prom/prob
 
 # To be removed once the PR is available in our rucio version
 # Patch for rules volume (https://github.com/dmwm/CMSRucio/issues/747, https://github.com/rucio/probes/pull/151)
-ADD https://patch-diff.githubusercontent.com/raw/rucio/probes/pull/151.patch /patch/151.patch
+ADD https://raw.githubusercontent.com/eachristgr/probes/94b72e283478c1a84dd6915bc42fdbce0fb74e35/cms/check_rules_count_volume_per_rse_activity_state /probes/cms
