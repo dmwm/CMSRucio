@@ -38,6 +38,9 @@ ADD https://patch-diff.githubusercontent.com/raw/dynamic-entropy/rucio/pull/4.pa
 # To be removed once this PR is available in our rucio version
 ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/7106.patch /patch/7106.patch
 
+# Patch for BB8 Daemon
+ADD https://patch-diff.githubusercontent.com/raw/amanrique1/rucio/pull/7.patch /patch/bb8.patch
+
 # Patch for deep flag
 ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/7170.diff /patch/7170.patch
 
