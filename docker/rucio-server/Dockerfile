@@ -32,5 +32,7 @@ ADD https://patch-diff.githubusercontent.com/raw/dynamic-entropy/rucio/pull/1.pa
 # Patch for directory scoped token support
 ADD https://patch-diff.githubusercontent.com/raw/dynamic-entropy/rucio/pull/4.patch /patch/token.patch
 
+# Patch for deep flag
+ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/7170.diff /patch/7170.patch
 
 ENTRYPOINT ["/cms-entrypoint.sh"]
