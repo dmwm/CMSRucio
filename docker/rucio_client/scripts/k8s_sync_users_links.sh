@@ -35,8 +35,9 @@ if [ "$RUCIO_HOME" = "/opt/rucio-prod" ]
   ./syncCustomRoles.py
 fi
 
-echo "Creating links"
-./cmslinks.py --overwrite --disable
+# Disable temporarily due to CMSTRANSF-1045 
+#echo "Creating links"
+#./cmslinks.py --overwrite --disable
 
 
 echo "Syncing OIDC user identities"
