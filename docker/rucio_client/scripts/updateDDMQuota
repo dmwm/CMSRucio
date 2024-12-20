@@ -36,12 +36,12 @@ def get_sum_of_all_rse_statics(rse_expression):
     rses = [rse["rse"] for rse in client.list_rses(rse_expression=rse_expression)]
     result = 0
     for rse in rses:
-        static, _, _ = get_rse_info(rse)
+        static, _, _ = get_rse_usage(rse)
         result += static
     return result
 
 
-def get_rse_info(rse):
+def get_rse_usage(rse):
     rse_usage = list(client.get_rse_usage(rse))
 
     required_fields = {"static", "rucio", "expired"}
@@ -69,18 +69,36 @@ def calculate_dm_weights(rse_expression, static_weight, free_weight, expired_wei
     dm_weights = {}
 
     for rse in rses:
-        static, rucio, expired = get_rse_info(rse)
+        static, rucio, expired = get_rse_usage(rse)
 
         # Normalise
         if static == 0:
             continue  # Skip if static is 0
 
+        free = static - rucio
+
         # Control dm_weight for specially configured rses
         rse_attributes = client.list_rse_attributes(rse)
+        rse_settings = client.get_rse(rse)
 
-        free = static - rucio
-        dm_weight = static_weight * (static / total_static) + free_weight * \
-            (free / static) + expired_weight * (expired / static)
+        # dm_weight should be zero if site is over the quota or
+        # availability_write is False
+        set_dm_weight_to_0 = False
+        try:
+            availability_write = rse_settings['availability_write']
+            if availability_write == False:
+                set_dm_weight_to_0 = True
+            if free < 0:
+                set_dm_weight_to_0 = True
+        except Exception as e:
+            # If availability_write setting doesn't exist, dm weight should be 0
+            set_dm_weight_to_0 = True
+        
+        if set_dm_weight_to_0:
+            dm_weight = 0
+        else:
+            dm_weight = static_weight * (static / total_static) + free_weight * \
+                (free / static) + expired_weight * (expired / static)
         dm_weight_coefficient = 1
         if "dm_weight_coefficient" in rse_attributes:
             dm_weight_coefficient = float(rse_attributes["dm_weight_coefficient"])
@@ -93,7 +111,6 @@ def calculate_dm_weights(rse_expression, static_weight, free_weight, expired_wei
             "free": free,
             "dm_weight_coefficient" : dm_weight_coefficient,
         }
-
         dm_weights[rse] = dm_weight
     return dm_weights
 
