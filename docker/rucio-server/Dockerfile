@@ -23,16 +23,9 @@ ADD docker/rucio-server/cms-entrypoint.sh /
 ADD docker/rucio-server/install_mail_templates.sh /tmp/
 RUN /tmp/install_mail_templates.sh
 
-# Cannot make patch directory unless there are patches
-RUN mkdir -p /patch
-
-# Patch for dst_file_report: Remove when https://github.com/rucio/rucio/pull/7081 is available
-ADD https://patch-diff.githubusercontent.com/raw/dynamic-entropy/rucio/pull/1.patch /patch/1.patch
-
-# Patch for directory scoped token support
-ADD https://patch-diff.githubusercontent.com/raw/dynamic-entropy/rucio/pull/4.patch /patch/token.patch
-
-# Patch for deep flag
-ADD https://patch-diff.githubusercontent.com/raw/rucio/rucio/pull/7170.diff /patch/7170.patch
+# Patches are now included via flux secrets. Please see:
+# https://github.com/dmwm/rucio-flux/blob/main/apps/base/patches/kustomization.yaml (and that directory)
+# https://github.com/dmwm/rucio-flux/blob/main/apps/base/rucio-server/cms-rucio-server.yaml
+# And prod/int-rucio-server.yaml
 
 ENTRYPOINT ["/cms-entrypoint.sh"]
