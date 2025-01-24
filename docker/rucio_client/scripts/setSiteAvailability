@@ -71,7 +71,7 @@ print("Skipping RSEs: %s" % skip_rses)
 for rse, available in available_map.items():
     try:
         if not DRY_RUN:
-            rclient.update_rse(rse, {"availability_write": available, "availability_delete": available})
+            rclient.update_rse(rse, {"availability_write": available, "availability_delete": available, "availability_read": available})
         print('Setting availability for %s to %s' % (rse, available))
     except Exception as e:  # Should never be the case
         print('Failed to update RSE %s, Error %s' % (rse, e))
