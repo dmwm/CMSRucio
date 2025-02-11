@@ -258,7 +258,7 @@ def _check_for_auto_approve_eligibility(issuer, rses, kwargs, session: "Optional
         logging.info('EWV: Checking size of rule')
 
         size_of_rule = sum([file['bytes']
-                            for file in list_files(InternalScope(did['scope']),
+                            for file in list_files(did['scope'],
                                                    did['name'],
                                                    session=session)])
 
