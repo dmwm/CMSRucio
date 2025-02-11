@@ -179,6 +179,8 @@ def _check_for_auto_approve_eligibility(issuer, rses, kwargs, session: "Optional
     def _get_rule_size(rules):
         rule_size = 0
         for rule in rules:
+            logging.info('EWV: calling list_files with scope. Rule size: %s', rule_size)
+
             scope = rule['scope']
             name = rule['name']
             rule_files = list_files(scope, name, session=session)
@@ -212,11 +214,19 @@ def _check_for_auto_approve_eligibility(issuer, rses, kwargs, session: "Optional
     except (NoOptionError, NoSectionError, RuntimeError):
         global_usage_all_accounts = 1e16
 
+    logging.info(
+        'EWV: Got global usage %s',
+        global_usage_all_accounts)
+
     try:
         global_usage_per_account = float(config_get(
             'rules', 'global_usage_per_account', raise_exception=True, default=1e15))
     except (NoOptionError, NoSectionError, RuntimeError):
         global_usage_per_account = 1e15
+
+    logging.info(
+        'EWV: Got global usage for account %s',
+        global_usage_per_account)
 
     try:
         rule_lifetime_threshold = int(config_get('rules', 'rule_lifetime_threshold',
@@ -245,10 +255,16 @@ def _check_for_auto_approve_eligibility(issuer, rses, kwargs, session: "Optional
         return False
 
     for did in dids:
+        logging.info('EWV: Checking size of rule')
+
         size_of_rule = sum([file['bytes']
                             for file in list_files(InternalScope(did['scope']),
                                                    did['name'],
                                                    session=session)])
+
+        logging.info(
+            'EWV: Got size of rule %s',
+            size_of_rule)
 
         # Limit single RSE rules to 50 TB
         # This does not mean that the total locks size at a RSE will be limited to 50 TB
@@ -258,9 +274,13 @@ def _check_for_auto_approve_eligibility(issuer, rses, kwargs, session: "Optional
         rses = parse_expression(rse_expression, filter_={'availability_write': True}, session=session)
 
         if len(rses) == 1:
+            logging.info('EWV: Getting rules')
+
             this_rse_autoapprove_rules = list_rules(
                 filters={'account': account, 'activity': auto_approve_activity, 'rse_expression': rse_expression},
                 session=session)
+            logging.info('EWV: Calling get_rule_size')
+
             this_rse_autoapprove_usage = _get_rule_size(this_rse_autoapprove_rules)
             if this_rse_autoapprove_usage + size_of_rule > single_rse_rule_size_threshold:
                 logging.warning(
@@ -270,14 +290,20 @@ def _check_for_auto_approve_eligibility(issuer, rses, kwargs, session: "Optional
                 return False
 
         # Check global usage of the account under this activity
+        logging.info('EWV: Calling list_rules global')
+
         all_auto_approve_rules_by_account = list_rules(
             filters={'account': account, 'activity': auto_approve_activity}, session=session)
+        logging.info('EWV: Calling _get_rule_size global')
+
         global_auto_approve_usage_by_account = _get_rule_size(all_auto_approve_rules_by_account)
         if global_auto_approve_usage_by_account + size_of_rule > global_usage_per_account:
             logging.warning(
                 'Global usage exceeded for auto approve rules for account %s, current usage, size of rule, global_usage_per_account: %s, %s, %s',
                 account, global_auto_approve_usage_by_account, size_of_rule, global_usage_per_account)
             return False
+
+        logging.info('EWV: Querying DB directly')
 
         # Check global usage under the AutoApprove category by all accounts
         query = session.query(
@@ -292,6 +318,7 @@ def _check_for_auto_approve_eligibility(issuer, rses, kwargs, session: "Optional
                             'global_usage_all_accounts: %s, %s, %s', current_auto_approve_usage, size_of_rule,
                             global_usage_all_accounts)
             return False
+        logging.info('EWV: Returning')
 
     return True
 
