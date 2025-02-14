@@ -17,6 +17,11 @@ fullnameOverride: ""
 cronjobSettings:
   daemonName: "cms-ruciod-prod"
   instance: "prod"
+  additionalEnvs:
+    - name: USERCERT_NAME
+      value: "rootcert.pem"
+    - name: USERKEY_NAME
+      value: "rootkey.pem"
 
 oidc:
   iamServer: https://cms-auth.web.cern.ch/ 

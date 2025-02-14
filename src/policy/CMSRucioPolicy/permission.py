@@ -21,7 +21,7 @@ from sqlalchemy.sql import func
 from typing import TYPE_CHECKING
 
 import rucio.core.scope
-from rucio.common.config import config_get
+from rucio.common.config import config_get, config_get_int
 from rucio.common.exception import InvalidRSEExpression
 from rucio.common.types import InternalScope
 from rucio.core.account import has_account_attribute
@@ -246,7 +246,7 @@ def _check_for_auto_approve_eligibility(issuer, rses, kwargs, session: "Optional
 
     for did in dids:
         size_of_rule = sum([file['bytes']
-                            for file in list_files(InternalScope(did['scope']),
+                            for file in list_files(did['scope'],
                                                    did['name'],
                                                    session=session)])
 
@@ -316,24 +316,35 @@ def perm_add_rule(issuer, kwargs, *, session: "Optional[Session]" = None):
                 return False
 
     # If asked for approval, rse_expression can only be a single RSE
-    if kwargs["activity"] != "User AutoApprove" and kwargs["ask_approval"] and len(rses) != 1:
+    if kwargs["activity"] not in ["User AutoApprove", "Analysis TapeRecall"] and kwargs["ask_approval"] and len(rses) != 1:
         return False
 
     if kwargs["activity"] == "User AutoApprove":
         return _check_for_auto_approve_eligibility(issuer, rses, kwargs, session=session)
 
+    if kwargs["activity"] == "Analysis TapeRecall" and issuer.external == "crab_tape_recall":
+        return True
+
     # Anyone can use _Temp RSEs if a lifetime is set and under a month
     all_temp = True
     for rse in rses:
         rse_attr = list_rse_attributes(rse_id=rse['id'], session=session)
-        rse_type = rse_attr.get('cms_type', None)
-        if rse_type not in ['temp']:
+        cms_type = rse_attr.get('cms_type', None)
+        if cms_type not in ['temp']:
             all_temp = False
 
     if all_temp and kwargs['lifetime'] is not None and kwargs['lifetime'] < 31 * 24 * 60 * 60:
         return True
 
-    # Non admin users can create rules without the ability to lock them
+    # Check if any of the rses is a tape RSE (This does not include the _Test and _Temp RSEs)
+    rse_names = [rse['rse'] for rse in rses]
+    any_tape = any(name.endswith('_Tape') for name in rse_names)
+
+    if any_tape and kwargs['lifetime'] is not None:
+        return False
+
+    # Non admin users cannot create rules with locked flag
+    # A locked rule cannot be deleted; and is not removed ever after the rule expires
     if kwargs['account'] == issuer and not kwargs['locked']:
         return True
 
@@ -706,9 +717,9 @@ def perm_update_rule(issuer, kwargs, *, session: "Optional[Session]" = None):
         if rule['activity'] == 'User AutoApprove':
             try:
                 # Default single extension duration - 1 month
-                extended_lifetime_limit = config_get("rules", "extended_lifetime_limit")
+                extended_lifetime_limit = config_get_int("rules", "extended_lifetime_limit")
                 # Total lifetime including all extensions cannot exceed 1 year
-                single_extension_limit = config_get("rules", "single_extension_limit")
+                single_extension_limit = config_get_int("rules", "single_extension_limit")
             except (NoOptionError, NoSectionError):
                 extended_lifetime_limit = 31536000
                 single_extension_limit = 2592000
@@ -1381,9 +1392,7 @@ def _restricted_rse_attribute(rse, key, value=None):
     # Add restricted attributes to this list
     # Use None as value to restrict the key regardless of the value
 
-    restricted_attributes = [
-        ('T2_US_MIT_Tape', 'archive_timeout', None)
-    ]
+    restricted_attributes = []
     for rse_name, attribute_key, attribute_value in restricted_attributes:
         if rse == rse_name and key == attribute_key and (attribute_value == value or attribute_value is None):
             return True

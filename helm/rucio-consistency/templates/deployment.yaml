@@ -46,6 +46,22 @@ spec:
                   key: db_ro_string
             - name: RUCIO_CFG_DATABASE_SCHEMA
               value: {{ .Values.consistency.schema }}
+            - name: PROMETHEUS_SERVERS
+              value: {{ .Values.consistency.prometheus_servers }}
+            - name: PROMETHEUS_PREFIX
+              value: {{ .Values.consistency.prometheus_prefix }}
+            - name: PROMETHEUS_LABELS
+              value: {{ .Values.consistency.prometheus_labels }}
+            - name: RUCIO_HOST
+              value: {{ .Values.consistency.rucio_host }}
+            - name: AUTH_HOST
+              value: {{ .Values.consistency.auth_host }}
+            - name: AUTH_TYPE
+              value: {{ .Values.consistency.auth_type }}
+            - name: CA_CERT
+              value: {{ .Values.consistency.ca_cert }}
+            - name: REQUEST_RETRIES
+              value: {{ .Values.consistency.request_retries | quote }}                                                                                             
           command: ["/consistency/run.sh"]
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

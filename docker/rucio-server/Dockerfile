@@ -23,10 +23,9 @@ ADD docker/rucio-server/cms-entrypoint.sh /
 ADD docker/rucio-server/install_mail_templates.sh /tmp/
 RUN /tmp/install_mail_templates.sh
 
-# Cannot make patch directory unless there are patches
-#RUN mkdir -p /patch
-
-# Patch for auto approve plugin rucio/pull/6215
-#ADD https://github.com/rucio/rucio/pull/6215.patch /patch/6215.patch
+# Patches are now included via flux secrets. Please see:
+# https://github.com/dmwm/rucio-flux/blob/main/apps/base/patches/kustomization.yaml (and that directory)
+# https://github.com/dmwm/rucio-flux/blob/main/apps/base/rucio-server/cms-rucio-server.yaml
+# And prod/int-rucio-server.yaml
 
 ENTRYPOINT ["/cms-entrypoint.sh"]

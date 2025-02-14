@@ -28,7 +28,7 @@ This is to test HTTP REST API readiness for all our Tapes.
         --name NAME
         can be specified if the default scope and name are not desired.
     ```
-6. For a Read Test `python3 test_http_tape_rest_api.py --rse RSENAME --mode read --ruleid RULEID`
+6. For a Read Test `python3 test_http_tape_rest_api.py --readtorse RSENAME --mode read --ruleid RULEID`
     ```    
     where RULEID is the rule id of the file that was written in the write test.
     optionally:
@@ -45,3 +45,30 @@ This is to test HTTP REST API readiness for all our Tapes.
 
 PS: Start with a small functional test transfer, the default dataset is a good example.
 If it works, then try with a larger dataset for stress testing.
+
+
+---- 
+
+Adding scripts for retrieving file locality information on buffer and tape.
+
+```bash
+curl -X POST --cert $X509_USER_PROXY --key $X509_USER_PROXY --capath /etc/grid-security/certificates https://<hostname>:<port>/api/v1/tape/archiveinfo> \
+--data '{"paths":[
+<file_path1>,
+<file_path2>,
+]}' | jq
+```
+
+The document for rest api specification can be found [here](https://cernbox.cern.ch/pdf-viewer/public/vLhBpHDdaXJSqwW/WLCG%20Tape%20REST%20API%20reference%20document.pdf)
+
+
+### resurrect_dids.py
+
+These are a set of scripts used to resurrect removed dids from the DELETED_DIDS table and then restore them in Rucio.
+In order to do that one has to:
+
+1. Ressurect the DIDs 
+2. Re-link DIDs (attach blocks to datasets and files to blocks)
+3. Make sure that the files actually exist in some RSE (possibly using gfal-stat)
+4. Manually add a replica that points to the existing file in the above found RSE
+

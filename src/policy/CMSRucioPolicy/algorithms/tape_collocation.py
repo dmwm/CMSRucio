@@ -1,9 +1,12 @@
 '''
-
+Tape Collocation algorithm for placement of CMS data on tape
 '''
+
 from rucio.transfertool.fts3_plugins import FTS3TapeMetadataPlugin
-from rucio.core.did import list_parent_dids
+from rucio.core.did import list_parent_dids, get_did
+from rucio.db.sqla.constants import DIDType
 from rucio.db.sqla.session import get_session 
+
 
 class CMSTapeCollocation(FTS3TapeMetadataPlugin): 
     def __init__(self, policy_algorithm) -> None:
@@ -22,16 +25,36 @@ class CMSTapeCollocation(FTS3TapeMetadataPlugin):
         self.allowed_types = ['data', 'hidata', 'mc', 'himc', 'relval', 'hirelval']
 
     def parent_container(self, scope, name): 
-        containers = [
-            f"{parent['scope']}:{parent['name']}"
-            for parent 
-            in list_parent_dids(scope=scope, name=name, session=self.session) 
-            if parent['type']=='CONTAINER'
-        ]
+        # Custom logic for CMS
+        # If dataset - look for the parent container
+        # If file - look for the parent dataset and then the parent container
+        is_file = get_did(scope=scope, name=name, session=self.session)['type'] == DIDType.FILE
+
         try: 
+            if is_file:
+                parent_dataset = [parent
+                    for parent 
+                    in list_parent_dids(scope=scope, name=name, session=self.session) 
+                    if parent['scope'].external == 'cms'
+                ][0]
+                containers = [
+                    parent['name']
+                    for parent 
+                    in list_parent_dids(scope=parent_dataset['scope'], name=parent_dataset['name'], session=self.session) 
+                    if (parent['type'] == DIDType.CONTAINER) and (parent['scope'].external == 'cms')
+                ]
+            else: 
+                containers = [
+                    parent['name']
+                    for parent 
+                    in list_parent_dids(scope=scope, name=name, session=self.session) 
+                    if (parent['type']==DIDType.CONTAINER) and (parent['scope'].external == 'cms')
+                ]
             return containers[0]
+
         except IndexError: 
             pass
+
 
     def data_type(self, name): 
         data_type = name.lstrip('/store/').split('/')[0] # First index that isn't `store`
@@ -54,7 +77,7 @@ class CMSTapeCollocation(FTS3TapeMetadataPlugin):
             pass  # Can't get the era
 
 
-    def cms_collocation(self, *hints):
+    def cms_collocation(self, **hints):
         """
         https://github.com/dmwm/CMSRucio/issues/753
         https://github.com/dmwm/CMSRucio/issues/323
@@ -69,29 +92,27 @@ class CMSTapeCollocation(FTS3TapeMetadataPlugin):
         Era (which for MC is the Campaign)
 
         Level 3 
-        Parent Container (can either get this explicitly or get the parent dataset and lop off the hash mark and the hash following it)
+        Parent Container (container of dataset if file, container of file if dataset)
         """
-
-        # Notes - Add it to the cms-rucio-common yaml in dmwcore/rucio-flux
-        # Levels common < daemons < prod-deamons 
-        # put in PR 
 
         lfn = hints['name']
         data_type = self.data_type(lfn)
-        tier = self.data_tier(data_type, lfn)
-        era = self.era(data_type, lfn)
-        parent = self.parent_container(hints['scope'], hints['name'])
-
+        
         collocation = {
             "0": data_type,
         }
 
-        if tier is not None: 
-            collocation['1'] = tier 
-        if era is not None: 
-            collocation['2'] = era
-        if parent is not None: 
-            collocation['3'] = parent
+        if data_type != "n/a":
+            tier = self.data_tier(data_type, lfn)
+            era = self.era(data_type, lfn)
+            parent = self.parent_container(hints['scope'], hints['name'])
+
+            if tier is not None: 
+                collocation['1'] = tier 
+            if era is not None: 
+                collocation['2'] = era
+            if parent is not None: 
+                collocation['3'] = parent
         return collocation
     
-CMSTapeCollocation(algorithm="def") # Registering the plugin
+CMSTapeCollocation(policy_algorithm="def") # Registering the plugin

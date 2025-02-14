@@ -26,20 +26,9 @@ RUN rmdir /etc/grid-security/certificates && ln -s /cvmfs/grid.cern.ch/etc/grid-
 
 ADD docker/rucio-daemons/cms-entrypoint.sh /
 
-# Eric patch for cache-consumer (revisit if ever comes up again)
-
-# ADD https://raw.githubusercontent.com/ericvaandering/rucio/fix_cache_consumer/lib/rucio/daemons/cache/consumer.py /usr/local/lib/python3.6/site-packages/rucio/daemons/cache/consumer.py
-# RUN python3 -m compileall /usr/local/lib/python3.6/site-packages/rucio/daemons/cache
-# ADD https://raw.githubusercontent.com/ericvaandering/rucio/fix_cache_consumer/lib/rucio/core/volatile_replica.py /usr/local/lib/python3.6/site-packages/rucio/core/volatile_replica.py
-# RUN python3 -m compileall /usr/local/lib/python3.6/site-packages/rucio/core
-# ADD https://raw.githubusercontent.com/ericvaandering/rucio/fix_cache_consumer/lib/rucio/common/stomp_utils.py /usr/local/lib/python3.6/site-packages/rucio/common/stomp_utils.py
-# RUN python3 -m compileall /usr/local/lib/python3.6/site-packages/rucio/common
-# ADD https://raw.githubusercontent.com/ericvaandering/containers/add_preparer/daemons/rucio.cfg.j2 /tmp/rucio.cfg.j2
-
-# Cannot make patch directory unless there are patches
-#RUN mkdir -p /patch
-
-# Patch for auto approve plugin rucio/pull/6215
-#ADD https://github.com/rucio/rucio/pull/6215.patch /patch/6215.patch
+# Patches are now included via flux secrets. Please see:
+# https://github.com/dmwm/rucio-flux/blob/main/apps/base/patches/kustomization.yaml (and that directory)
+# https://github.com/dmwm/rucio-flux/blob/main/apps/base/rucio-daemons/cms-rucio-daemons.yaml
+# And prod/int-rucio-daemons.yaml
 
 ENTRYPOINT ["/cms-entrypoint.sh"]

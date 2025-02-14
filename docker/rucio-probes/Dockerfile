@@ -11,7 +11,7 @@ ARG RUCIO_VERSION
 FROM rucio/probes:$RUCIO_VERSION
 
 # For now CMS versions use python3 explicitly. Can be removed when main container goes to python3
-#RUN ln -s /usr/bin/python3 /usr/local/bin/python
+RUN ln -s /usr/bin/python3 /usr/local/bin/python
 
 # Add CMS policy package
 RUN mkdir -p /opt/rucio/policy/CMSRucioPolicy
@@ -19,40 +19,38 @@ COPY src/policy/CMSRucioPolicy /opt/rucio/policy/CMSRucioPolicy
 # Make it search the policy directory. Needs a change for python upgrades
 RUN echo "/opt/rucio/policy" > /usr/local/lib/python3.9/site-packages/policy.pth
 
-# Temporary additions
-
-# Until Fernando ports to SQLAlchemy and/or merged
-
-ADD https://raw.githubusercontent.com/ericvaandering/probes/hack_obsolete_replicas/common/check_obsolete_replicas /probes/common
-ADD https://raw.githubusercontent.com/nsmith-/probes/hack_replicas/common/check_deletable_replicas /probes/common
-
-# TODO: Merge Donata's probes somewhere
-# This is removed by 122 or 123 from Panos
-# ADD https://raw.githubusercontent.com/dmielaikaite/probes/dmielaik_probes/common/check_used_space /probes/common
+# TODO: Remove Tooo old? Was there a PR for them in rucio probes?
+#ADD https://raw.githubusercontent.com/ericvaandering/probes/hack_obsolete_replicas/common/check_obsolete_replicas /probes/common
+#ADD https://raw.githubusercontent.com/nsmith-/probes/hack_replicas/common/check_deletable_replicas /probes/common
 
 # Where from?
 # Supplanted in PR115 ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_check_expired_rules/common/check_expired_rules /probes/common
 ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_check_expired_locked/common/check_expired_locked_rules /probes/common
 
-# PR 130 - Should be in 33.7
-ADD https://raw.githubusercontent.com/haozturk/probes/720-fix/cms/check_rule_counts /probes/cms/
 
-# PR 126 - Should be in 33.7
-ADD https://raw.githubusercontent.com/rucio/probes/cms_rules_by_account_to_prom/cms/check_rules_states_by_account /probes/cms/
-
+# TODO: Most of these don't work either, each with a different error - different reasons than above
 # PR 132 - Not accepted into rucio/probes yet
-ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_expired_dids /probes
-ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_fts_backlog /probes
-ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_messages_to_submit /probes
-ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_new_dids /probes
-ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_stuck_rules /probes
-ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_transfer_queues_status /probes
-ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_unevaluated_dids /probes
-ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_unlocked_replicas /probes
-ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_updated_dids /probes
+ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_expired_dids /probes/common
+ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_fts_backlog /probes/common
+ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_messages_to_submit /probes/common
+ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_new_dids /probes/common
+ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_stuck_rules /probes/common
+ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_transfer_queues_status /probes/common
+ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_unevaluated_dids /probes/common
+ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_unlocked_replicas /probes/common
+ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_updated_dids /probes/common
+
+# PR 136 which was closed in favor of #145, which should be watched.
+# N.b. they will not move to the CMS VO, so we need a change to flux as well
+ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_usage_probes/cms/check_deletable_replicas /probes/cms
+ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_usage_probes/cms/check_obsolete_replicas /probes/cms
 
 RUN chmod +x /probes/common/check_*
 RUN chmod +x /probes/cms/check_*
 
 # Temporary while we are adding variables to the config. Push to rucio-containers
 ADD https://raw.githubusercontent.com/ericvaandering/containers/probes_prom/probes/rucio.cfg.j2 /tmp/
+
+# To be removed once the PR is available in our rucio version
+# Patch for rules volume (https://github.com/dmwm/CMSRucio/issues/747, https://github.com/rucio/probes/pull/151)
+ADD https://raw.githubusercontent.com/eachristgr/probes/94b72e283478c1a84dd6915bc42fdbce0fb74e35/cms/check_rules_count_volume_per_rse_activity_state /probes/cms

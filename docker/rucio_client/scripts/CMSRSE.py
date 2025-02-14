@@ -19,8 +19,8 @@ DOMAINS_BY_TYPE = {
                 'delete': 1},
         'lan': {'read': 0, 'write': 0, 'delete': 0}},
     'int-real': {
-        'wan': {'read': 1, 'write': 0, 'third_party_copy_write': 1, 'third_party_copy_read': 1,
-                'delete': 0},
+        'wan': {'read': 1, 'write': 1, 'third_party_copy_write': 1, 'third_party_copy_read': 1,
+                'delete': 1},
         'lan': {'read': 0, 'write': 0, 'delete': 0}},
     'test': {
         'wan': {'read': 1, 'write': 1, 'third_party_copy_write': 1, 'third_party_copy_read': 1,
@@ -62,6 +62,8 @@ class CMSRSE:
         self.settings['deterministic'] = deterministic
         self.rucio_rse_type = json['type'].upper()
 
+        xattrs = {}
+
         # If we are building a _Test or _Temp instance add the special prefix
         if cms_type == "test":
             self.rse_name = json['rse']+"_Test"
@@ -70,11 +72,10 @@ class CMSRSE:
         else:
             self.rse_name = json['rse']
             if json.get('loadtest', None) is not None:
-                self.attrs['loadtest'] = json['loadtest']
+                xattrs['loadtest'] = json['loadtest']
 
-        self._get_attributes()
-        self.attrs['fts'] = ','.join(json['fts'])
-
+        xattrs['fts'] = ','.join(json['fts'])
+        self._get_attributes(xattrs=xattrs)
 
     """
     Parses either a prefix or a pfn within a rule in the storage.json
@@ -246,7 +247,7 @@ class CMSRSE:
         if self.rse_name in APPROVAL_REQUIRED:
             attrs['requires_approval'] = 'True'
 
-        for (key, value) in xattrs:
+        for key, value in xattrs.items():
             attrs[key] = value
 
         self.attrs = attrs
@@ -278,7 +279,6 @@ class CMSRSE:
                                  key, value, self.rse_name)
                 else:
                     self.rcli.add_rse_attribute(rse=self.rse_name, key=key, value=value)
-
         return changed
 
     def _get_protocol(self, proto_json, protos_json):
@@ -355,6 +355,9 @@ class CMSRSE:
             # if we are building a _Test instance add the specia prefix
             if self.cms_type == "test":
                 prefix = prefix + "store/test/rucio/"
+
+            elif self.cms_type == "int-real":
+                prefix = prefix + "store/test/rucio/int/"
 
             elif self.cms_type == "temp":
                 prefix = prefix + "store/temp/"
