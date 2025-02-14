@@ -2,7 +2,7 @@
 #
 # Eric Vaandering <ewv@fnal.gov>, 2022
 
-from CMSRucioPolicy.algorithms import lfn2pfn, auto_approve
+from CMSRucioPolicy.algorithms import lfn2pfn, auto_approve, tape_collocation
 
 SUPPORTED_VERSION = ["1.30", "1.31", "32", "33", "34"]
 
@@ -17,5 +17,8 @@ def get_algorithms():
         },
         'auto_approve': {
             'global': auto_approve.global_approval,
+        }, 
+        'fts3tape_metadata_plugins': {
+            'tape_collocation': tape_collocation
         }
     }
