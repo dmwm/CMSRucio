@@ -5,7 +5,6 @@ Tape Collocation algorithm for placement of CMS data on tape
 from rucio.transfertool.fts3_plugins import FTS3TapeMetadataPlugin
 from rucio.core.did import list_parent_dids, get_did
 from rucio.db.sqla.constants import DIDType
-from rucio.db.sqla.session import get_session 
 
 
 class CMSTapeCollocation(FTS3TapeMetadataPlugin): 
@@ -19,8 +18,6 @@ class CMSTapeCollocation(FTS3TapeMetadataPlugin):
         )
     
     def instance_init(self): 
-        self.session = get_session()
-
         # Top level name spaces this plugin operates on 
         self.allowed_types = ['data', 'hidata', 'mc', 'himc', 'relval', 'hirelval']
         self.parking_name = "parking"
@@ -31,19 +28,19 @@ class CMSTapeCollocation(FTS3TapeMetadataPlugin):
         # Custom logic for CMS
         # If dataset - look for the parent container
         # If file - look for the parent dataset and then the parent container
-        is_file = get_did(scope=scope, name=name, session=self.session)['type'] == DIDType.FILE
+        is_file = get_did(scope=scope, name=name)['type'] == DIDType.FILE
 
         try: 
             if is_file:
                 parent_dataset = [parent
                     for parent 
-                    in list_parent_dids(scope=scope, name=name, session=self.session) 
+                    in list_parent_dids(scope=scope, name=name) 
                     if parent['scope'].external == 'cms'
                 ][0]
                 containers = [
                     parent['name']
                     for parent 
-                    in list_parent_dids(scope=parent_dataset['scope'], name=parent_dataset['name'], session=self.session) 
+                    in list_parent_dids(scope=parent_dataset['scope'], name=parent_dataset['name']) 
                     if (parent['type'] == DIDType.CONTAINER) and (parent['scope'].external == 'cms')
                 ]
             else: 
