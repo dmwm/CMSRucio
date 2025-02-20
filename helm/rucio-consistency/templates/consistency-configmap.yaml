@@ -48,8 +48,11 @@ data:
 
 
 {{ range $site, $config := .Values.consistency.sites }}
-      {{ $site }}:
 {{- if $config }}
+{{- if or (or (or $config.server $config.server_root) (or $config.timeout (hasKey $config "is_redirector")))
+(or (or $config.minagedark $config.maxdarkfraction ) ($config.maxmissfraction))
+}}
+      {{ $site }}:
 {{- if or (or $config.server $config.server_root) (or $config.timeout (hasKey $config "is_redirector")) }}
         scanner:
 {{- if  ($config.server) }}
