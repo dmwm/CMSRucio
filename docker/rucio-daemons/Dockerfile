@@ -10,6 +10,10 @@
 ARG RUCIO_VERSION
 FROM rucio/rucio-daemons:release-$RUCIO_VERSION
 
+RUN sed -i -e 's/enabled=0/enabled=1/g' /etc/yum.repos.d/epel-testing.repo && \
+    yum clean all && \
+    yum install -y davix-libs
+
 # Add CMS policy package
 RUN mkdir -p /opt/rucio/policy/CMSRucioPolicy
 COPY src/policy/CMSRucioPolicy /opt/rucio/policy/CMSRucioPolicy
