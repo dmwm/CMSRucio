@@ -30,6 +30,7 @@ from rucio.core.identity import exist_identity_account
 from rucio.core.rse import list_rse_attributes, get_rse
 from rucio.core.rse_expression_parser import parse_expression
 from rucio.core.rule import get_rule, list_rules
+from rucio.core.permission import PermissionResult
 from rucio.db.sqla.constants import IdentityType
 from rucio.db.sqla.models import ReplicaLock, ReplicationRule
 
@@ -187,7 +188,8 @@ def _check_for_auto_approve_eligibility(issuer, rses, kwargs, session: "Optional
 
     # prevent rule creation under 'User AutoApprove' for rules without ask_approval
     if not kwargs["ask_approval"]:
-        return False
+        return PermissionResult(False, ("ask_approval argument is necessary under User AutoApprove.\n"
+                                           "Review the requirements for Auto Approval in: https://cmsdmops.docs.cern.ch/Users/Subscribe%20data/#requirements-for-auto-approval" ))
     # prevent rule creation to tape and Tier3 and Tier0 under the 'User AutoApprove' activity
     rule_rses = {rse['rse'] for rse in rses}
     try:
@@ -201,7 +203,7 @@ def _check_for_auto_approve_eligibility(issuer, rses, kwargs, session: "Optional
         tape_rses = set()
 
     if rule_rses & t3_rses or rule_rses & tape_rses:
-        return False
+        return PermissionResult(False, 'Rules cannot be created to tape, T3 or T0 under the User AutoApprove activity.')
 
     account = kwargs['account']
     auto_approve_activity = 'User AutoApprove'
@@ -232,17 +234,20 @@ def _check_for_auto_approve_eligibility(issuer, rses, kwargs, session: "Optional
 
     # Check if the account is banned
     if has_account_attribute(account, 'auto_approve_banned', session=session):
-        return False
+        return PermissionResult(False, "This account is banned, please create a ticket in Jira to the DM team.")
 
     # Check if the rule is locked
     if kwargs['locked']:
-        return False
+        return PermissionResult(False, ("Rules cannot be locked under User AutoApprove.\n"
+                                            "Review the requirements for Auto Approval in: https://cmsdmops.docs.cern.ch/Users/Subscribe%20data/#requirements-for-auto-approval"))
 
     if kwargs['lifetime'] is None:
-        return False
+        return PermissionResult(False, ("Rules without lifetime cannot be created under User AutoApprove.\n"
+                                            "Review the requirements for Auto Approval in: https://cmsdmops.docs.cern.ch/Users/Subscribe%20data/#requirements-for-auto-approval"))
 
     if kwargs['lifetime'] > rule_lifetime_threshold:
-        return False
+        return PermissionResult(False, (f"The rule lifetime exceedsThe rule lifetime exceeds the treshold ({rule_lifetime_treshold}).\n"
+                                            "Review the requirements for Auto Approval in: https://cmsdmops.docs.cern.ch/Users/Subscribe%20data/#requirements-for-auto-approval"))
 
     for did in dids:
         size_of_rule = sum([file['bytes']
@@ -263,21 +268,24 @@ def _check_for_auto_approve_eligibility(issuer, rses, kwargs, session: "Optional
                 session=session)
             this_rse_autoapprove_usage = _get_rule_size(this_rse_autoapprove_rules)
             if this_rse_autoapprove_usage + size_of_rule > single_rse_rule_size_threshold:
-                logging.warning(
-                    'Single RSE usage exceeded for auto approve rules for account %s and RSE %s, this_rse_autoapprove_usage, size_of_rule, single_rse_rule_size_threshold: %s, %s, %s',
-                    account, rse_expression, this_rse_autoapprove_usage, size_of_rule,
-                    single_rse_rule_size_threshold)
-                return False
+                logging.warning(f'Single RSE usage exceeded for auto approve rules for account {account} and RSE {rse_expression}, ',
+                                    'this_rse_autoapprove_usage, size_of_rule, single_rse_rule_size_threshold: ',
+                                    f'{this_rse_autoapprove_usage}, {size_of_rule}, {single_rse_rule_size_threshold}')
+                return PermissionResult(False, (f'Single RSE usage exceeded for auto approve rules for account {account} and RSE {rse_expression}, '
+                                                    'this_rse_autoapprove_usage, size_of_rule, single_rse_rule_size_threshold: '
+                                                    f'{this_rse_autoapprove_usage}, {size_of_rule}, {single_rse_rule_size_threshold}'))
 
         # Check global usage of the account under this activity
         all_auto_approve_rules_by_account = list_rules(
             filters={'account': account, 'activity': auto_approve_activity}, session=session)
         global_auto_approve_usage_by_account = _get_rule_size(all_auto_approve_rules_by_account)
         if global_auto_approve_usage_by_account + size_of_rule > global_usage_per_account:
-            logging.warning(
-                'Global usage exceeded for auto approve rules for account %s, current usage, size of rule, global_usage_per_account: %s, %s, %s',
-                account, global_auto_approve_usage_by_account, size_of_rule, global_usage_per_account)
-            return False
+            logging.warning(f'Global usage exceeded for auto approve rules for account {account}, current usage, ',
+                                f'size of rule, global_usage_per_account: {global_auto_approve_usage_by_account}, ',
+                                    f'{size_of_rule}, {global_usage_per_account}')
+            return PermissionResult(False, (f'Global usage exceeded for auto approve rules for account {account}, current usage, '
+                                                f'size of rule, global_usage_per_account: {global_auto_approve_usage_by_account}, '
+                                                    f'{size_of_rule}, {global_usage_per_account}'))
 
         # Check global usage under the AutoApprove category by all accounts
         query = session.query(
@@ -288,10 +296,10 @@ def _check_for_auto_approve_eligibility(issuer, rses, kwargs, session: "Optional
         if current_auto_approve_usage is None:
             current_auto_approve_usage = 0
         if current_auto_approve_usage + size_of_rule > global_usage_all_accounts:
-            logging.warning('Global usage exceeded for auto approve rules, current usage, size of rule, '
-                            'global_usage_all_accounts: %s, %s, %s', current_auto_approve_usage, size_of_rule,
-                            global_usage_all_accounts)
-            return False
+            logging.warning('Global usage exceeded for auto approve rules, current usage, size of rule, ',
+                                f'global_usage_all_accounts: {current_auto_approve_usage}, {size_of_rule}, {global_usage_all_accounts}')
+            return PermissionResult(False, ('Global usage exceeded for auto approve rules, current usage, size of rule, '
+                                                f'global_usage_all_accounts: {current_auto_approve_usage}, {size_of_rule}, {global_usage_all_accounts}'))
 
     return True
 
@@ -313,11 +321,12 @@ def perm_add_rule(issuer, kwargs, *, session: "Optional[Session]" = None):
         for rse in rses:
             rse_attr = list_rse_attributes(rse_id=rse['id'])
             if rse_attr.get('requires_approval', False):
-                return False
+                return PermissionResult(False, ("One or more of the RSEs matching the expression needs approval "
+                                                    "and thus the rule cannot be created (i.e. ask_approval is missing)."))
 
     # If asked for approval, rse_expression can only be a single RSE
     if kwargs["activity"] not in ["User AutoApprove", "Analysis TapeRecall"] and kwargs["ask_approval"] and len(rses) != 1:
-        return False
+        return PermissionResult(False, "If asked for approval, rse_expression can only contain a single RSE.")
 
     if kwargs["activity"] == "User AutoApprove":
         return _check_for_auto_approve_eligibility(issuer, rses, kwargs, session=session)
@@ -341,7 +350,7 @@ def perm_add_rule(issuer, kwargs, *, session: "Optional[Session]" = None):
     any_tape = any(name.endswith('_Tape') for name in rse_names)
 
     if any_tape and kwargs['lifetime'] is not None:
-        return False
+        return PermissionResult(False, "Tape rules cannot have a lifetime as per DM policy.")
 
     # Non admin users cannot create rules with locked flag
     # A locked rule cannot be deleted; and is not removed ever after the rule expires
