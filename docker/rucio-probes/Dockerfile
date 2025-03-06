@@ -45,12 +45,12 @@ ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manag
 ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_usage_probes/cms/check_deletable_replicas /probes/cms
 ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_usage_probes/cms/check_obsolete_replicas /probes/cms
 
+# To be removed once the PR is available in our rucio version
+# Patch for rules volume (https://github.com/dmwm/CMSRucio/issues/747, https://github.com/rucio/probes/pull/154)
+ADD https://raw.githubusercontent.com/rucio/probes/b403db9dad980b60979895b0b09cd133eaa23a59/cms/check_requests_count_volume /probes/cms
+
 RUN chmod +x /probes/common/check_*
 RUN chmod +x /probes/cms/check_*
 
 # Temporary while we are adding variables to the config. Push to rucio-containers
 ADD https://raw.githubusercontent.com/ericvaandering/containers/probes_prom/probes/rucio.cfg.j2 /tmp/
-
-# To be removed once the PR is available in our rucio version
-# Patch for rules volume (https://github.com/dmwm/CMSRucio/issues/747, https://github.com/rucio/probes/pull/151)
-ADD https://raw.githubusercontent.com/eachristgr/probes/94b72e283478c1a84dd6915bc42fdbce0fb74e35/cms/check_rules_count_volume_per_rse_activity_state /probes/cms
