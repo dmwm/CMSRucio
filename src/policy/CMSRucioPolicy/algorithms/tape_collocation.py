@@ -5,18 +5,23 @@ Tape Collocation algorithm for placement of CMS data on tape
 from rucio.transfertool.fts3_plugins import FTS3TapeMetadataPlugin
 from rucio.core.did import list_parent_dids, get_did
 from rucio.db.sqla.constants import DIDType
+import logging 
 
 
 class CMSTapeCollocation(FTS3TapeMetadataPlugin): 
-    def __init__(self, policy_algorithm) -> None:
-        super().__init__(policy_algorithm)
+    def __init__(self) -> None:
+        policy_algorithm = "tape_collocation"
 
         self.register(
-            "tape_collocation", 
+            policy_algorithm, 
             func= lambda x: self._collocation(self.cms_collocation, x), 
             init_func=self.instance_init
         )
-    
+        super().__init__(policy_algorithm)
+
+        self.logger = logging.log 
+        self.logger.info("Initialized plugin 'Tape Collocation'")
+
     def instance_init(self): 
         # Top level name spaces this plugin operates on 
         self.allowed_types = ['data', 'hidata', 'mc', 'himc', 'relval', 'hirelval']
@@ -53,7 +58,7 @@ class CMSTapeCollocation(FTS3TapeMetadataPlugin):
             return containers[0]
 
         except IndexError: 
-            pass
+            self.logger.debug("No parent container found for %s:%s", scope, name)
 
     def _is_raw(self, name): 
         # Raw always contains "RAW" in the name
@@ -86,14 +91,13 @@ class CMSTapeCollocation(FTS3TapeMetadataPlugin):
         try: 
             return name.removeprefix('/store/').split('/')[3]
         except IndexError: 
-            pass  # Can't get the tier
+            self.logger.debug("Could not determine data tier for %s", name)
 
     def era(self, name): 
         try: 
             return name.removeprefix('/store/').split('/')[1]
         except IndexError: 
-            pass  # Can't get the era
-
+            self.logger.debug("Could not determine era for %s", name)
 
     def cms_collocation(self, **hints):
         """
@@ -141,6 +145,9 @@ class CMSTapeCollocation(FTS3TapeMetadataPlugin):
                 collocation['2'] = era
             if parent is not None: 
                 collocation['3'] = parent
+        else: 
+            self.logger.debug("Could not determine data type for %s", lfn)
+
         return collocation
     
-CMSTapeCollocation(policy_algorithm="def") # Registering the plugin
+CMSTapeCollocation() # Registering the plugin
