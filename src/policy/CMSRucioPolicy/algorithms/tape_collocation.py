@@ -2,104 +2,117 @@
 Tape Collocation algorithm for placement of CMS data on tape
 '''
 
+from rucio.common.exception import DataIdentifierNotFound
 from rucio.transfertool.fts3_plugins import FTS3TapeMetadataPlugin
 from rucio.core.did import list_parent_dids, get_did
 from rucio.db.sqla.constants import DIDType
+from rucio.common.types import InternalScope
 import logging 
 
+logger = logging.getLogger(__name__)
 
 class CMSTapeCollocation(FTS3TapeMetadataPlugin): 
+    policy_algorithm = "tape_collocation"
+
+    allowed_types = ['data', 'hidata', 'mc', 'himc', 'relval', 'hirelval']
+    parking_name = "parking"
+    raw_name = "raw"
+    hiraw_name = "hiraw"
+
     def __init__(self) -> None:
-        policy_algorithm = "tape_collocation"
 
-        self.register(
-            policy_algorithm, 
-            func= lambda x: self._collocation(self.cms_collocation, x), 
-            init_func=self.instance_init
+        super().__init__(self.policy_algorithm)
+
+        logger.info("Initialized plugin 'Tape Collocation'")
+
+    @classmethod
+    def _module_init_(cls) -> None:
+        cls.register(
+            cls.policy_algorithm, 
+            func= lambda x: cls._collocation(cls.cms_collocation, x), 
         )
-        super().__init__(policy_algorithm)
 
-        self.logger = logging.log 
-        self.logger.info("Initialized plugin 'Tape Collocation'")
-
-    def instance_init(self): 
-        # Top level name spaces this plugin operates on 
-        self.allowed_types = ['data', 'hidata', 'mc', 'himc', 'relval', 'hirelval']
-        self.parking_name = "parking"
-        self.raw_name = "raw"
-        self.hiraw_name = "hiraw"
-
-    def parent_container(self, scope, name): 
+    @staticmethod
+    def parent_container(name): 
         # Custom logic for CMS
         # If dataset - look for the parent container
         # If file - look for the parent dataset and then the parent container
-        is_file = get_did(scope=scope, name=name)['type'] == DIDType.FILE
-
+        scope = InternalScope("cms")
+        try: 
+            is_file = get_did(scope=scope, name=name)['type'] == DIDType.FILE
+        except DataIdentifierNotFound: 
+            logger.warning("DID not found for %s:%s", scope, name)
+            return None
         try: 
             if is_file:
                 parent_dataset = [parent
                     for parent 
                     in list_parent_dids(scope=scope, name=name) 
-                    if parent['scope'].external == 'cms'
                 ][0]
                 containers = [
                     parent['name']
                     for parent 
-                    in list_parent_dids(scope=parent_dataset['scope'], name=parent_dataset['name']) 
-                    if (parent['type'] == DIDType.CONTAINER) and (parent['scope'].external == 'cms')
+                    in list_parent_dids(scope=scope, name=parent_dataset['name']) 
+                    if parent['type'] == DIDType.CONTAINER
                 ]
             else: 
                 containers = [
                     parent['name']
                     for parent 
-                    in list_parent_dids(scope=scope, name=name, session=self.session) 
-                    if (parent['type']==DIDType.CONTAINER) and (parent['scope'].external == 'cms')
+                    in list_parent_dids(scope=scope, name=name) 
+                    if parent['type']==DIDType.CONTAINER
                 ]
             return containers[0]
 
-        except IndexError: 
-            self.logger.debug("No parent container found for %s:%s", scope, name)
+        except (IndexError, DataIdentifierNotFound): 
+            logger.debug("No parent container found for %s:%s", scope, name)
 
-    def _is_raw(self, name): 
+    @staticmethod
+    def _is_raw(name): 
         # Raw always contains "RAW" in the name
         return any(i=="RAW" for i in name.split('/'))
 
-    def _is_parking(self, name):
+    @staticmethod
+    def _is_parking(name):
         # Parking is denoted by having ParkingXXXX in the lfn
         try: 
             return any(n.startswith("Parking") for n in name.split('/'))
         except IndexError:
-            False
+            return False
 
-    def data_type(self, name): 
+    @staticmethod
+    def data_type(name): 
         data_type = name.removeprefix('/store/').split('/')[0] # First index that isn't `store`
         
         # Custom logic: Use parking or raw over "data", use hiraw if heavy ion and raw 
-        if data_type not in self.allowed_types: 
+        if data_type not in CMSTapeCollocation.allowed_types: 
             data_type = "n/a"
-        elif self._is_parking(name): 
-            data_type = self.parking_name
-        elif self._is_raw(name):
+        elif CMSTapeCollocation._is_parking(name): 
+            data_type = CMSTapeCollocation.parking_name
+        elif CMSTapeCollocation._is_raw(name):
             if data_type.startswith("hi"): 
-                data_type = self.hiraw_name
+                data_type = CMSTapeCollocation.hiraw_name
             else: 
-                data_type = self.raw_name
+                data_type = CMSTapeCollocation.raw_name
         
         return data_type
 
-    def data_tier(self, name): 
+    @staticmethod
+    def data_tier(name): 
         try: 
             return name.removeprefix('/store/').split('/')[3]
         except IndexError: 
-            self.logger.debug("Could not determine data tier for %s", name)
+            logger.debug("Could not determine data tier for %s", name)
 
-    def era(self, name): 
+    @staticmethod
+    def era(name): 
         try: 
             return name.removeprefix('/store/').split('/')[1]
         except IndexError: 
-            self.logger.debug("Could not determine era for %s", name)
+            logger.debug("Could not determine era for %s", name)
 
-    def cms_collocation(self, **hints):
+    @classmethod
+    def cms_collocation(cls, **hints):
         """
         https://github.com/dmwm/CMSRucio/issues/753
         https://github.com/dmwm/CMSRucio/issues/323
@@ -128,16 +141,16 @@ class CMSTapeCollocation(FTS3TapeMetadataPlugin):
         """
 
         lfn = hints['name']
-        data_type = self.data_type(lfn)
+        data_type = cls.data_type(lfn)
         
         collocation = {
             "0": data_type,
         }
 
         if data_type != "n/a":
-            tier = self.data_tier(lfn)
-            era = self.era(lfn)
-            parent = self.parent_container(hints['scope'], hints['name'])
+            tier = cls.data_tier(lfn)
+            era = cls.era(lfn)
+            parent = cls.parent_container(InternalScope(hints['scope']), hints['name'])
 
             if tier is not None: 
                 collocation['1'] = tier 
@@ -146,8 +159,6 @@ class CMSTapeCollocation(FTS3TapeMetadataPlugin):
             if parent is not None: 
                 collocation['3'] = parent
         else: 
-            self.logger.debug("Could not determine data type for %s", lfn)
+            logger.debug("Could not determine data type for %s", lfn)
 
         return collocation
-    
-CMSTapeCollocation() # Registering the plugin
