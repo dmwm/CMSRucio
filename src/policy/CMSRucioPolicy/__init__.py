@@ -3,9 +3,10 @@
 # Eric Vaandering <ewv@fnal.gov>, 2022
 
 from CMSRucioPolicy.algorithms import lfn2pfn, auto_approve, pfn2lfn
-
+from CMSRucioPolicy.algorithms.tape_collocation import CMSTapeCollocation
 SUPPORTED_VERSION = [">= 36.0"]
 
+CMSTapeCollocation._module_init_()
 
 def get_algorithms():
     """
