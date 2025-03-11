@@ -23,10 +23,11 @@ class CMSTapeCollocation(FTS3TapeMetadataPlugin):
 
         super().__init__(self.policy_algorithm)
 
-        logger.info("Initialized plugin 'Tape Collocation'")
+        logger.info("Initialized plugin %s", self.policy_algorithm)
 
     @classmethod
     def _module_init_(cls) -> None:
+        logger.info("Registered plugin %s", cls.policy_algorithm)
         cls.register(
             cls.policy_algorithm, 
             func= lambda x: cls._collocation(cls.cms_collocation, x), 
@@ -162,3 +163,5 @@ class CMSTapeCollocation(FTS3TapeMetadataPlugin):
             logger.debug("Could not determine data type for %s", lfn)
 
         return collocation
+
+CMSTapeCollocation._module_init_()
