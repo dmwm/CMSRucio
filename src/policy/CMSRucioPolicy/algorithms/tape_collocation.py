@@ -2,6 +2,7 @@
 Tape Collocation algorithm for placement of CMS data on tape
 '''
 
+from typing import Union
 from rucio.common.exception import DataIdentifierNotFound
 from rucio.transfertool.fts3_plugins import FTS3TapeMetadataPlugin
 from rucio.core.did import list_parent_dids, get_did
@@ -19,7 +20,7 @@ class CMSTapeCollocation(FTS3TapeMetadataPlugin):
     raw_name = "raw"
     hiraw_name = "hiraw"
 
-    def __init__(self) -> None:
+    def __init__(self, policy: Union[str, None] = None) -> None:
 
         super().__init__(self.policy_algorithm)
 
@@ -151,7 +152,7 @@ class CMSTapeCollocation(FTS3TapeMetadataPlugin):
         if data_type != "n/a":
             tier = cls.data_tier(lfn)
             era = cls.era(lfn)
-            parent = cls.parent_container(InternalScope(hints['scope']), hints['name'])
+            parent = cls.parent_container(hints['name'])
 
             if tier is not None: 
                 collocation['1'] = tier 
