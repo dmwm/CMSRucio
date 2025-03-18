@@ -1,19 +1,20 @@
 '''
-Tape Collocation algorithm for placement of CMS data on tape
+Tape colocation algorithm for placement of CMS data on tape
 '''
 
-from typing import Union
+from typing import Any, Optional, Union
 from rucio.common.exception import DataIdentifierNotFound
 from rucio.transfertool.fts3_plugins import FTS3TapeMetadataPlugin
 from rucio.core.did import list_parent_dids, get_did
 from rucio.db.sqla.constants import DIDType
 from rucio.common.types import InternalScope
 import logging 
+import json
 
 logger = logging.getLogger(__name__)
 
-class CMSTapeCollocation(FTS3TapeMetadataPlugin): 
-    policy_algorithm = "tape_collocation"
+class CMSTapeColocation(FTS3TapeMetadataPlugin): 
+    policy_algorithm = "tape_colocation"
 
     allowed_types = ['data', 'hidata', 'mc', 'himc', 'relval', 'hirelval']
     parking_name = "parking"
@@ -31,8 +32,16 @@ class CMSTapeCollocation(FTS3TapeMetadataPlugin):
         logger.info("Registered plugin %s", cls.policy_algorithm)
         cls.register(
             cls.policy_algorithm, 
-            func= lambda x: cls._collocation(cls.cms_collocation, x), 
-        )
+            func=cls.cms_colocation
+        ) 
+
+    @staticmethod
+    def _encode(name: Any) -> Optional[str]: 
+        try: 
+            json.dumps(name)
+            return name
+        except json.JSONDecodeError:
+            return None
 
     @staticmethod
     def parent_container(name): 
@@ -64,7 +73,10 @@ class CMSTapeCollocation(FTS3TapeMetadataPlugin):
                     in list_parent_dids(scope=scope, name=name) 
                     if parent['type']==DIDType.CONTAINER
                 ]
-            return containers[0]
+            container = CMSTapeColocation._encode(containers[0])
+            if container is None: 
+                logger.debug("Could not encode container for %s", name)
+            return container
 
         except (IndexError, DataIdentifierNotFound): 
             logger.debug("No parent container found for %s:%s", scope, name)
@@ -87,34 +99,40 @@ class CMSTapeCollocation(FTS3TapeMetadataPlugin):
         data_type = name.removeprefix('/store/').split('/')[0] # First index that isn't `store`
         
         # Custom logic: Use parking or raw over "data", use hiraw if heavy ion and raw 
-        if data_type not in CMSTapeCollocation.allowed_types: 
+        if data_type not in CMSTapeColocation.allowed_types: 
             data_type = "n/a"
-        elif CMSTapeCollocation._is_parking(name): 
-            data_type = CMSTapeCollocation.parking_name
-        elif CMSTapeCollocation._is_raw(name):
+        elif CMSTapeColocation._is_parking(name): 
+            data_type = CMSTapeColocation.parking_name
+        elif CMSTapeColocation._is_raw(name):
             if data_type.startswith("hi"): 
-                data_type = CMSTapeCollocation.hiraw_name
+                data_type = CMSTapeColocation.hiraw_name
             else: 
-                data_type = CMSTapeCollocation.raw_name
+                data_type = CMSTapeColocation.raw_name
         
         return data_type
 
     @staticmethod
     def data_tier(name): 
         try: 
-            return name.removeprefix('/store/').split('/')[3]
+            tier = name.removeprefix('/store/').split('/')[3]
+            if CMSTapeColocation._encode(tier) is None:
+                logger.debug("Could not encode data tier for %s", name)
+            return tier
         except IndexError: 
             logger.debug("Could not determine data tier for %s", name)
 
     @staticmethod
     def era(name): 
         try: 
-            return name.removeprefix('/store/').split('/')[1]
+            era = name.removeprefix('/store/').split('/')[1]
+            if CMSTapeColocation._encode(era) is None:
+                logger.debug("Could not encode era for %s", name)
+            return era
         except IndexError: 
             logger.debug("Could not determine era for %s", name)
 
     @classmethod
-    def cms_collocation(cls, **hints):
+    def cms_colocation(cls, hints):
         """
         https://github.com/dmwm/CMSRucio/issues/753
         https://github.com/dmwm/CMSRucio/issues/323
@@ -145,7 +163,7 @@ class CMSTapeCollocation(FTS3TapeMetadataPlugin):
         lfn = hints['name']
         data_type = cls.data_type(lfn)
         
-        collocation = {
+        colocation = {
             "0": data_type,
         }
 
@@ -153,16 +171,16 @@ class CMSTapeCollocation(FTS3TapeMetadataPlugin):
             tier = cls.data_tier(lfn)
             era = cls.era(lfn)
             parent = cls.parent_container(hints['name'])
-
             if tier is not None: 
-                collocation['1'] = tier 
+                colocation['1'] = tier
             if era is not None: 
-                collocation['2'] = era
+                colocation['2'] = era
             if parent is not None: 
-                collocation['3'] = parent
+                colocation['3'] = parent
         else: 
             logger.debug("Could not determine data type for %s", lfn)
 
-        return collocation
-
-CMSTapeCollocation._module_init_()
+        # TODO Speak with FTS3 Team about these headers
+        return {"colocation_hints": colocation}
+    
+CMSTapeColocation._module_init_()
