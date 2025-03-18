@@ -182,5 +182,3 @@ class CMSTapeColocation(FTS3TapeMetadataPlugin):
 
         # TODO Speak with FTS3 Team about these headers
         return {"colocation_hints": colocation}
-    
-CMSTapeColocation._module_init_()

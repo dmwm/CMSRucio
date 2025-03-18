@@ -11,6 +11,8 @@ def get_algorithms():
     """
     from CMSRucioPolicy.algorithms import lfn2pfn, auto_approve, pfn2lfn
     from CMSRucioPolicy.algorithms.tape_colocation import CMSTapeColocation
+    CMSTapeColocation._module_init_()
+    
     return {
         'lfn2pfn': {
             'cmstfc': lfn2pfn.cmstfc,
@@ -20,9 +22,6 @@ def get_algorithms():
         },
         'pfn2lfn': {
             'cms_pfn2lfn': pfn2lfn.cms_pfn2lfn,
-        }, 
-        "fts3_tape_metadata_plugins": {
-            "tape_colocation": CMSTapeColocation,
         }
     }
 
