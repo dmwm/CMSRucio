@@ -181,4 +181,4 @@ class CMSTapeColocation(FTS3TapeMetadataPlugin):
             logger.debug("Could not determine data type for %s", lfn)
 
         # TODO Speak with FTS3 Team about these headers
-        return {"colocation_hints": colocation}
+        return {"collocation_hints": colocation}
