@@ -32,7 +32,7 @@ class CMSTapeColocation(FTS3TapeMetadataPlugin):
         logger.info("Registered plugin %s", cls.policy_algorithm)
         cls.register(
             cls.policy_algorithm, 
-            func=cls.cms_colocation
+            func=lambda x: cls.cms_colocation(x)
         ) 
 
     @staticmethod
@@ -181,4 +181,5 @@ class CMSTapeColocation(FTS3TapeMetadataPlugin):
             logger.debug("Could not determine data type for %s", lfn)
 
         # TODO Speak with FTS3 Team about these headers
+        logger.debug("Setting colocation hints %s", colocation)
         return {"collocation_hints": colocation}
