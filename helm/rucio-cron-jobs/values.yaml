@@ -10,6 +10,14 @@ image:
   # Overrides the image tag whose default is the chart appVersion.
   tag: "latest"
 
+dmops_image:
+  repository: registry.cern.ch/cmsrucio/dmops-spark-crons
+  pullPolicy: Always
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "latest"
+
+dmops_namespace: "dmtops-crons"
+
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
