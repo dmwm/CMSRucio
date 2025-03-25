@@ -61,7 +61,7 @@ def should_enable_availability_on_occupancy(rse):
 def main():
 
     QUERY_HEADER = '{"search_type":"query_then_fetch","ignore_unavailable":true,"index":["monit_prod_cmssst_*"]}'
-    DRY_RUN = True
+    DRY_RUN = False
 
     with open('availability_lucene.json', 'r') as lucene_json:
         lucene = json.load(lucene_json)
