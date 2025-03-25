@@ -40,6 +40,8 @@ echo "Set site capacity"
 ./setSiteCapacity
 
 echo "Setting availability"
-./setSiteAvailability
+./setSiteAvailability.py
+echo "Setting wmcore_output_tape attribute"
+./set_wmcore_output_tape.py
 echo "Update DDM quota"
 ./updateDDMQuota
