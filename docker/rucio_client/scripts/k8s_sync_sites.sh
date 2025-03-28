@@ -41,5 +41,7 @@ echo "Set site capacity"
 
 echo "Setting availability"
 ./setSiteAvailability
+echo "Setting wmcore_output_tape attribute"
+./setWmcoreTapeOutput
 echo "Update DDM quota"
 ./updateDDMQuota
