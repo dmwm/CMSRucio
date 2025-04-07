@@ -1,10 +1,10 @@
 #! /usr/bin/env python3
 
 """
-DM whitelists tape sites via wmcore_output_tape RSE attribute for Production Output. 
+DM provides allowed tape sites via wmcore_output_tape RSE attribute for Production Output. 
 For a given production output dataset, WM(MSOutput) chooses the tape destination amongst the 
-whitelisted tape RSEs. To be specific, MSOutput makes a weighted random selection based on the dm_weight
-attribute amongst the whitelisted tape RSEs
+allowed tape RSEs. To be specific, MSOutput makes a weighted random selection based on the dm_weight
+attribute amongst the allowed tape RSEs
 """
 
 from rucio.client import Client
@@ -31,4 +31,4 @@ for rse in tape_rses:
         print(f"DRY-RUN: Setting wmcore_output_tape at {rse} to {wmcore_output_tape}")
     else:
         print(f"Setting wmcore_output_tape at {rse} to {wmcore_output_tape}")
-        rclient.add_rse_attribute(rse, "wmcore__output_tape", wmcore_output_tape)
+        rclient.add_rse_attribute(rse, "wmcore_output_tape", wmcore_output_tape)

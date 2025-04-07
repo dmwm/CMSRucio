@@ -5,6 +5,7 @@ import json
 import os
 import requests
 import time
+
 from rucio.client import Client
 from occupancyController import should_enable_availability_on_occupancy
 
@@ -22,7 +23,7 @@ lucene["query"]["bool"]["filter"]["range"]["metadata.timestamp"]["lt"] = int(tim
 query = io.StringIO(QUERY_HEADER + '\n' + json.dumps(lucene) + '\n')
 
 headers = {'Authorization': 'Bearer %s' % os.environ['MONIT_TOKEN'],
-        'Content-Type': 'application/json'}
+           'Content-Type': 'application/json'}
 
 r = requests.post('https://monit-grafana.cern.ch/api/datasources/proxy/9475/_msearch', data=query, headers=headers)
 
@@ -79,7 +80,7 @@ for site in sites:
         if available_map[rse]:
             should_enable = should_enable_availability_on_occupancy(rse)
             if not should_enable:
-                print(f"The following site doesn't have enough free space. Availability write should be disabled: {rse}")
+                print(f"{rse} doesn't have enough free space. Writing will be disabled.")
                 available_map[rse]["availability_write"] = False
 
 
@@ -88,7 +89,10 @@ print("Following RSE are skipped due to skip_site_availability_update: %s" % ski
 for rse, decision in available_map.items():
     try:
         if not DRY_RUN:
-            rclient.update_rse(rse, {"availability_write": decision["availability_write"], "availability_delete": decision["availability_delete"], "availability_read": decision["availability_read"]})
+            rclient.update_rse(rse,
+                               {"availability_write": decision["availability_write"],
+                                "availability_delete": decision["availability_delete"],
+                                "availability_read": decision["availability_read"]})
             print('Setting availability for %s to %s' % (rse, decision))
         else:
             print('DRY-RUN: Setting availability for %s to %s' % (rse, decision))
