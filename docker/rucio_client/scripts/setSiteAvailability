@@ -7,9 +7,12 @@ import requests
 import time
 
 from rucio.client import Client
+from occupancyController import should_enable_availability_on_occupancy
 
 QUERY_HEADER = '{"search_type":"query_then_fetch","ignore_unavailable":true,"index":["monit_prod_cmssst_*"]}'
 DRY_RUN = False
+
+rclient = Client()
 
 with open('availability_lucene.json', 'r') as lucene_json:
     lucene = json.load(lucene_json)
@@ -28,8 +31,7 @@ j = json.loads(r.text)
 
 sites = [record['_source']['data'] for record in j['responses'][0]['hits']['hits']]
 
-rclient = Client()
-
+# Map storing the decisions for read/write/delete based on SSB
 available_map = {}
 skip_rses = [rse['rse'] for rse in rclient.list_rses(rse_expression='skip_site_availability_update=True')]
 all_rses = [rse['rse'] for rse in rclient.list_rses()]
@@ -62,17 +64,37 @@ for site in sites:
             continue
         rucio_status = site.get('rucio_status', None)
         if not rucio_status or rucio_status not in ['dependable', 'enabled']:
-            available_map[rse] = False
+            available_map[rse] = {
+                "availability_read": False,
+                "availability_write": False,
+                "availability_delete": False
+            }
         else:
-            available_map[rse] = True
+            available_map[rse] = {
+                "availability_read": True,
+                "availability_write": True,
+                "availability_delete": True
+            }
 
-print("Skipping RSEs: %s" % skip_rses)
+        # If the site is enabled based on SSB, do an occupancy check
+        if available_map[rse]:
+            should_enable = should_enable_availability_on_occupancy(rse)
+            if not should_enable:
+                print(f"{rse} doesn't have enough free space. Writing will be disabled.")
+                available_map[rse]["availability_write"] = False
 
-for rse, available in available_map.items():
+
+print("Following RSE are skipped due to skip_site_availability_update: %s" % skip_rses)
+
+for rse, decision in available_map.items():
     try:
         if not DRY_RUN:
-            rclient.update_rse(rse, {"availability_write": available, "availability_delete": available, "availability_read": available})
-        print('Setting availability for %s to %s' % (rse, available))
+            rclient.update_rse(rse,
+                               {"availability_write": decision["availability_write"],
+                                "availability_delete": decision["availability_delete"],
+                                "availability_read": decision["availability_read"]})
+            print('Setting availability for %s to %s' % (rse, decision))
+        else:
+            print('DRY-RUN: Setting availability for %s to %s' % (rse, decision))
     except Exception as e:  # Should never be the case
         print('Failed to update RSE %s, Error %s' % (rse, e))
-
