@@ -12,7 +12,7 @@ from rseUsageMetrics import get_rse_usage, get_sum_of_all_rse_statics
 
 DEFAULT_GLOBAL_QUOTA_PCT = 15
 DEFAULT_LOCAL_QUOTA_PCT = 50
-DRY_RUN = False
+DRY_RUN = True
 
 client = Client()
 account = "wmcore_transferor"
@@ -51,11 +51,10 @@ def set_local_quotas():
 
     for rse in rses:
         static, rucio, expired = get_rse_usage(rse)
-
         free = static - rucio
 
-        # TODO: What if it's negative?
-        local_quota_bytes = ( (free + expired) * local_quota_pct) / 100 
+        # Set it to 0 if it's negative
+        local_quota_bytes = max((((free + expired) * local_quota_pct) / 100), 0)
         if DRY_RUN:
             print(f"DRY-RUN: Setting local quota of wmcore_transferor at {rse} to {local_quota_bytes / 1e12} TB")
         else:
