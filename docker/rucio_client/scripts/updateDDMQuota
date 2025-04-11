@@ -1,10 +1,12 @@
 #! /usr/bin/env python3
 
 import math
-from rucio.client import Client
 from tabulate import tabulate
-client = Client()
 
+from rucio.client import Client
+from rseUsageMetrics import get_rse_usage, get_sum_of_all_rse_statics
+
+client = Client()
 # See the following link for documentation and please update it if you change the logic
 # https://cmsdmops.docs.cern.ch/Operators/ManageDMWeight/
 
@@ -30,37 +32,6 @@ def print_results():
 
     print(tabulate(table_disk, headers=headers))
     print(tabulate(table_tape, headers=headers))
-
-
-def get_sum_of_all_rse_statics(rse_expression):
-    rses = [rse["rse"] for rse in client.list_rses(rse_expression=rse_expression)]
-    result = 0
-    for rse in rses:
-        static, _, _ = get_rse_usage(rse)
-        result += static
-    return result
-
-
-def get_rse_usage(rse):
-    rse_usage = list(client.get_rse_usage(rse))
-
-    required_fields = {"static", "rucio", "expired"}
-    relevant_info = {}
-
-    for source in rse_usage:
-        # Assuming source and used keys exist
-        relevant_info[source["source"]] = source["used"]
-
-    if not required_fields.issubset(relevant_info.keys()):
-        print("Skipping {} due to lack of relevant key in rse".format(rse))
-        print("{} is not a subset of {}".format(required_fields, relevant_info.keys()))
-        return 0, 0, 0
-
-    # Apparently, python integers do not overflow, https://docs.python.org/3/library/exceptions.html#OverflowError
-
-    static, rucio, expired = relevant_info["static"], relevant_info["rucio"], relevant_info["expired"]
-    return static, rucio, expired
-
 
 def calculate_dm_weights(rse_expression, static_weight, free_weight, expired_weight, make_quadratic):
 
