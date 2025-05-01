@@ -10,7 +10,7 @@ import re
 import json
 
 from rucio.client.client import Client
-from rucio.common.exception import RSEProtocolNotSupported, RSENotFound
+from rucio.common.exception import RSEProtocolNotSupported, RSENotFound, Duplicate
 
 APPROVAL_REQUIRED = ['T1_DE_KIT_Tape', 'T1_ES_PIC_Tape', 'T1_RU_JINR_Tape', 'T1_UK_RAL_Tape', 'T1_US_FNAL_Tape']
 DOMAINS_BY_TYPE = {
@@ -40,17 +40,39 @@ IMPL_MAP = {'SRMv2': 'rucio.rse.protocols.gfal.Default',
             'WebDAV': 'rucio.rse.protocols.gfal.Default'}
 DEFAULT_PORTS = {'gsiftp': 2811, 'root': 1094, 'davs': 443}
 
+# from rucio.core.rse
+# RSE settings/properties that can be modified
+MUTABLE_RSE_PROPERTIES = {
+    'name',
+    'availability_read',
+    'availability_write',
+    'availability_delete',
+    'latitude',
+    'longitude',
+    'time_zone',
+    'rse_type',
+    'volatile',
+    'deterministic',
+    'region_code',
+    'country_name',
+    'city',
+    'staging_area',
+    'qos_class',
+    'continent',
+    'availability'
+}
+
 
 class CMSRSE:
     """
     Wrapping the definition of a CMS RSE. Gathering the information
-    from PhEDEx and translating them into the definition of a Rucio RSE
+    from JSON and translating them into the definition of a Rucio RSE
     for the different expected types: real, test, temp.
     """
 
-    def __init__(self, json, dry=False, cms_type='real', deterministic=True):
+    def __init__(self, site_json: dict, attributes: dict, dry=False, cms_type='real', deterministic=True):
 
-        self.json = json
+        self.json = site_json
         self.dry = dry
         self.cms_type = cms_type
 
@@ -60,34 +82,41 @@ class CMSRSE:
         self.attrs = {}
         self.settings = {}
         self.settings['deterministic'] = deterministic
-        self.rucio_rse_type = json['type'].upper()
+        self.rucio_rse_type = site_json['type'].upper()
 
         xattrs = {}
 
-        # If we are building a _Test or _Temp instance add the special prefix
+        # If we are building a _Test or _Temp instance add the special suffix
         if cms_type == "test":
-            self.rse_name = json['rse']+"_Test"
+            self.rse_name = site_json['rse']+"_Test"
         elif cms_type == "temp":
-            self.rse_name = json['rse']+"_Temp"
+            self.rse_name = site_json['rse']+"_Temp"
         else:
-            self.rse_name = json['rse']
-            if json.get('loadtest', None) is not None:
-                xattrs['loadtest'] = json['loadtest']
+            self.rse_name = site_json['rse']
+            if site_json.get('loadtest', None) is not None:
+                xattrs['loadtest'] = site_json['loadtest']
 
-        xattrs['fts'] = ','.join(json['fts'])
+        xattrs['fts'] = ','.join(site_json['fts'])
         self._get_attributes(xattrs=xattrs)
 
-    """
-    Parses either a prefix or a pfn within a rule in the storage.json
-    @url is something like:
-    - root://redirector.t2.ucsd.edu:1094//$1
-    - davs://xrootd.ultralight.org:1094
-    - srm://cmsrm-se01.roma1.infn.it:8443/srm/managerv2?SFN=/pnfs/roma1.infn.it/data/cms
-    @protocol_name. Is one of RUCIO_PROTOS = ['SRMv2', 'XRootD', 'WebDAV']
-    @is_prefix. Tell use whethere we are analyzing a prefix or a rule from the TFC
-    """
+        for k, v in attributes:
+            if k in MUTABLE_RSE_PROPERTIES:
+                # extract settings
+                self.settings[k] = v
+            else:
+                self.attrs[k] = v
 
     def _parse_url(self, url, protocol_name, is_prefix):
+        """
+        Parses either a prefix or a pfn within a rule in the storage.json
+
+        @url is something like:
+        - root://redirector.t2.ucsd.edu:1094//$1
+        - davs://xrootd.ultralight.org:1094
+        - srm://cmsrm-se01.roma1.infn.it:8443/srm/managerv2?SFN=/pnfs/roma1.infn.it/data/cms
+        @protocol_name. Is one of RUCIO_PROTOS = ['SRMv2', 'XRootD', 'WebDAV']
+        @is_prefix. Tell use whethere we are analyzing a prefix or a rule from the TFC
+        """
         error = False
         prefix_regexp_list = [
             {'type': 1, 'regexp': re.compile(
@@ -204,10 +233,13 @@ class CMSRSE:
 
         return status, pfn
 
+    def _get_settings(self):
+        pass
+
     def _get_attributes(self, tier=None, country=None, xattrs=None):
         """
         Gets the expected RSE attributes according to the
-        given cmsrse parameters and to the info from phedex
+        given cmsrse parameters and to the info from JSON
         :fts:               fts server. If None the server defined for
                             the pnn is taken.
         :tier:              tier. If None it is taken from pnn
@@ -254,6 +286,10 @@ class CMSRSE:
         return
 
     def _set_attributes(self):
+        """
+        Sets the attributes from JSON to Rucio
+        """
+        # Fetch the current rse attributes from Rucio
         try:
             rattrs = self.rcli.list_rse_attributes(rse=self.rse_name)
         except RSENotFound:
@@ -261,40 +297,41 @@ class CMSRSE:
 
         changed = False
 
-        for (key, value) in self.attrs.items():
-            if key not in rattrs or rattrs[key] != value:
-                # Hack. I can find no way to define an attribute to 1
-                # (systematically reinterpreted as True)
-                if key in rattrs and rattrs[key] is True and \
-                        (str(value) == '1' or str(value) == 'True'):
-                    continue
+        if rattrs.get('rse_attr_commit', None) and self.attrs['rse_attr_commit'] == rattrs.get('rse_attr_commit'):
+            logging.info('commit hash matches, skipping')
+        else:
+            for (key, value) in self.attrs.items():
+                if key not in rattrs or rattrs[key] != value:
+                    # Hack. I can find no way to define an attribute to 1
+                    # (systematically reinterpreted as True)
+                    if key in rattrs and rattrs[key] is True and \
+                            (str(value) == '1' or str(value) == 'True'):
+                        continue
 
-                if key not in rattrs:
-                    rattrs[key] = 'None'
-                logging.debug('setting attribute %s from value %s to value %s for rse %s',
-                              key, rattrs[key], value, self.rse_name)
-                changed = True
-                if self.dry:
-                    logging.info('setting attribute %s to value %s for rse %s. Dry run, skipping',
-                                 key, value, self.rse_name)
-                else:
-                    self.rcli.add_rse_attribute(rse=self.rse_name, key=key, value=value)
+                    if key not in rattrs:
+                        rattrs[key] = 'None'
+                    logging.debug('setting attribute %s from value %s to value %s for rse %s',
+                                key, rattrs[key], value, self.rse_name)
+                    changed = True
+                    if self.dry:
+                        logging.info('setting attribute %s to value %s for rse %s. Dry run, skipping',
+                                    key, value, self.rse_name)
+                    else:
+                        try:
+                            self.rcli.add_rse_attribute(rse=self.rse_name, key=key, value=value)
+                        except Duplicate:
+                            logging.info('attribute %s already exists. Updating to value %s for rse %s',
+                                        key, value, self.rse_name)
+                            self.rcli.delete_rse_attribute(rse=self.rse_name, key=key)
+                            self.rcli.add_rse_attribute(rse=self.rse_name, key=key, value=value)
         return changed
 
     def _get_protocol(self, proto_json, protos_json):
         """
         Get the informations about the RSE protocol from creator argument or
-        from phedex
-        :seinfo:      informations about the SE (in the form of the seinfo method of PhEDEx class).
-                      If None the info is gathered from PhEDEx using the seinfo method.
-        :add_prefix:  path to be added to the prefix in seinfo. if none
-                      SE_ADD_PREFIX_BYTYPE is used.
-        :tfc:         dictionnary with tfc rules. If None the info is gathered from PhEDEx using
-                      the PhEDEx.tfc method,
-        :exclude:     rules to be excluded from tfc (in case it is gathered from PhEDEx).
-        :domains:     domains dictionnary. If none the DOMAINS_BYTYPE constant is used.
-        :token:       space token. default None
-        :proto:       protocol to be considered. default DEFAULT_PROTOCOL.
+        from JSON
+        :proto_json:  specific protocol
+        :protos_json: all protocols
         """
 
         protocol_name = proto_json['protocol']
@@ -544,6 +581,9 @@ class CMSRSE:
         return new_changes
 
     def _create_rse(self):
+        """
+        Creates an RSE
+        """
 
         create = False
 
@@ -570,7 +610,7 @@ class CMSRSE:
     def update(self):
         """
         Creates, if needed, and updates the RSE according
-        to CMS rules and PhEDEx data.
+        to CMS rules and JSON data.
         """
         create_res = self._create_rse()
 

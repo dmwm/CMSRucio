@@ -1,5 +1,7 @@
 #!/bin/env python3
 
+import base64
+from collections import ChainMap, defaultdict
 import json
 import os
 from pathlib import Path
@@ -8,7 +10,9 @@ import gitlab
 from rucio.client import Client
 from rucio.common.exception import Duplicate
 
-IGNORED_RSEINFO = ['id', 'protocols']
+IGNORED_RSE_INFO = ['id', 'protocols']
+
+CMS_TYPES = ['test', 'temp']
 
 # from rucio.core.rse
 MUTABLE_RSE_PROPERTIES = {
@@ -32,7 +36,10 @@ MUTABLE_RSE_PROPERTIES = {
 }
 
 
-client = Client()
+try:
+    client = Client()
+except:
+    pass
 
 
 def get_info_from_rucio(rse: str) -> dict:
@@ -43,84 +50,97 @@ def get_info_from_rucio(rse: str) -> dict:
 
     returns a dict of settings and attributes
     '''
-    rseinfo = client.get_rse(rse=rse)
+    rse_info = client.get_rse(rse=rse)
     attributes = client.list_rse_attributes(rse=rse)
-    usage = client.get_rse_usage(rse=rse)
-    rse_limits = client.get_rse_limits(rse)
 
     # Settings
-    settings = {key: rseinfo[key] for i, key in enumerate(sorted(rseinfo)) if key in MUTABLE_RSE_PROPERTIES}
+    settings = {key: rse_info[key] for i, key in enumerate(sorted(rse_info)) if key in MUTABLE_RSE_PROPERTIES}
 
-    return settings, attributes
+    return dict(ChainMap(settings, attributes))
 
 
-def get_info_from_gitlab(rse: str) -> dict:
+def commit_to_gitlab(site: str, data: dict, dry_run: bool = True) -> bool:
     private_token = os.environ['GITLAB_TOKEN']
-    gl = gitlab.Gitlab('https://githlab.cern.ch', private_token=private_token)
+    gl = gitlab.Gitlab('https://gitlab.cern.ch', private_token=private_token)
     group = gl.groups.get('siteconf')
-    projects = group.projects.list(all=True)
-
-
-def set_rse_settings(rse: str, config: dict, dry_run: bool = True):
-    '''
-    Setts RSE settings and attributes from a config dict
-    '''
-    settings = config['settings']
-    attributes = config['attributes']
-
-    current_settings, current_attrs = get_info_from_rucio(rse)
-
-    # update settings
-    # TODO: Handle KeyError
-    settings_to_update = []
-    for key, value in settings.items():
-        if current_settings.get(key) != value:
-            settings_to_update.append(key)
-
-    # update attributes
-    # TODO: Handle KeyError
-    attr_to_update = []
-    for key, value in attributes.items():
-        if current_attrs.get(key) != value:
-            attr_to_update.append(key)
-        else:
-            print(f'attribute {key} is not added to RSE')
-
-    print(f'Settings to update: {settings_to_update}')
-    print(f'Attributes to update: {attr_to_update}')
-
+    projects = group.projects.list(all=True, search=site)
+    if len(projects) > 1:
+        print(f'multiple projects found for site: {site}')
+        return False
+    full_project = gl.projects.get(projects[0].id)
     if not dry_run:
-        # update settings
-        to_update = {k: settings[k] for k in settings_to_update}
-        # client.update_rse(rse, to_update)
+        try:
+            commit = full_project.commits.create(data)
+            return True
+        except Exception as e:
+            print(e)
+            return False
+    else:
+        print(f"DRY RUN: {site}, {data}")
+        return False
 
-        for attribute in attr_to_update:
-            value = attributes[attribute]
-            if attribute in current_attrs.keys():
-                print(f'Attribute exists, Deleting {attribute} from {rse}')
-                # client.delete_rse_attribute(rse, attribute)
-            try:
-                print(f'Adding {attribute}: {value} to {rse}')
-                # client.add_rse_attribute(rse, attribute, value)
-            except Duplicate:
-                print(f'{attribute} already exists')
 
+def commit_to_personal_gitlab(site: str, data: dict, dry_run: bool = True) -> bool:
+    private_token = os.environ['GITLAB_TOKEN']
+    gl = gitlab.Gitlab('https://gitlab.cern.ch', private_token=private_token)
+    projects = gl.projects.list(owned=True, search=site)
+    if len(projects) > 1:
+        print(f'multiple projects found for site: {site}')
+        return False
+    full_project = gl.projects.get(projects[0].id)
+    if not dry_run:
+        try:
+            commit = full_project.commits.create(data)
+            return True
+        except Exception as e:
+            print(e)
+            return False
+    else:
+        print(f"DRY RUN: {site}, {data}")
+        return False
+
+
+def extract_siteconf_project_name(rse: str) -> str:
+    to_remove = ['_Temp', '_Test', '_Tape', '_Disk']
+    for s in to_remove:
+        rse = rse.removesuffix(s)
+    return rse
 
 
 if __name__ == '__main__':
+    rses_by_site = defaultdict(list)
     rses = client.list_rses('update_from_json=True')
     for rse in rses:
         name = rse['rse']
-        settings, attributes = get_info_from_rucio(name)
+        rse_info = get_info_from_rucio(name)
         file_dest = Path('rse_configs', f'{name}.json')
 
         with open(file_dest, 'w') as f:
-            json.dump({"settings": settings,
-                       "attributes": attributes},
-                       f,
-                       indent=4)
+            json.dump(rse_info, f, indent=4)
+        
+        project_name = extract_siteconf_project_name(rse['rse'])
+        rses_by_site[project_name].append(rse['rse'])
 
-    # rse = 'T0_CH_CERN_Disk'
-    # with open(f'rse_configs/{rse}.json', 'r', encoding='utf-8') as f:
-    #     config = json.load(f)
-    #     set_rse_settings(rse, config)
+    sites_to_commit = []
+    sites_to_ignore = ['T2_US_Nebraska']
+
+    for site, rses in rses_by_site.items():
+        if site in sites_to_commit:
+            print(rses)
+            a = {
+                'branch': 'master',
+                'commit_message': 'upload initial rse config',
+                'actions': []
+            }
+            for rse in rses:
+                file_src = Path('rse_configs', f'{rse}.json')
+                action = {
+                    'action': 'create',
+                    'file_path': f'rucio/{rse}.json',
+                    'content': open(file_src, 'r').read()
+                }
+                a['actions'].append(action)
+
+            #commit = commit_to_gitlab(site, a, dry_run=False)
+            commit = commit_to_personal_gitlab(site, a, dry_run=False)
+        
