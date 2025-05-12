@@ -92,7 +92,7 @@ def map_cric_users(country, option, dry_run):
         dns = list(dns)
         cric_user = CricUser(username, email, dns, account_type, institute, institute_country, policy, option)
         cric_user_list.append(cric_user)
-        set_rucio_limits(cric_user)
+        set_rucio_limits(cric_user, dry_run)
 
 
 """
@@ -100,7 +100,7 @@ This function sets the Rucio limits, and if needed it also create a Rucio accoun
 """
 
 
-def set_rucio_limits(cric_user):
+def set_rucio_limits(cric_user, dry_run):
     # FIXME: Add and subtract identities
     # FIXME: Pay attention to mode and add/subtract quotas
     # Move into cric user class
@@ -110,7 +110,14 @@ def set_rucio_limits(cric_user):
         print("Add account for %s %s" % (account, email))
 
         try:
-            client.get_account(account)
+            rucio_account = client.get_account(account)
+            if rucio_account['email'] != email:
+                # Update the account:
+                if dry_run:
+                    print('DRY-RUN: CRIC email is different from rucio email. Rucio email should be updated')
+                else:
+                    print('CRIC email is different from rucio email. Updating')
+                    client.update_account(account, 'email', email)
         except AccountNotFound:
             client.add_account(account, cric_user.account_type, email)
 
