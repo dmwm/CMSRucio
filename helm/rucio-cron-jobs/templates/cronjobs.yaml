@@ -123,3 +123,47 @@ spec:
 {{- end }}
               command: ['/root/CMSRucio/docker/rucio_client/scripts/k8s_sync_users_links.sh']
           restartPolicy: Never
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: rucio-subscriptions
+  namespace: {{ .Values.dmops_namespace }}
+spec:
+  schedule: "0 6 * * *"
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      template:
+        metadata:
+          labels:
+            app: dmtops-spark-svc
+        spec:
+          volumes:
+          - name: dmtops-cron-secrets
+            secret:
+              secretName: dmtops-cron-secrets
+          containers:
+            - name: rucio-subscriptions
+              image: "{{ .Values.dmops_image.repository }}:{{ .Values.dmops_image.tag | default .Chart.AppVersion }}"
+              imagePullPolicy: {{ .Values.dmops_image.pullPolicy }}
+              volumeMounts:
+                - name: dmtops-cron-secrets
+                  mountPath: /etc/secrets
+                  readOnly: true
+              env:
+                - name: DRIVERPORT
+                  value: "31203"
+                - name: BMPORT
+                  value: "31204"
+                - name: K8SHOST
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
+              ports:
+                - containerPort: 31203 # spark.driver.port
+                  name: port-0
+                - containerPort: 31204 # spark.driver.blockManager.port
+                  name: port-1
+              command: ['/src/submit_rucio_subscriptions.sh']
+          restartPolicy: OnFailure
