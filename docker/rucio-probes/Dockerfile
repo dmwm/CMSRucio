@@ -47,9 +47,10 @@ ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_usage_probes/cms
 
 # To be removed once the PR is available in our rucio version
 # Patch for rules volume (https://github.com/dmwm/CMSRucio/issues/747, https://github.com/rucio/probes/pull/154)
-ADD https://raw.githubusercontent.com/rucio/probes/b403db9dad980b60979895b0b09cd133eaa23a59/cms/check_requests_count_volume /probes/cms
+# Removing this since it is not that useful
+# ADD https://raw.githubusercontent.com/rucio/probes/b403db9dad980b60979895b0b09cd133eaa23a59/cms/check_requests_count_volume /probes/cms
 # Patch for rse settings and attributes monitoring (https://github.com/dmwm/CMSRucio/issues/912, https://github.com/rucio/probes/pull/155)
-ADD https://raw.githubusercontent.com/rucio/probes/35c608bb9206252a6685b1b8551fda916c85fb16/cms/check_rse_settings_attributes /probes/cms
+ADD https://raw.githubusercontent.com/rucio/probes/342cea9b8636d342da8cdfc3ece9e7fed14b8dc9/cms/check_rse_settings_attributes /probes/cms
 
 RUN chmod +x /probes/common/check_*
 RUN chmod +x /probes/cms/check_*
