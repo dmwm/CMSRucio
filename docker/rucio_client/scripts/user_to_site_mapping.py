@@ -119,15 +119,24 @@ def set_rucio_limits(cric_user, dry_run):
                     print('CRIC email is different from rucio email. Updating')
                     client.update_account(account, 'email', email)
         except AccountNotFound:
-            client.add_account(account, cric_user.account_type, email)
+            if dry_run:
+                print('DRY-RUN: Add account.')
+            else:
+                client.add_account(account, cric_user.account_type, email)
 
         try:
-            client.add_scope(account, 'user.%s' % account)
+            if dry_run:
+                print('DRY-RUN: Add scope.')
+            else:
+                client.add_scope(account, 'user.%s' % account)
             print('Scope added for user %s' % account)
         except Duplicate:
             print('Scope for user %s already existed' % account)
 
-        cric_user.add_identities_to_rucio(client=client)
+        if dry_run:
+            print("DRY-RUN: Add identities to rucio.")
+        else:
+            cric_user.add_identities_to_rucio(client=client)
 
         # Clear out old quotas. May want to remove this soon.
 
@@ -140,7 +149,10 @@ def set_rucio_limits(cric_user, dry_run):
         for rse in cric_user.rses_list:
             if rse.quota > limits.get(rse.sitename, 0):
                 print(" quota at %s: %s" % (rse.sitename, rse.quota))
-                client.set_local_account_limit(account, rse.sitename, rse.quota)
+                if dry_run:
+                    print('DRY-RUN: set local account limit.')
+                else:
+                    client.set_local_account_limit(account, rse.sitename, rse.quota)
     except InvalidObject:
         print("Warning: could not add account or quota to account described by %s" % pprint.pformat(cric_user))
 
