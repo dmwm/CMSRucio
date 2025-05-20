@@ -45,11 +45,11 @@ ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manag
 ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_usage_probes/cms/check_deletable_replicas /probes/cms
 ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_usage_probes/cms/check_obsolete_replicas /probes/cms
 
-# To be removed once the PR is available in our rucio version
-# Patch for rules volume (https://github.com/dmwm/CMSRucio/issues/747, https://github.com/rucio/probes/pull/154)
-# Removing this since it is not that useful
-# ADD https://raw.githubusercontent.com/rucio/probes/b403db9dad980b60979895b0b09cd133eaa23a59/cms/check_requests_count_volume /probes/cms
-# Patch for rse settings and attributes monitoring (https://github.com/dmwm/CMSRucio/issues/912, https://github.com/rucio/probes/pull/155)
+# Patch https://github.com/rucio/probes/pull/154
+ADD https://raw.githubusercontent.com/rucio/probes/f0295b00bece9c92016c22f704e650036d2e84f4/cms/check_requests_count_volume /probes/cms
+ADD https://raw.githubusercontent.com/rucio/probes/f0295b00bece9c92016c22f704e650036d2e84f4/cms/check_rules_count_per_acc_st_exp_sexp_act /probes/cms
+RUN rm /probes/cms/check_rules_count_volume_per_rse_activity_state
+# Patch https://github.com/rucio/probes/pull/155
 ADD https://raw.githubusercontent.com/rucio/probes/342cea9b8636d342da8cdfc3ece9e7fed14b8dc9/cms/check_rse_settings_attributes /probes/cms
 
 RUN chmod +x /probes/common/check_*
