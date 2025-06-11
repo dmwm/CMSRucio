@@ -76,8 +76,8 @@ for site in sites:
                 "availability_delete": True
             }
 
-        # If the site is enabled based on SSB, do an occupancy check
-        if available_map[rse]:
+        # If the site is not tape and is enabled based on SSB, do an occupancy check
+        if available_map[rse] and not '_Tape' in rse:
             should_enable = should_enable_availability_on_occupancy(rse)
             if not should_enable:
                 print(f"{rse} doesn't have enough free space. Writing will be disabled.")
