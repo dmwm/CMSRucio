@@ -92,7 +92,7 @@ def map_cric_users(country, option, dry_run):
         dns = list(dns)
         cric_user = CricUser(username, email, dns, account_type, institute, institute_country, policy, option)
         cric_user_list.append(cric_user)
-        set_rucio_limits(cric_user)
+        set_rucio_limits(cric_user, dry_run)
 
 
 """
@@ -100,7 +100,7 @@ This function sets the Rucio limits, and if needed it also create a Rucio accoun
 """
 
 
-def set_rucio_limits(cric_user):
+def set_rucio_limits(cric_user, dry_run):
     # FIXME: Add and subtract identities
     # FIXME: Pay attention to mode and add/subtract quotas
     # Move into cric user class
@@ -110,17 +110,33 @@ def set_rucio_limits(cric_user):
         print("Add account for %s %s" % (account, email))
 
         try:
-            client.get_account(account)
+            rucio_account = client.get_account(account)
+            if rucio_account['email'] != email:
+                # Update the account:
+                if dry_run:
+                    print('DRY-RUN: CRIC email is different from rucio email. Rucio email should be updated')
+                else:
+                    print('CRIC email is different from rucio email. Updating')
+                    client.update_account(account, 'email', email)
         except AccountNotFound:
-            client.add_account(account, cric_user.account_type, email)
+            if dry_run:
+                print(f'DRY-RUN: Add account {account} with type {cric_user.account_type} and {email}.')
+            else:
+                client.add_account(account, cric_user.account_type, email)
 
         try:
-            client.add_scope(account, 'user.%s' % account)
+            if dry_run:
+                print(f'DRY-RUN: Add scope for account {account}.')
+            else:
+                client.add_scope(account, 'user.%s' % account)
             print('Scope added for user %s' % account)
         except Duplicate:
             print('Scope for user %s already existed' % account)
 
-        cric_user.add_identities_to_rucio(client=client)
+        if dry_run:
+            print(f'DRY-RUN: Add identities to rucio with client {client}.')
+        else:
+            cric_user.add_identities_to_rucio(client=client)
 
         # Clear out old quotas. May want to remove this soon.
 
@@ -133,7 +149,10 @@ def set_rucio_limits(cric_user):
         for rse in cric_user.rses_list:
             if rse.quota > limits.get(rse.sitename, 0):
                 print(" quota at %s: %s" % (rse.sitename, rse.quota))
-                client.set_local_account_limit(account, rse.sitename, rse.quota)
+                if dry_run:
+                    print(f'DRY-RUN: set local account limit for account {account}, rse.sitename {rse.sitename}, and rse.quota {rse.quota}.')
+                else:
+                    client.set_local_account_limit(account, rse.sitename, rse.quota)
     except InvalidObject:
         print("Warning: could not add account or quota to account described by %s" % pprint.pformat(cric_user))
 
