@@ -90,3 +90,7 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+wfDashboard: false
+  # when true, the workflow dashboard will be run in integration and production
+  # when false, the workflow dashboard will only run in production
