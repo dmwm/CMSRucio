@@ -45,3 +45,5 @@ echo "Setting wmcore_output_tape attribute"
 ./setWmcoreTapeOutput
 echo "Update DDM quota"
 ./updateDDMQuota
+echo "Set wmcore_transferor account limits"
+./updateWMCoreTransferorQuotas

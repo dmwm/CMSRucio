@@ -1,0 +1,70 @@
+#! /usr/bin/env python3
+"""
+Script to update the global and the local quotas of the wmcore_transferor account.
+Its global quota is set to X % of total disk capacity of T1 and T2 sites used in production
+Its local quota is Y % of an RSE's (free + expired) space.
+Global quota is introduced to have a global control on the usage of this account.
+Local quotas are introduced to avoid the over-usage of certain RSEs.
+"""
+
+from rucio.client import Client
+from rseUsageMetrics import get_rse_usage, get_sum_of_all_rse_statics
+
+DEFAULT_GLOBAL_QUOTA_PCT = 15
+DEFAULT_LOCAL_QUOTA_PCT = 50
+DRY_RUN = False
+
+client = Client()
+account = "wmcore_transferor"
+rse_expression = "rse_type=DISK&cms_type=real&tier<3&tier>0"
+
+def get_global_quota_pct():
+    try:
+        global_quota_pct = int(client.get_config(section="accounts", option="wmcore_transferor_global_quota_pct"))
+    except Exception as e:
+        global_quota_pct = DEFAULT_GLOBAL_QUOTA_PCT
+    return global_quota_pct
+
+def get_local_quota_pct():
+    try:
+        local_quota_pct = int(client.get_config(section="accounts", option="wmcore_transferor_local_quota_pct"))
+    except Exception as e:
+        local_quota_pct = DEFAULT_LOCAL_QUOTA_PCT
+    return local_quota_pct
+
+
+def set_global_quota():
+
+    total_disk_capacity = get_sum_of_all_rse_statics(rse_expression)
+    global_quota_pct = get_global_quota_pct()
+    global_quota_bytes = (total_disk_capacity * global_quota_pct) / 100
+    if DRY_RUN:
+        print(f"DRY-RUN: Setting global quota of wmcore_transferor to {global_quota_bytes / 1e15} PB")
+    else:
+        print(f"Setting global quota of wmcore_transferor to {global_quota_bytes / 1e15} PB")
+        set_global_account_limit(account, rse_expression, global_quota_bytes)
+
+def set_local_quotas():
+
+    rses = [rse["rse"] for rse in client.list_rses(rse_expression=rse_expression)]
+    local_quota_pct = get_local_quota_pct()
+
+    for rse in rses:
+        static, rucio, expired = get_rse_usage(rse)
+        free = static - rucio
+
+        # Set it to 0 if it's negative
+        local_quota_bytes = max((((free + expired) * local_quota_pct) / 100), 0)
+        if DRY_RUN:
+            print(f"DRY-RUN: Setting local quota of wmcore_transferor at {rse} to {local_quota_bytes / 1e12} TB")
+        else:
+            print(f"Setting local quota of wmcore_transferor at {rse} to {local_quota_bytes / 1e12} TB")
+            set_local_account_limit(account, rse, local_quota_bytes)
+
+
+def main():
+    set_global_quota()
+    set_local_quotas()
+
+if __name__ == "__main__":
+    main()
