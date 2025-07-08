@@ -35,6 +35,30 @@ MUTABLE_RSE_PROPERTIES = {
     'availability'
 }
 
+IGNORE = [
+    "cms_type",
+    "ddm_quota",
+    "dm_weight",
+    "freespace",
+    "fts",
+    "lfn2pfn_algorithm",
+    "loadtest",
+    "min_free_space_percentage",
+    "pnn",
+    "quota_approvers",
+    "region",
+    "rule_approvers",
+    "site_admins",
+    "tier",
+    "availability",
+    "availability_delete",
+    "availability_read",
+    "availability_write",
+    "deterministic",
+    "rse_type",
+    "volatile",
+]
+
 
 try:
     client = Client()
@@ -121,7 +145,7 @@ if __name__ == '__main__':
         project_name = extract_siteconf_project_name(rse['rse'])
         rses_by_site[project_name].append(rse['rse'])
 
-    sites_to_commit = []
+    #sites_to_commit = []
     sites_to_ignore = ['T2_US_Nebraska']
 
     for site, rses in rses_by_site.items():
@@ -137,10 +161,12 @@ if __name__ == '__main__':
                 action = {
                     'action': 'create',
                     'file_path': f'rucio/{rse}.json',
-                    'content': open(file_src, 'r').read()
+                    'content': open(file_src, 'r').read(),
+                    'author_email': 'dylee@fnal.gov',
+                    'author_name': 'Dennis Lee'
                 }
                 a['actions'].append(action)
 
-            #commit = commit_to_gitlab(site, a, dry_run=False)
-            commit = commit_to_personal_gitlab(site, a, dry_run=False)
+            commit = commit_to_gitlab(site, a, dry_run=False)
+            #commit = commit_to_personal_gitlab(site, a, dry_run=False)
         
