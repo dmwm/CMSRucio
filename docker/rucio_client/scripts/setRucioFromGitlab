@@ -46,6 +46,7 @@ else:
 client = Client()
 
 
+# get list of RSEs that allow updating from JSON
 rses = client.list_rses('update_from_json=True')
 DO_SITES = [rse['rse'] for rse in rses]
 for project in projects:
@@ -53,10 +54,16 @@ for project in projects:
     try:
         f = full_project.files.get('storage.json', 'master')
         sites = json.loads(base64.b64decode(f.content))
+    except gitlab.exceptions.GitlabGetError:
+        print(f"Unable to download storage.json for {project.name}")
+    except json.decoder.JSONDecodeError:
+        print(f"Unable to decode storage.json for {project.name}")
+    else:
         for site in sites:
             if 'rse' not in site:
                 print(f"Error: No RSE entry found for {site['site']}. Skipping.")
                 continue
+
             print(f'Checking {site["rse"]} and type {options.cms_type}')
             if site['rse'] and options.cms_type in ['test', 'temp']:
                 # For these, query the actual site and construct a JSON
@@ -66,38 +73,64 @@ for project in projects:
                 elif options.cms_type == 'temp':
                     rse_name = site['rse'] + '_Temp'
                     deterministic = False
-                if rse_name in SKIP_SITES or not DO_SITES or rse_name not in DO_SITES:
-                    print(' Skipping.')
-                    continue
-
-                if 'fts' not in site:
-                    site.update({'fts': ["https://fts3-cms.cern.ch:8446", "https://lcgfts3.gridpp.rl.ac.uk:8446"]})
-                rse = CMSRSE(site, dry=options.dry_run, cms_type=options.cms_type, deterministic=deterministic)
-                try:
-                    if rse.update():
-                        print(f'RSE {rse.rse_name} and type {rse.rucio_rse_type} changed')
-                    else:
-                        print(f'RSE {rse.rse_name} and type {rse.rucio_rse_type} unchanged')
-                except Exception:
-                    print(f'Could not update RSE {rse.rse_name}. Traceback:')
-                    print(traceback.format_exc())
             elif options.cms_type in ['prod-real', 'int-real']:
-                if site['rse'] in SKIP_SITES or not DO_SITES or site['rse'] not in DO_SITES:
-                    print(' Skipping.')
-                    continue
-
-                if 'fts' not in site:
-                    site.update({'fts': ["https://fts3-cms.cern.ch:8446", "https://lcgfts3.gridpp.rl.ac.uk:8446"]})
-                rse = CMSRSE(site, dry=options.dry_run, cms_type=options.cms_type)
-                try:
-                    if rse.update():
-                        print(f'RSE {rse.rse_name} and type {rse.rucio_rse_type} changed')
-                    else:
-                        print(f'RSE {rse.rse_name} and type {rse.rucio_rse_type} unchanged')
-                except Exception:
-                    print(f'Could not update RSE {rse.rse_name}. Traceback:')
-                    print(traceback.format_exc())
+                # Set reals rse_name without suffix and deterministic to True
+                rse_name = site['rse'] 
+                deterministic = True
             elif not site['rse']:
                 print(f'No RSE defined in JSON {site}')
-    except (gitlab.exceptions.GitlabGetError, json.decoder.JSONDecodeError):
-        print(f"Unable to download or decode storage.json for {project.name}")
+                continue
+
+            if rse_name in SKIP_SITES or not DO_SITES or rse_name not in DO_SITES:
+                print(' Skipping.')
+                continue
+
+            try:
+                # load rucio attributes and settings from gitlab
+                f = full_project.files.get(f'rucio/{rse_name}.json', 'master')
+                rucio_attrs = json.loads(base64.b64decode(f.content))
+                commit_id = f.last_commit_id
+
+                # set the last commit id of the RSE json file to keep track of it in Rucio
+                rucio_attrs['rse_attr_commit'] = commit_id
+            except gitlab.exceptions.GitlabGetError:
+                print(f"Unable to download rucio/{rse_name}.json for {project.name}")
+                continue
+            except json.decoder.JSONDecodeError:
+                print(f"Unable to decode rucio/{rse_name}.json for {project.name}")
+                continue
+
+            if 'fts' not in site:
+                site.update({'fts': ["https://fts3-cms.cern.ch:8446", "https://lcgfts3.gridpp.rl.ac.uk:8446"]})
+            rse = CMSRSE(site, rucio_attrs, dry=options.dry_run, cms_type=options.cms_type, deterministic=deterministic)
+            try:
+                if rse.update():
+                    print(f'RSE {rse.rse_name} and type {rse.rucio_rse_type} changed')
+                else:
+                    print(f'RSE {rse.rse_name} and type {rse.rucio_rse_type} unchanged')
+            except Exception:
+                print(f'Could not update RSE {rse.rse_name}. Traceback:')
+                print(traceback.format_exc())
+            
+
+            # elif options.cms_type in ['prod-real', 'int-real']:
+            #     if site['rse'] in SKIP_SITES or not DO_SITES or site['rse'] not in DO_SITES:
+            #         print(' Skipping.')
+            #         continue
+
+            #     f = full_project.files.get(f'rucio/{rse_name}.json', 'master')
+            #     rucio_attrs = json.loads(base64.b64decode(f.content))
+
+            #     if 'fts' not in site:
+            #         site.update({'fts': ["https://fts3-cms.cern.ch:8446", "https://lcgfts3.gridpp.rl.ac.uk:8446"]})
+            #     rse = CMSRSE(site, rucio_attrs, dry=options.dry_run, cms_type=options.cms_type)
+            #     try:
+            #         if rse.update():
+            #             print(f'RSE {rse.rse_name} and type {rse.rucio_rse_type} changed')
+            #         else:
+            #             print(f'RSE {rse.rse_name} and type {rse.rucio_rse_type} unchanged')
+            #     except Exception:
+            #         print(f'Could not update RSE {rse.rse_name}. Traceback:')
+            #         print(traceback.format_exc())
+            # elif not site['rse']:
+            #     print(f'No RSE defined in JSON {site}')
