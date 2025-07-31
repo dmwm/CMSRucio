@@ -24,7 +24,7 @@ cronjobSettings:
       value: "rootkey.pem"
 
 oidc:
-  iamServer: https://cms-auth.web.cern.ch/ 
+  iamServer: https://cms-auth.cern.ch/ 
   iamClientId: da4251a5-70c2-418d-a061-b861e779ed1e
 
 serviceAccount:
