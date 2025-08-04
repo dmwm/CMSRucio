@@ -1,0 +1,44 @@
+{{- if .Values.wf-dashboard.enabled -}}
+{{- $fullName := include "rucio-cron-jobs.fullname" . -}}
+{{- $svcPort := .Values.service.port -}}
+apiVersion: batch/v1
+kind: cron-job
+metadata:
+  name: {{ .Release.Name }}-wf-dashboard
+  labels:
+    {{- include "rucio-cron-jobs.labels" . | nindent 4 }}
+  {{- end }}
+spec:
+  schedule: "20 4 * * *"
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 14400
+      backoffLimit: 0
+      template:
+        spec:
+          volumes:
+          - name: proxy-volume
+            secret:
+              defaultMode: 420
+              secretName: server-rucio-x509up
+          {{- range $key, $val := .Values.persistentVolumes }}
+          - name: {{ $key }}
+            persistentVolumeClaim:
+              claimName: {{ $val.name }}
+          {{- end}}
+          containers:
+            - name: {{ .Release.Name }}-wf-dashboard
+              image: registry.cern.ch/cmsrucio/wf-dashboard:release-0.9
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              volumeMounts:
+                - mountPath: /opt/proxy
+                  name: proxy-volume
+              env: 
+                - name: X509_USER_PROXY
+                  value: "/opt/proxy"
+{{- with .Values.cronjobSettings.additionalEnvs }}
+{{ toYaml . | indent 16 }}
+{{- end }}
+              command: ['python3', 'monit_pull.py']
+          restartPolicy: Never
+{{- end }}
