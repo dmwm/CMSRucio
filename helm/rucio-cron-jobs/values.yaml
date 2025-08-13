@@ -91,7 +91,7 @@ tolerations: []
 
 affinity: {}
 
-wfDashboard: 
+wf-dashboard: 
   enabled: false
     # when true, the workflow dashboard will be run in integration and production
     # when false, the workflow dashboard will only run in production

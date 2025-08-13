@@ -1,4 +1,4 @@
-{{- if .Values.wfDashboard.enabled -}}
+{{- if .Values.wf-dashboard.enabled -}}
 {{- $fullName := include "rucio-cron-jobs.fullname" . -}}
 {{- $svcPort := .Values.service.port -}}
 {{- if semverCompare ">=1.14-0" .Capabilities.KubeVersion.GitVersion -}}
@@ -6,7 +6,7 @@ apiVersion: networking.k8s.io/v1beta1
 {{- else -}}
 apiVersion: extensions/v1beta1
 {{- end }}
-kind: wfDashboard
+kind: wf-dashboard
 metadata:
   name: {{ $fullName }}
   labels:
