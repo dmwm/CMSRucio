@@ -1273,7 +1273,10 @@ def perm_add_bad_pfns(issuer, kwargs, *, session: "Optional[Session]" = None):
     :param session: The DB session to use
     :returns: True if account is allowed, otherwise False
     """
-    return _is_root(issuer) or has_account_attribute(account=issuer, key='admin', session=session)
+    if _is_root(issuer) or has_account_attribute(account=issuer, key='admin', session=session):
+        return True
+    
+    return _is_cms_site_admin(kwargs['rse_id'], issuer, session)   
 
 
 def perm_remove_did_from_followed(issuer, kwargs, *, session: "Optional[Session]" = None):
