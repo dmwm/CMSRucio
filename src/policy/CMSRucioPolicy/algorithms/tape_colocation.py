@@ -38,7 +38,7 @@ class CMSTapeColocation(FTS3TapeMetadataPlugin):
         cls.register(
             cls.policy_algorithm, 
             func=lambda x: cls.tape_metadata(x)
-        ) 
+        )
 
     @staticmethod
     def _encode(name: Any) -> Optional[str]: 
@@ -49,11 +49,11 @@ class CMSTapeColocation(FTS3TapeMetadataPlugin):
             return None
 
     @staticmethod
-    def parent_container(name): 
+    def parent_container(scope, name): 
         # Custom logic for CMS
         # If dataset - look for the parent container
         # If file - look for the parent dataset and then the parent container
-        scope = InternalScope("cms")
+        scope = InternalScope(scope)
         try:
             is_file = get_did(scope=scope, name=name)['type'] == DIDType.FILE
         except DataIdentifierNotFound: 
@@ -136,10 +136,10 @@ class CMSTapeColocation(FTS3TapeMetadataPlugin):
             logger.debug("Could not determine era for %s", name)
 
     @staticmethod
-    def _get_container_stats(name):
+    def _get_container_stats(scope, name):
         size = 0
         length = 0
-        scope  = InternalScope("cms")
+        scope  = InternalScope(scope)
         try:
             contents = list_content(scope, name)
             for item in contents:
@@ -208,7 +208,7 @@ class CMSTapeColocation(FTS3TapeMetadataPlugin):
         if data_type != "n/a":
             tier = cls.data_tier(lfn)
             era = cls.era(lfn)
-            parent = cls.parent_container(hints['name'])
+            parent = cls.parent_container(hints['scope'], hints['name'])
             if tier is not None:
                 colocation['1'] = tier
             if era is not None:
@@ -225,7 +225,7 @@ class CMSTapeColocation(FTS3TapeMetadataPlugin):
             "activity": hints.get("activity", "default"),
         }
         if parent is not None:
-            length, size = CMSTapeColocation._get_container_stats(parent)
+            length, size = CMSTapeColocation._get_container_stats(hints['scope'], parent)
             additional_hints['3'] = {
                 "length": length, #The number of files in the parent container
                 "size": size,   #The total size of the parent container
