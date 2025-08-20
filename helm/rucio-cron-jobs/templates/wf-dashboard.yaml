@@ -13,16 +13,13 @@ metadata:
     {{- include "rucio-cron-jobs.labels" . | nindent 4 }}
   {{- end }}
 spec:
-  {{- if .Values.ingress.tls }}
-  tls:
-    {{- range .Values.ingress.tls }}
-    - hosts:
+  schedule: "20 4 * * *"
+  - hosts:
         {{- range .hosts }}
         - {{ . | quote }}
         {{- end }}
       secretName: {{ .secretName }}
     {{- end }}
-  {{- end }}
   rules:
     {{- range .Values.ingress.hosts }}
     - host: {{ .host | quote }}
@@ -35,4 +32,41 @@ spec:
               servicePort: {{ $svcPort }}
           {{- end }}
     {{- end }}
-  {{- end }}
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 7200
+      backoffLimit: 0
+      template:
+        spec:
+          volumes:
+          - name: proxy-volume
+            secret:
+              defaultMode: 420
+              secretName: server-rucio-x509up
+          {{- range $key, $val := .Values.persistentVolumes }}
+          - name: {{ $key }}
+            persistentVolumeClaim:
+              claimName: {{ $val.name }}
+          {{- end}}
+          containers:
+            - name: {{ .Release.Name }}-wf-dashboard
+              image: registry.cern.ch/cmsrucio/wf-dashboard:release-0.9
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              volumeMounts:
+                - mountPath: /opt/proxy
+                  name: proxy-volume
+              env: 
+                - name: X509_USER_PROXY
+                  value: "/opt/proxy"
+{{- with .Values.cronjobSettings.additionalEnvs }}
+{{ toYaml . | indent 16 }}
+{{- end }}
+              command: ['python3', 'monit_pull.py']
+          restartPolicy: Never
+
+
+
+
+          
+
+    
