@@ -8,25 +8,29 @@ client = Client()
 # See the following link for documentation and please update it if you change the logic
 # https://cmsdmops.docs.cern.ch/Operators/ManageDMWeight/
 
-DRY_RUN = False
-MAX_DM_WEIGHT = 100
-MIN_DM_WEIGHT = 1
+DRY_RUN = True
+TOTAL_DM_WEIGHT = 100
 stats = {}
 
 def print_results():
-    headers = ['RSE', 'PLEDGE (PB)', 'FREE SPACE (PB)', "RELATIVE FREE (%)", "DM WEIGHT COEFFICIENT", "DM_WEIGHT"]
+    headers = ['RSE', 'PLEDGE (PB)', 'FREE SPACE (PB)', 'EXPIRED SPACE (PB)', "RELATIVE FREE (%)", "DM WEIGHT COEFFICIENT", "DM_WEIGHT"]
     table_disk = []
     table_tape = []
     for rse, values in stats.items():
         pledge = values["pledge"] / 1e15
         free = values["free"] / 1e15
+        expired = values["expired"] / 1e15
         relative_free = (free/pledge) * 100
         dm_weight_coefficient = values["dm_weight_coefficient"]
         dm_weight = values["dm_weight"]
         if "Tape" in rse:
-            table_tape.append([rse,pledge,free,relative_free,dm_weight_coefficient, dm_weight])
+            table_tape.append([rse,pledge,free,expired,relative_free,dm_weight_coefficient, dm_weight])
         else: 
-            table_disk.append([rse,pledge,free,relative_free,dm_weight_coefficient, dm_weight])
+            table_disk.append([rse,pledge,free,expired,relative_free,dm_weight_coefficient, dm_weight])
+
+    # Sort tables by DM_WEIGHT (column 6) in descending order
+    table_disk.sort(key=lambda x: x[6], reverse=True)
+    table_tape.sort(key=lambda x: x[6], reverse=True)
 
     print(tabulate(table_disk, headers=headers))
     print(tabulate(table_tape, headers=headers))
@@ -40,6 +44,8 @@ def get_sum_of_all_rse_statics(rse_expression):
         result += static
     return result
 
+def get_min_free_space(rse):
+    return client.get_rse_limits(rse)["MinFreeSpace"]
 
 def get_rse_usage(rse):
     rse_usage = list(client.get_rse_usage(rse))
@@ -70,12 +76,18 @@ def calculate_dm_weights(rse_expression, static_weight, free_weight, expired_wei
 
     for rse in rses:
         static, rucio, expired = get_rse_usage(rse)
+        try:
+            min_free_space = get_min_free_space(rse)
+        except Exception as e:
+            print(f"Error getting min free space for {rse}: {e}")
+            min_free_space = 0
 
         # Normalise
         if static == 0:
             continue  # Skip if static is 0
 
-        free = static - rucio
+        #free = static - rucio
+        free = static - rucio - min_free_space
 
         # Control dm_weight for specially configured rses
         rse_attributes = client.list_rse_attributes(rse)
@@ -109,6 +121,7 @@ def calculate_dm_weights(rse_expression, static_weight, free_weight, expired_wei
         stats[rse] = {
             "pledge": static,
             "free": free,
+            "expired": expired,
             "dm_weight_coefficient" : dm_weight_coefficient,
         }
         dm_weights[rse] = dm_weight
@@ -120,16 +133,7 @@ def normalize_dm_weights(dm_weights):
     min_positive_weight = min([n for n in weights if n > 0])
     for rse, weight in dm_weights.items():
 
-        # Don't take 0 weights into normalization, since they are manually overriden
-        if weight == 0:
-            dm_weight = weight
-        else:
-            # This normalization sets the lowest dm_weight to 0
-            dm_weight = int(((weight - min_positive_weight) / (max(weights) - min_positive_weight)) * MAX_DM_WEIGHT)
-            # Make the lowest dm_weight non-zero
-            if dm_weight == 0:
-                dm_weight = MIN_DM_WEIGHT
-            #dm_weight = int((weight/sum(weights)) * MAX_DM_WEIGHT)
+        dm_weight = (weight/sum(weights)) * TOTAL_DM_WEIGHT
         dm_weights[rse] = dm_weight
         stats[rse]["dm_weight"] = dm_weight
 
@@ -166,9 +170,9 @@ def main():
     # T3s do not have the "static" usage set, they are quasi-static
     
     run(rse_expression = "rse_type=DISK&cms_type=real&tier<3&tier>0",
-                         static_weight = 0.2,
-                         free_weight = 0.5, 
-                         expired_weight = 0.3,
+                         static_weight = 0.4,
+                         free_weight = 0.4, 
+                         expired_weight = 0.2,
                          make_quadratic = True)
     
 
