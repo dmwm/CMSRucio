@@ -34,7 +34,7 @@ spec:
             secretKeyRef:
               key: db_string
               name: rucio-secrets
-        image: registry.cern.ch/cmsrucio/rucio-upgrade:release-1.29.2.post1
+        image: registry.cern.ch/cmsrucio/rucio-upgrade:release-37.1.0
         imagePullPolicy: Always
         name: cms-rucio-upgrade
         resources:
@@ -46,20 +46,14 @@ spec:
         terminationMessagePolicy: File
         volumeMounts:
         - mountPath: /opt/proxy
-          name: proxy-volume
-        - mountPath: /opt/certs
-          name: ca-volume
+          name: server-rucio-x509up
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
       securityContext: {}
       terminationGracePeriodSeconds: 30
       volumes:
-      - name: proxy-volume
+      - name: server-rucio-x509up
         secret:
           defaultMode: 420
-          secretName: daemons-rucio-x509up
-      - name: ca-volume
-        secret:
-          defaultMode: 420
-          secretName: daemons-rucio-ca-bundle
+          secretName: server-rucio-x509up

@@ -52,3 +52,9 @@ RUN chmod +x /probes/cms/check_*
 
 # Temporary while we are adding variables to the config. Push to rucio-containers
 ADD https://raw.githubusercontent.com/ericvaandering/containers/probes_prom/probes/rucio.cfg.j2 /tmp/
+
+
+# Stuff for Cron version  Move to upstream
+RUN dnf -y install cronie-noanacron
+ADD docker/rucio-probes/run-probes.sh /
+ADD docker/rucio-probes/DeterministicDelay /

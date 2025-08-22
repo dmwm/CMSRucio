@@ -1,4 +1,4 @@
-FROM almalinux:9
+FROM almalinux:9.5
 
 ARG RUCIO_VERSION
 ARG CMSRUCIO_GITTAG
@@ -14,6 +14,7 @@ RUN dnf install -y epel-release.noarch && \
 RUN dnf config-manager --set-enabled crb
 
 # FIXME: What is all this? We can't need it all
+RUN dnf install -y openssh-clients
 RUN dnf install -y python3 python3-pip libaio gcc python3-devel \
     wget unzip openssl-devel bind-utils nano git && \
     dnf clean all && \
