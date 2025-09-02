@@ -26,6 +26,8 @@ DEFAULT_EXCLUDE_LINKS = (
 CTA_RSES = ['T0_CH_CERN_Tape']
 CERN_RSES = ['T2_CH_CERN']
 
+SKIP_RSES = ['T1_US_FNAL_Tape']
+
 DEFAULT_DISTANCE_RULES = {'site': 1, 'region&country': 4, 'country': 7, 'region': 10, 'other': 13}
 
 
@@ -181,6 +183,10 @@ class LinksMatrix(object):
                     continue
 
                 if (srse in CTA_RSES and drse not in CERN_RSES) or (drse in CTA_RSES and srse not in CERN_RSES):
+                    logging.debug("Not setting link from %s to %s", srse, drse)
+                    continue
+
+                if srse in SKIP_RSES or drse in SKIP_RSES:
                     logging.debug("Not setting link from %s to %s", srse, drse)
                     continue
 
