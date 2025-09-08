@@ -90,7 +90,6 @@ def calculate_dm_weights(rse_expression, static_weight, free_weight, expired_wei
         if static == 0:
             continue  # Skip if static is 0
 
-        #free = static - rucio
         free = static - rucio - min_free_space
 
         # Control dm_weight for specially configured rses
