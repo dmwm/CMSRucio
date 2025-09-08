@@ -8,7 +8,7 @@ client = Client()
 # See the following link for documentation and please update it if you change the logic
 # https://cmsdmops.docs.cern.ch/Operators/ManageDMWeight/
 
-DRY_RUN = True
+DRY_RUN = False
 TOTAL_DM_WEIGHT = 100
 stats = {}
 
