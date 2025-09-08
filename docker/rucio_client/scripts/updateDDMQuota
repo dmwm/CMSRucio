@@ -8,7 +8,7 @@ client = Client()
 # See the following link for documentation and please update it if you change the logic
 # https://cmsdmops.docs.cern.ch/Operators/ManageDMWeight/
 
-DRY_RUN = False
+DRY_RUN = True
 TOTAL_DM_WEIGHT = 100
 stats = {}
 
@@ -175,9 +175,9 @@ def main():
     # T3s do not have the "static" usage set, they are quasi-static
     
     run(rse_expression = "rse_type=DISK&cms_type=real&tier<3&tier>0",
-                         static_weight = 0.4,
-                         free_weight = 0.4, 
-                         expired_weight = 0.2,
+                         static_weight = 0.35,
+                         free_weight = 0.35, 
+                         expired_weight = 0.3,
                          make_quadratic = True)
     
 
