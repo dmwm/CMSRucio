@@ -91,5 +91,5 @@ tolerations: []
 
 affinity: {}
 
-wf-dashboard: 
+wfDashboard: 
   enabled: false
