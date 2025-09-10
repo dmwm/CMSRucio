@@ -6,7 +6,6 @@ metadata:
   name: {{ .Release.Name }}-wf-dashboard
   labels:
     {{- include "rucio-cron-jobs.labels" . | nindent 4 }}
-  {{- end }}
 spec:
   schedule: "20 4 * * *"
   jobTemplate:
