@@ -37,6 +37,6 @@ spec:
 {{- with .Values.cronjobSettings.additionalEnvs }}
 {{ toYaml . | indent 16 }}
 {{- end }}
-              command: ['python3', 'monit_pull.py']
+              command: ['/entrypoint.sh']
           restartPolicy: Never
 {{- end }}
