@@ -1,7 +1,7 @@
 {{- if .Values.wfDashboard.enabled }}
 {{- $fullName := include "rucio-cron-jobs.fullname" . -}}
 apiVersion: batch/v1
-kind: cron-job
+kind: CronJob
 metadata:
   name: {{ .Release.Name }}-wf-dashboard
   labels:
