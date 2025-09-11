@@ -53,7 +53,8 @@ class CMSTapeColocation(FTS3TapeMetadataPlugin):
         # Custom logic for CMS
         # If dataset - look for the parent container
         # If file - look for the parent dataset and then the parent container
-        scope = InternalScope(scope)
+        if not isinstance(scope, InternalScope): 
+            scope = InternalScope(scope)
         try:
             is_file = get_did(scope=scope, name=name)['type'] == DIDType.FILE
         except DataIdentifierNotFound: 
@@ -139,7 +140,8 @@ class CMSTapeColocation(FTS3TapeMetadataPlugin):
     def _get_container_stats(scope, name):
         size = 0
         length = 0
-        scope  = InternalScope(scope)
+        if not isinstance(scope, InternalScope): 
+            scope = InternalScope(scope)
         try:
             contents = list_content(scope, name)
             for item in contents:
