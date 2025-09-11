@@ -17,7 +17,7 @@ spec:
           volumes:
           - name: proxy-volume
             secret:
-              defaultMode: 420
+              defaultMode: 400
               secretName: server-rucio-x509up
           {{- range $key, $val := .Values.persistentVolumes }}
           - name: {{ $key }}
@@ -33,7 +33,7 @@ spec:
                   name: proxy-volume
               env: 
                 - name: X509_USER_PROXY
-                  value: "/opt/proxy"
+                  value: "/opt/proxy/x509up"
 {{- with .Values.cronjobSettings.additionalEnvs }}
 {{ toYaml . | indent 16 }}
 {{- end }}
