@@ -4,8 +4,9 @@ Class definition for the distances (links) among CMS RSEs.
 And script for updating the distances.
 """
 import gitlab
-import base64
+
 import argparse
+import base64
 import json
 import logging
 import os
@@ -16,7 +17,7 @@ from rucio.client import Client
 
 DEFAULT_EXCLUDE_LINKS = (
     {'dest': {'type': 'temp'}, 'src': {}},
-    {'dest': {'rse': 'T2_US_Caltech'}, 'src': {'rse': 'T2_US_Caltech_Ceph'}},
+    {'dest': {'rse': 'T2_US_Caltech'}, 'src': {'rse': 'T2_US_Caltech_Ceph'}}, # TODO: Temporary site, Clear up
     {'dest': {'rse': 'T1_UK_RAL_Tape_Test'}, 'src': {}},
     {'dest': {}, 'src': {'rse': 'T1_UK_RAL_Tape_Test'}},
     {'dest': {'rse': 'T1_UK_RAL_Tape'}, 'src': {'rse': '^(?!T1_UK_RAL_Disk|T0_CH_CERN_Disk).*$'}},
@@ -26,7 +27,17 @@ DEFAULT_EXCLUDE_LINKS = (
 CTA_RSES = ['T0_CH_CERN_Tape']
 CERN_RSES = ['T2_CH_CERN']
 
-DEFAULT_DISTANCE_RULES = {'site': 1, 'region&country': 4, 'country': 7, 'region': 10, 'other': 13}
+# TODO: Regions A and C should be 11
+# TODO: Regions C and D should be 12
+DEFAULT_DISTANCE_RULES = {
+    'site': 1,
+    'region&country': 4,
+    'country': 7, 
+    'region': 10,
+    'AC': 11,
+    'CD': 12,
+    'other': 13
+}
 
 
 class LinksMatrix(object):
@@ -101,11 +112,12 @@ class LinksMatrix(object):
 
     def _get_matrix(self, distance, exclude):
 
+        # TODO: Unused?
         matrix = {}
 
         self.links = {}
 
-        for src in self.rselist:
+        for src in self.rselist: # get the list
             for dest in self.rselist:
 
                 src_rse = src['rse']
@@ -113,20 +125,25 @@ class LinksMatrix(object):
                 src_pnn = src['pnn']
                 dest_pnn = dest['pnn']
 
+                # TODO: If region A and region C, set to 11
+                # TODO: Region C and D: 12
                 if dest_pnn == src_pnn:
                     link = distance['site']
-                elif src['region'] and dest['region'] and src['region'] == dest['region']:
-                    if src['country'] == dest['country']:
+                elif src['region'] and dest['region'] and src['region'] == dest['region']: # Check same region
+                    if src['country'] == dest['country']: # Same country and region
                         link = distance['region&country']
                     else:
                         link = distance['region']
-                elif src_pnn in matrix and dest_pnn in matrix[src_pnn]:
+                elif src_pnn in matrix and dest_pnn in matrix[src_pnn]: # not sure what this is for
                     link = distance['site'] - matrix[src_pnn][dest_pnn]
+                elif src['country'] == dest['country']:
+                    link = distance['country']
+                elif {src['region'], dest['region']} == {'A', 'C'}:
+                    link = distance['AC']
+                elif {src['region'], dest['region']} == {'C', 'D'}:
+                    link = distance['CD']
                 else:
-                    if src['country'] == dest['country']:
-                        link = distance['country']
-                    else:
-                        link = distance['other']
+                    link = distance['other']
 
                 if src_rse not in self.links:
                     self.links[src_rse] = {}
@@ -136,6 +153,9 @@ class LinksMatrix(object):
         self._filter_matrix(exclude)
 
     def _filter_matrix(self, exclude):
+        """
+        Removes links from list of excluded
+        """
 
         for src in self.rselist:
             for dest in self.rselist:
