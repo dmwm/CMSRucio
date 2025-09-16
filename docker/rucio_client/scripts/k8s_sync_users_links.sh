@@ -36,8 +36,8 @@ if [ "$RUCIO_HOME" = "/opt/rucio-prod" ]
 fi
 
 # Disable temporarily due to CMSTRANSF-1045 
-#echo "Creating links"
-#./cmslinks.py --overwrite --disable
+echo "Creating links"
+./cmslinks.py --overwrite --disable
 
 
 echo "Syncing OIDC user identities"
