@@ -39,6 +39,7 @@ DEFAULT_DISTANCE_RULES = {
     'other': 13
 }
 
+SKIP_RSES = ['T1_US_FNAL_Tape']
 
 class LinksMatrix(object):
     """
@@ -201,6 +202,10 @@ class LinksMatrix(object):
                     continue
 
                 if (srse in CTA_RSES and drse not in CERN_RSES) or (drse in CTA_RSES and srse not in CERN_RSES):
+                    logging.debug("Not setting link from %s to %s", srse, drse)
+                    continue
+
+                if srse in SKIP_RSES or drse in SKIP_RSES:
                     logging.debug("Not setting link from %s to %s", srse, drse)
                     continue
 
