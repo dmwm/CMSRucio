@@ -28,7 +28,7 @@ ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manag
 ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_unevaluated_dids /probes/common
 
 # PR 160
-ADD https://raw.githubusercontent.com/voetberg/probes/127-modern-expired-locked-rules/common/check_expired_locked_rules /probes/common
+ADD https://raw.githubusercontent.com/voetberg/rucio_probes/127-modern-expired-locked-rules/common/check_expired_locked_rules /probes/common
 # PR 161
 ADD https://raw.githubusercontent.com/voetberg/rucio_probes/127-update-check_transfer_queue_status/common/check_transfer_queues_status /probes/common
 # PR 162
