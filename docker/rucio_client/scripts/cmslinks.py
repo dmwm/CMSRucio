@@ -39,6 +39,7 @@ DEFAULT_DISTANCE_RULES = {
     'other': 13
 }
 
+SKIP_RSES = ['T1_US_FNAL_Tape']
 
 class LinksMatrix(object):
     """
@@ -204,6 +205,10 @@ class LinksMatrix(object):
                     logging.debug("Not setting link from %s to %s", srse, drse)
                     continue
 
+                if srse in SKIP_RSES or drse in SKIP_RSES:
+                    logging.debug("Not setting link from %s to %s", srse, drse)
+                    continue
+
                 count['checked'].append([srse, drse])
 
                 link = self.rcli.get_distance(srse, drse)
@@ -224,10 +229,11 @@ class LinksMatrix(object):
                             count['updated'].append([srse, drse])
 
                 elif link and disable:
-                    logging.info("DISABLE link from %s to %s.", srse, drse)
-                    if not dry:
-                        self.rcli.update_distance(srse, drse, {'distance': None, })
-                    count['disabled'].append([srse, drse])
+                    if link[0]['distance'] != None:
+                        logging.info("DISABLE link from %s to %s.", srse, drse)
+                        if not dry:
+                            self.rcli.update_distance(srse, drse, {'distance': None, })
+                        count['disabled'].append([srse, drse])
 
         return count
 
