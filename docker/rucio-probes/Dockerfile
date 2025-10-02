@@ -43,9 +43,6 @@ ADD https://raw.githubusercontent.com/voetberg/rucio_probes/127-update-check_mes
 ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_usage_probes/cms/check_deletable_replicas /probes/cms
 ADD https://raw.githubusercontent.com/ericvaandering/probes/cms_usage_probes/cms/check_obsolete_replicas /probes/cms
 
-# Patch https://github.com/rucio/probes/pull/155
-ADD https://raw.githubusercontent.com/rucio/probes/342cea9b8636d342da8cdfc3ece9e7fed14b8dc9/cms/check_rse_settings_attributes /probes/cms
-
 RUN chmod +x /probes/common/check_*
 RUN chmod +x /probes/cms/check_*
 
