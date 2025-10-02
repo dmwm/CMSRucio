@@ -48,8 +48,9 @@ class CMSTapeColocation(FTS3TapeMetadataPlugin):
         # Custom logic for CMS
         # If dataset - look for the parent container
         # If file - look for the parent dataset and then the parent container
-        scope = InternalScope("cms")
-        try: 
+        if not isinstance(scope, InternalScope): 
+            scope = InternalScope(scope)
+        try:
             is_file = get_did(scope=scope, name=name)['type'] == DIDType.FILE
         except DataIdentifierNotFound: 
             logger.warning("DID not found for %s:%s", scope, name)
@@ -130,6 +131,28 @@ class CMSTapeColocation(FTS3TapeMetadataPlugin):
             return era
         except IndexError: 
             logger.debug("Could not determine era for %s", name)
+
+    @staticmethod
+    def _get_container_stats(scope, name):
+        size = 0
+        length = 0
+        if not isinstance(scope, InternalScope): 
+            scope = InternalScope(scope)
+        try:
+            contents = list_content(scope, name)
+            for item in contents:
+                if item['type'] == DIDType.FILE:
+                    size += item.get('bytes', 0)
+                    length += 1
+                elif item['type'] in [DIDType.DATASET, DIDType.CONTAINER]:
+                    # Recursively get size of nested datasets/containers
+                    sub_length, sub_size = CMSTapeColocation._get_container_stats(item['name'])
+                    length += sub_length
+                    size += sub_size
+        except DataIdentifierNotFound:
+            logger.warning("DID not found for container %s:%s", scope, name)
+
+        return length, size
 
     @classmethod
     def cms_colocation(cls, hints):
