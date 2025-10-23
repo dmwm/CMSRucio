@@ -6,6 +6,7 @@ from collections import defaultdict
 import requests
 from rucio.client.client import Client
 from rucio.common.exception import RSEAttributeNotFound, Duplicate, AccountNotFound, InvalidObject
+from legacydn_converter import rfc2253dn
 
 TO_STRIP = ['_Disk', '_Tape', '_Temp', '_Disk_Temp', '_Test', '_Disk_Test', '_Tape_Test', '_Ceph']
 
@@ -123,7 +124,7 @@ def sync_roles_to_groups(client, users):
 
     for user in users:
         roles = user['ROLES']
-        dn = user['DN']
+        dn = rfc2253dn(legacy_dn=user['DN'])
         email = user['EMAIL']
 
         # data-managers: are site managers / admins?
