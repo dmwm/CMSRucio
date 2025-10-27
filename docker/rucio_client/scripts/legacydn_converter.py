@@ -61,9 +61,12 @@ def rfc2253dn(legacy_dn: str, verbose: bool = False) -> str:
             # skips any DNs that don't have a attribute in the RFC_ATTRIBUTE_ORDER
             pass
 
+    # EWV This code from Dennis seems techincally correct but we or Apache don't seem to follow it. OU/O can be swapped, ST can appear in odd places
     # sort existing attributes based on expected attribute order
-    result = [a[0] for a in sorted(zip(elements, attributes, indexes), key=lambda x: x[2])]
+    # result = [a[0] for a in sorted(zip(elements, attributes, indexes), key=lambda x: x[2])]
 
+    # Just reverse what was in the slash version
+    result = elements
     if verbose:
         print(f"original: {legacy_dn}\nindexes: {indexes}\nconverted: {','.join(result)}")
 
