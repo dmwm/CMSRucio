@@ -29,8 +29,12 @@ ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manag
 
 # PR 160
 ADD https://raw.githubusercontent.com/voetberg/rucio_probes/127-modern-expired-locked-rules/common/check_expired_locked_rules /probes/common
+
 # PR 161
-ADD https://raw.githubusercontent.com/voetberg/rucio_probes/127-update-check_transfer_queue_status/common/check_transfer_queues_status /probes/common
+#ADD https://raw.githubusercontent.com/voetberg/rucio_probes/127-update-check_transfer_queue_status/common/check_transfer_queues_status /probes/common
+# Reverting for now
+ADD https://raw.githubusercontent.com/voetberg/rucio_probes/common_context_manager_update/common/check_transfer_queues_status /probes/common
+
 # PR 162
 ADD https://raw.githubusercontent.com/voetberg/rucio_probes/127-update-check_stuck_rules/common/check_stuck_rules /probes/common
 # PR 163
