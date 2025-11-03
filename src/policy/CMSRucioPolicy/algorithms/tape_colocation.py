@@ -235,9 +235,9 @@ class CMSTapeColocation(FTS3TapeMetadataPlugin):
         logger.debug("Setting additional hints %s", additional_hints)
 
         metadata = {
-            "size": hints['metadata'].get('filesize', 0),  # File size
-            "md5": hints['metadata'].get("md5"),  # MD5 checksum
-            "adler32": hints['metadata'].get("adler32"), # Adler32 checksum
+            "size": hints.get('filesize', 0),  # File size
+            "md5": hints.get("md5", None),  # MD5 checksum
+            "adler32": hints.get("adler32", None), # Adler32 checksum
         }
         logger.debug("File metadata: %s", metadata)
 
