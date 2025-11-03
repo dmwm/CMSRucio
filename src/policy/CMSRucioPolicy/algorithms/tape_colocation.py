@@ -150,7 +150,7 @@ class CMSTapeColocation(FTS3TapeMetadataPlugin):
                     length += 1
                 elif item['type'] in [DIDType.DATASET, DIDType.CONTAINER]:
                     # Recursively get size of nested datasets/containers
-                    sub_length, sub_size = CMSTapeColocation._get_container_stats(item['name'])
+                    sub_length, sub_size = CMSTapeColocation._get_container_stats(scope, item['name'])
                     length += sub_length
                     size += sub_size
         except DataIdentifierNotFound:
