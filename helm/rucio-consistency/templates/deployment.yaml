@@ -37,6 +37,14 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
+{{- if .Values.consistency.useJobber}}
+            - name: RUCIO_USING_JOBBER
+              value: "1"
+{{- end }}
+{{- if .Values.consistency.useCron}}
+            - name: RUCIO_USING_CRON
+              value: "1"
+{{- end }}
             - name: RUCIO_CFG_COMMON_LOGLEVEL
               value: {{ .Values.consistency.logLevel }}
             - name: RUCIO_CFG_DATABASE_DEFAULT
@@ -80,6 +88,10 @@ spec:
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
           volumeMounts:
+{{- if .Values.consistency.useCron}}
+            - mountPath: /etc/cron.rucio/
+              name: crontab
+{{- end }}
             - mountPath: /config/
               name: consistency-config
             - mountPath: /unmerged-config/
@@ -113,6 +125,13 @@ spec:
         secret:
           defaultMode: 420
           secretName: server-rucio-x509up
+{{- if .Values.consistency.useCron}}
+        - configMap:
+            defaultMode: 0644
+            name: {{ include "rucio-consistency.fullname" . }}-crontab
+          name: crontab
+{{- end }}
+# FIXME: Also value for use jobber when it's working
       - name: jobber-config
         configMap:
           defaultMode: 0644
