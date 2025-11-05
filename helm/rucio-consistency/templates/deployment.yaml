@@ -126,10 +126,10 @@ spec:
           defaultMode: 420
           secretName: server-rucio-x509up
 {{- if .Values.consistency.useCron}}
-        - configMap:
-            defaultMode: 0644
-            name: {{ include "rucio-consistency.fullname" . }}-crontab
-          name: crontab
+      - name: crontab
+        configMap:
+          defaultMode: 0644
+          name: {{ include "rucio-consistency.fullname" . }}-crontab
 {{- end }}
 # FIXME: Also value for use jobber when it's working
       - name: jobber-config
