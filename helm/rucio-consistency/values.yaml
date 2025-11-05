@@ -31,8 +31,8 @@ consistency:
   reportSize: 10Gi
   defaultRoot: "/path/to/nowhere"
   rucioCfgSecret: "this-one"
-  useCron: 0
-  useJobber: 1
+  useCron: false
+  useJobber: true
   detDelay: /DeterministicDelay
   filter: ""
   sites:
