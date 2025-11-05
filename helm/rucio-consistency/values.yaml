@@ -31,6 +31,9 @@ consistency:
   reportSize: 10Gi
   defaultRoot: "/path/to/nowhere"
   rucioCfgSecret: "this-one"
+  useCron: 0
+  useJobber: 1
+  detDelay: /DeterministicDelay
   filter: ""
   sites:
     {}
@@ -39,6 +42,8 @@ consistency:
     # (14 day intervals will run in the first and third week of the month)
     # Some_Site:
     #   interval: 0
+
+    # With useCron set, any interval is fine.
 
 imagePullSecrets: []
 nameOverride: ""
