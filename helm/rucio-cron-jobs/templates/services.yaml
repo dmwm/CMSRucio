@@ -1,0 +1,22 @@
+# Services used to open node ports for Spark communications
+# WARNING: The same ports can't be used in parallel for different spark-jobs
+kind: Service
+apiVersion: v1
+metadata:
+  name: dmtops-spark-svc
+  namespace: {{ .Values.dmops_namespace }}
+spec:
+  selector:
+    app: dmtops-spark-svc
+  type: NodePort
+  ports:
+    - name: port-0 # spark.driver.port
+      nodePort: 31203
+      port: 31203
+      protocol: TCP
+      targetPort: 31203
+    - name: port-1 # spark.driver.blockManager.port
+      nodePort: 31204
+      port: 31204
+      protocol: TCP
+      targetPort: 31204
