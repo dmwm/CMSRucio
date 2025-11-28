@@ -1,0 +1,34 @@
+name: File Invalidation Tool Docker Image CI
+
+on:
+  push:
+    tags:
+      - 'fileinvalidation-*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Get tag name
+        id: tagname
+        run: echo "tag=${GITHUB_REF#refs/tags/loadtest-}" >> "$GITHUB_ENV"
+        
+      - name: Login to CERN Harbour
+        uses: docker/login-action@v2
+        with:
+          registry: registry.cern.ch
+          username: ${{ secrets.HARBOR_USERNAME }}
+          password: ${{ secrets.HARBOR_TOKEN }}
+
+      - name: Build the Docker Image
+        run: |
+          cd DMOps/file_invalidation_tool && docker build . \
+          --file Dockerfile \
+          --tag registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/file_invalidation_tool:${{ env.tag }}
+      
+      - name: Push Image to CERN Harbour
+        run: docker push registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/file_invalidation_tool:${{ env.tag }}
+
