@@ -25,14 +25,19 @@ def check_arguments():
     Parse and check the arguments provided, and perform various validations based on the running mode.
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('running_mode', type=RunningMode, help='Running mode: --global, --only-dbs, --only-rucio, --site-invalidation, --integrity-validation')
+    parser.add_argument('running_mode', type=RunningMode, help='Running mode: --global, --only-dbs, --only-rucio, --site-invalidation, checksum-validation ')
     parser.add_argument('--dry-run', action='store_true', help='Test the script without deleting anything')
     parser.add_argument('--erase-mode', action='store_true', help='Erase empty datasets and containers')
     parser.add_argument('--rucio-mode', action='store_true', help='Invalidate files using rucio instead of spark')
+    parser.add_argument('--global-invalidate-last-replicas', action='store_true', help='When using site-invalidation, if the replica is the last available one globally, also invalidate the file in DBS')
     parser.add_argument('--rse', type=str, help='Site name on which to perform the invalidations')
     parser.add_argument('--reason', type=str, help='Comment for the deletion')
 
     args = parser.parse_args()
+
+    # The --global-invalidate-last-replicas option is only valid for site-invalidation mode
+    if getattr(args, 'global_invalidate_last_replicas', False) and args.running_mode != RunningMode.SITE_INVALIDATION:
+        raise ValueError('--global-invalidate-last-replicas can only be used with site-invalidation mode')
 
     if not args.running_mode == RunningMode.INTEGRITY_VALIDATION and not args.reason:
         raise ValueError('Reason is required.')
@@ -95,7 +100,7 @@ def check_arguments():
             raise ValueError('RSE is required when using site-invalidation mode')
         if args.erase_mode:
             raise ValueError('Erase mode is not allowed when using site-invalidation mode. Only [--reason,--rse,--dry-run] are allowed when using site-invalidation mode')
-        return args.running_mode, files[0].split('/')[-1],did_level, dids, args.rse, args.reason, args.dry_run, args.rucio_mode
+        return args.running_mode, files[0].split('/')[-1],did_level, dids, args.rse, args.reason, args.dry_run, args.rucio_mode, args.global_invalidate_last_replicas
 
     # Global, DBS or Rucio invalidation mode
     if args.rse:
@@ -191,7 +196,7 @@ def dbs_invalidation(did_level, dids, dry_run=False):
     logging.info('Finished DBS invalidation')
     logging.info('--------------------------------------------')
 
-def rucio_invalidation(did_level, dids, reason, dry_run=False, erase_mode=False):
+def rucio_invalidation(did_level, dids, reason, dry_run=False, erase_mode=False, global_invalidate_last_replicas=False):
     logging.info('Starting Rucio invalidation')
     replicas_df = pd.read_csv('/input/rucio_replicas_inv.csv')
     datasets = []
@@ -220,9 +225,9 @@ def rucio_invalidation(did_level, dids, reason, dry_run=False, erase_mode=False)
     loop = asyncio.get_event_loop()
     reason = "File Invalidation Tool - " + reason
     if erase_mode:
-        loop.run_until_complete(invalidate_rucio(replicas_df, reason, rules_stuck, rules_delete_df, datasets, containers,dry_run))
+        loop.run_until_complete(invalidate_rucio(replicas_df, reason, rules_stuck, rules_delete_df, datasets, containers, dry_run, global_invalidate_last_replicas))
     else:
-        loop.run_until_complete(invalidate_rucio(replicas_df, reason, rules_stuck, dry_run=dry_run))
+        loop.run_until_complete(invalidate_rucio(replicas_df, reason, rules_stuck, dry_run=dry_run, global_invalidate_last_replicas=global_invalidate_last_replicas))
     logging.info('Finished Rucio invalidation')
 
 if __name__ == '__main__':
@@ -234,10 +239,10 @@ if __name__ == '__main__':
         checksum_invalidate_dids(dids_df, dry_run)
     # Local invalidation
     elif args[0] == RunningMode.SITE_INVALIDATION:
-        _, input_file, did_level, dids, rse, reason, dry_run,rucio_mode = args
+        _, input_file, did_level, dids, rse, reason, dry_run, rucio_mode, global_invalidate_last_replicas = args
         try:
             submit_list_generation_job(did_level, input_file, rse=rse,rucio_mode=rucio_mode)
-            rucio_invalidation(did_level, dids, reason, dry_run=dry_run)
+            rucio_invalidation(did_level, dids, reason, dry_run=dry_run, global_invalidate_last_replicas=global_invalidate_last_replicas)
         except subprocess.CalledProcessError as e:
             logging.error("Error running shell script:")
             logging.error(e.stderr)
@@ -269,4 +274,4 @@ if __name__ == '__main__':
                 logging.info(e.stderr)
             except Exception as e:
                 logging.info("Error running invalidation script:")
-                logging.info(e.stderr)
+                logging.info(e)

@@ -14,6 +14,7 @@ import logging
 import pandas as pd
 import argparse
 from rucio.client import Client
+from invalidate_dbs import invalidate_files as invalidate_dbs_files
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s %(asctime)s - %(message)s',datefmt='%Y-%m-%d %H:%M:%S')
 
@@ -63,6 +64,7 @@ def validate_arguments():
     parser.add_argument('--dry-run', action='store_true', help='Test the script without deleting anything')
     parser.add_argument('--erase-mode', action='store_true', help='Erase empty datasets and containers')
     parser.add_argument('--reason', type=str, help='Comment for the deletion')
+    parser.add_argument('--global-invalidate-last-replicas', action='store_true', help='If set, files that end up with no replicas globally will be invalidated in DBS')
 
     args = parser.parse_args()
     replicas_df = pd.DataFrame()
@@ -109,37 +111,77 @@ def validate_arguments():
             rules_stuck = f.readlines()
             rules_stuck = [x.strip() for x in rules_stuck]
 
-    return replicas_df, datasets, containers, rules_delete_df, rules_stuck, args.reason,args.dry_run
+    return replicas_df, datasets, containers, rules_delete_df, rules_stuck, args.reason, args.dry_run, args.global_invalidate_last_replicas
 
-async def replicas_worker(queue, reason, dry_run):
+async def replicas_worker(queue, reason, dry_run, global_invalidate_last_replicas=False):
     """
     Asynchronously processes files from a queue and declares them as bad if necessary.
 
     Args:
         queue (asyncio.Queue): The queue containing files to be processed.
         dry_run (bool): Whether to perform a dry run or not.
+        global_invalidate_last_replicas (bool): If True, check if file is last replica and invalidate in DBS.
 
     Returns:
         None
     """
     client = Client()
+    allowed_states = {"AVAILABLE", "TEMPORARY_UNAVAILABLE"}
 
     while True:
+        
         record = await queue.get()
         file = record[0]
         rses = record[1].split(';')
         dids = []
+        
         for rse in rses:
             dids.append({'scope':'cms', 'name':file, 'rse': rse})
+        
+        invalidate_in_dbs = False
+        if global_invalidate_last_replicas:
+            
+            try:
+                
+                reps = list(client.list_replicas(dids=[{'scope':'cms','name':file}]))
+                if reps:
+                    reps_file = list(reps)[0]
+                    reps_rses = [
+                        rse
+                        for rse, state in reps_file.get("states", {}).items()
+                        if state in allowed_states
+                    ]
+                    
+                    rses_with_valid_replicas = list(set(reps_rses) - set(rses))
+                    
+                    if len(rses_with_valid_replicas) == 0:
+                        if len(rses) == 1:
+                            logging.info("Replica of %s at %s is the last available one. File will be invalidate globally." % (file, rses))        
+                        else:
+                            logging.info("Replicas of %s at %s are the last available ones. File will be invalidate globally." % (file, rses))
+                        invalidate_in_dbs = True
+                        
+            except Exception as e:
+                logging.error(f"Failed to list replicas for last-replica check for {file}: {e}")
+
         try:
+            
             if not dry_run:
                 # Force in case replicas was already declared as bad in the past
                 client.declare_bad_file_replicas(dids, reason=reason, force=True)
                 logging.info("Declared file %s as bad at %s" % (file, rses))
             else:
                 logging.info("Would declare file %s as bad at %s" % (file, rses))
+            
         except Exception as e:
             logging.error("Error declaring file %s as bad at %s: %s" % (file, rses, e))
+                    
+        if invalidate_in_dbs:
+            try:
+                invalidate_dbs_files([file], test=dry_run)
+            except Exception as e:
+                logging.error(f"Error invalidating file in DBS for {file}: {e}")
+
         queue.task_done()
 
 async def stuck_rules_worker(queue, reason, dry_run):
@@ -221,7 +263,7 @@ async def erase_dids_worker(queue, dry_run):
             logging.error("Error deleting did %s: %s" % (did, e))
         queue.task_done()
 
-async def main(replicas_df,reason,rules_stuck=[], rules_delete=pd.DataFrame(),datasets=[],containers=[],dry_run=False):
+async def main(replicas_df,reason,rules_stuck=[], rules_delete=pd.DataFrame(),datasets=[],containers=[],dry_run=False, global_invalidate_last_replicas=False):
     """
     Asynchronously executes tasks to process replicas, datasets, and containers.
 
@@ -251,7 +293,7 @@ async def main(replicas_df,reason,rules_stuck=[], rules_delete=pd.DataFrame(),da
         logging.info("-------------------------------------Rucio invalidation: Start bad replicas workers---------------------------------------")
         num_workers_replicas = 30
         queue_replicas = asyncio.Queue()
-        workers_files = [loop.create_task(replicas_worker(queue_replicas,reason, dry_run)) for _ in range(num_workers_replicas)]
+        workers_files = [loop.create_task(replicas_worker(queue_replicas, reason, dry_run, global_invalidate_last_replicas)) for _ in range(num_workers_replicas)]
         for file, rse in replicas_df[['FILENAME','RSES']].values:
             await queue_replicas.put((file, rse))
 
@@ -288,6 +330,6 @@ async def main(replicas_df,reason,rules_stuck=[], rules_delete=pd.DataFrame(),da
 
 
 if __name__ == '__main__':
-    replicas_df, datasets, containers, rules_delete_df, rules_stuck, reason ,dry_run = validate_arguments()
+    replicas_df, datasets, containers, rules_delete_df, rules_stuck, reason, dry_run, global_invalidate_last_replicas = validate_arguments()
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(main(replicas_df,reason,rules_delete_df, rules_stuck, datasets, containers,dry_run))
+    loop.run_until_complete(main(replicas_df, reason, rules_stuck, rules_delete_df, datasets, containers, dry_run, global_invalidate_last_replicas))
