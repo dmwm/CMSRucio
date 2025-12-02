@@ -1,0 +1,16 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: jobs-log-processor
+spec:
+  schedule: "*/5 * * * *"  # every 1 minutes
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: log-processor
+            image: registry.paas.cern.ch/file-invalidation-tool/file-invalidation-tool:latest
+            command: ["python3", "fi_manager/process_jobs.py"]
+          restartPolicy: Never
+          serviceAccountName: job-reader

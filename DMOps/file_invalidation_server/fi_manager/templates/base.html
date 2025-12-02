@@ -1,0 +1,25 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}File Invalidation Tool{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}"> {% block head %}{% endblock %}
+</head>
+<body>
+    <header>
+        <h1>File Invalidation Tool</h1>
+        <nav>
+            </nav>
+    </header>
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+    <footer>
+        <p>CMS DM Comp Ops</p>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>
