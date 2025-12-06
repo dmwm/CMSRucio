@@ -7,7 +7,7 @@ spec:
     spec:
       initContainers:
       - name: debug-voms
-        image: registry.cern.ch/cmsrucio/file_invalidation_tool:test
+        image: registry.cern.ch/cmsrucio/file_invalidation_tool:latest
         command: ["/bin/sh", "-c", "
                     cp /tmp/usercert.pem /certs/usercert.pem;
                     cp /tmp/userkey.pem /certs/userkey.pem;
@@ -31,7 +31,7 @@ spec:
         - name: certs
           mountPath: /certs
       - name: debug-cvmfs
-        image: registry.cern.ch/cmsrucio/file_invalidation_tool:test
+        image: registry.cern.ch/cmsrucio/file_invalidation_tool:latest
         command:
         - /bin/sh
         - -c
@@ -53,7 +53,7 @@ spec:
           mountPath: "/input/"
       containers:
       - name: invalidation-tool
-        image: registry.cern.ch/cmsrucio/file_invalidation_tool:test
+        image: registry.cern.ch/cmsrucio/file_invalidation_tool:latest
         imagePullPolicy: Always 
         args: ["global","--reason", "$(REASON)", "--rucio-mode", "--dry-run"] 
         #command: ["sleep","infinity"]

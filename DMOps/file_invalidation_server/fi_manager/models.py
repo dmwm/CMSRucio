@@ -18,6 +18,7 @@ class FileInvalidationRequests(models.Model):
     reason = models.TextField(blank=True, null=True)
     job_id = models.CharField(max_length=8,null=True,blank=True)
     logs = models.TextField()
+    global_invalidate_last_replicas = models.BooleanField(default=False)
 
     class Meta:
         managed = False

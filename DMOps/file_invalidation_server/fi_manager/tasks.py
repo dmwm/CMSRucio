@@ -13,7 +13,7 @@ src_dir = os.path.dirname(current_dir)
 yaml_path = os.path.join(src_dir, 'controllers', 'job.yaml')
 
 
-def process_invalidation(request_id, reason, dry_run=True,mode='global',rse=None,to_process='queued'):
+def process_invalidation(request_id, reason, dry_run=True,mode='global',rse=None,to_process='queued',global_invalidate_last_replicas=False):
     file_records = FileInvalidationRequests.objects.filter(request_id=request_id,status=to_process)
     if file_records.count()==0:
         raise ValueError(f'There are no records in the db for the request_id: {request_id}')
@@ -34,7 +34,16 @@ def process_invalidation(request_id, reason, dry_run=True,mode='global',rse=None
 
         logging.info(f"File saved to: {file_path}.")
         job_unique_uuid = uuid.uuid4().hex[:8]
-        status = create_job_from_yaml(filename=f'temp_file_{str(request_id).replace("-","")}.txt',reason=reason,filepath=file_path, job_id = job_unique_uuid,dry_run=dry_run,mode=mode,rse=rse)        
+        status = create_job_from_yaml(
+            filename=f'temp_file_{str(request_id).replace("-","")}.txt',
+            reason=reason,
+            filepath=file_path,
+            job_id=job_unique_uuid,
+            dry_run=dry_run,
+            mode=mode,
+            rse=rse,
+            global_invalidate_last_replicas=global_invalidate_last_replicas
+        )        
         
         # On job creation, the files are sent to queued status
         sent_requests = FileInvalidationRequests.objects.filter(request_id=request_id)
@@ -51,7 +60,7 @@ def process_invalidation(request_id, reason, dry_run=True,mode='global',rse=None
     return message
 
 
-def create_job_from_yaml(filename,reason,filepath, job_id, dry_run, mode, rse):
+def create_job_from_yaml(filename,reason,filepath,job_id,dry_run,mode,rse,global_invalidate_last_replicas):
 
     with open(yaml_path) as f:
         job_definition = yaml.safe_load(f)
@@ -66,6 +75,9 @@ def create_job_from_yaml(filename,reason,filepath, job_id, dry_run, mode, rse):
 
     if dry_run:
         arg_list.append("--dry-run")
+        
+    if global_invalidate_last_replicas:
+        arg_list.append("--global-invalidate-last-replicas")
 
     job_definition['spec']['template']['spec']['containers'][0]['args'] = arg_list
 

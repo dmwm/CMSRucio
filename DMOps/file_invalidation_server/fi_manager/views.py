@@ -25,10 +25,15 @@ class FileInvalidationRequestSerializer(serializers.Serializer):
     dry_run = serializers.BooleanField(initial=True)
     mode = serializers.ChoiceField(choices=['global','local'],allow_blank=False)
     rse = serializers.CharField(required=False,help_text="ONLY FOR LOCAL MODE. The RSE at which the list of files should be invalidated.")
+    global_invalidate_last_replicas = serializers.BooleanField(
+        initial=False,required=False,
+        help_text="ONLY FOR LOCAL MODE. If set to True, files with their last available replica under invalidation will be invalidated globally."
+    )
 
     def validate(self,data):
         mode = data.get('mode')
         rse = data.get('rse')
+        global_invalidate_last_replicas = data.get('global_invalidate_last_replicas',False)
 
         if mode == 'global' and rse:
             raise serializers.ValidationError({'rse':"RSE must be empty when mode is 'global'"})
@@ -36,6 +41,8 @@ class FileInvalidationRequestSerializer(serializers.Serializer):
         if mode == 'local' and not rse:
             raise serializers.ValidationError({'rse':"RSE is required when mode is 'local'"})
         
+        if global_invalidate_last_replicas and mode != 'local':
+            raise serializers.ValidationError({'global_invalidate_last_replicas':" This option it's only allowed when the mode is set to 'local'."})
 
         file_content = data.get('file_content')
         if 'cms:/' in file_content:
@@ -46,7 +53,6 @@ class FileInvalidationRequestSerializer(serializers.Serializer):
 class FileInvalidationRequestsView(APIView):
     serializer_class = FileInvalidationRequestSerializer
     parser_classes = [MultiPartParser, JSONParser]
-
 
     def get_serializer_class(self, *args, **kwargs):
         return self.serializer_class(*args, **kwargs)
@@ -69,6 +75,7 @@ class FileInvalidationRequestsView(APIView):
                 rse = serializer.validated_data['rse']
             else:
                 rse = None
+            global_invalidate_last_replicas = serializer.validated_data['global_invalidate_last_replicas']
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
@@ -94,7 +101,7 @@ class FileInvalidationRequestsView(APIView):
                 if obj.status=="in_progress":
                     already_serviced_files = already_serviced_files + ' Please wait 30min for the CronJob to update it on the database'
             else:
-                input_vals = {'request_id':request_id,'file_name':fn,'status':'queued','mode':mode,'dry_run':dry_run,'reason':reason}
+                input_vals = {'request_id':request_id,'file_name':fn,'status':'queued','mode':mode,'dry_run':dry_run,'reason':reason,'global_invalidate_last_replicas':global_invalidate_last_replicas}
                 file_record = FileInvalidationRequests.objects.create(**input_vals)
                 cnt += 1
 
@@ -103,7 +110,7 @@ class FileInvalidationRequestsView(APIView):
         response_message = ""
         if cnt>0:
             logging.info(f'Processing request id {request_id}...')
-            response_message = process_invalidation(request_id, reason,dry_run=dry_run,mode=mode,rse=rse,to_process='queued')
+            response_message = process_invalidation(request_id, reason,dry_run=dry_run,mode=mode,rse=rse,to_process='queued',global_invalidate_last_replicas=global_invalidate_last_replicas)
         else:
             return Response({"message": f"None of the files could be invalidated. {raw_file_message}, {already_serviced_files}"}, status=status.HTTP_400_BAD_REQUEST)
 
