@@ -1,0 +1,110 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: file-invalidation-job
+spec:
+  template:
+    spec:
+      initContainers:
+      - name: debug-voms
+        image: registry.cern.ch/cmsrucio/file_invalidation_tool:latest
+        command: ["/bin/sh", "-c", "
+                    cp /tmp/usercert.pem /certs/usercert.pem;
+                    cp /tmp/userkey.pem /certs/userkey.pem;
+                    ls -l /certs/usercert.pem;
+                    stat -c '%a' /certs/usercert.pem;
+                    ls -l /certs/userkey.pem;
+                    stat -c '%a' /certs/userkey.pem;
+                    chmod 400 /certs/usercert.pem;
+                    chmod 600 /certs/userkey.pem;
+                    voms-proxy-init -voms cms -rfc -valid 192:00 --cert '/certs/usercert.pem' --key '/certs/userkey.pem';"]
+        volumeMounts:
+        - name: user-cert
+          mountPath: "/tmp/usercert.pem"
+          subPath: "usercert.pem"
+        - name: user-key
+          mountPath: "/tmp/userkey.pem"
+          subPath: "userkey.pem"
+        - name: vomses-volume
+          mountPath: "/etc/vomses/"
+          readOnly: true
+        - name: certs
+          mountPath: /certs
+      - name: debug-cvmfs
+        image: registry.cern.ch/cmsrucio/file_invalidation_tool:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e;
+          echo 'Waiting for 30s'; 
+          sleep 30;
+          # Check /cvmfs/cms.cern.ch/
+          ls -l /cvmfs/cms.cern.ch/ | grep 'rucio';
+          # Check /cvmfs/cms.cern.ch/rucio/
+          ls -l /cvmfs/cms.cern.ch/rucio/ | grep 'rucio.cfg';
+          
+          [ -d /input/ ] && rm -f /input/rucio* /input/dbs_files_inv.txt /input/datasets_inv.txt
+        volumeMounts:
+        - name: cvmfs-volume
+          mountPath: "/cvmfs/"
+          readOnly: true
+        - name: input-file
+          mountPath: "/input/"
+      containers:
+      - name: invalidation-tool
+        image: registry.cern.ch/cmsrucio/file_invalidation_tool:latest
+        imagePullPolicy: Always 
+        args: ["global","--reason", "$(REASON)", "--rucio-mode", "--dry-run"] 
+        #command: ["sleep","infinity"]
+        volumeMounts:
+        - name: input-file
+          mountPath: "/input/"
+        - name: dmtops-keytab
+          mountPath: "/secrets/dmtops.keytab"
+          subPath: "dmtops.keytab"
+        - name: cvmfs-volume
+          mountPath: "/cvmfs/"
+          readOnly: true
+        - name: vomses-volume
+          mountPath: "/etc/vomses/"
+          readOnly: true
+        - name: certs
+          mountPath: "/certs"
+        env: #Pass environment variables to the container.
+        - name: REASON
+          value: "your_reason_here" #replace with your reason.
+      restartPolicy: Never
+      serviceAccountName: job-runner
+      volumes:
+      - name: input-file
+        persistentVolumeClaim:
+          claimName: input-file-pvc
+      - name: user-cert
+        configMap:
+          name: user-certificates
+          items:
+          - key: usercert.pem
+            path: usercert.pem
+      - name: user-key
+        configMap:
+          name: user-certificates
+          items:
+          - key: userkey.pem
+            path: userkey.pem
+      - name: dmtops-keytab
+        secret:
+          secretName: dmtops-keytab
+          items:
+          - key: dmtops.keytab
+            path: dmtops.keytab
+      - name: vomses-volume
+        configMap:
+          name: vomses-config
+      - name: cvmfs-volume
+        persistentVolumeClaim:
+          claimName: cvmfs-volume
+      - name: certs
+        emptyDir: {}
+  backoffLimit: 4
+  

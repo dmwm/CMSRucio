@@ -1,0 +1,17 @@
+/* static/css/styles.css */
+body {
+    font-family: sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+}
+
+header, footer {
+    background-color: #e0e0e0;
+    padding: 20px;
+    text-align: center;
+}
+
+main {
+    padding: 20px;
+}
