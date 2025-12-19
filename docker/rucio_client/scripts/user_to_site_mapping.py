@@ -60,8 +60,7 @@ def map_cric_users(country, option, dry_run):
 
         institute_country = user['institute_country']
         institute = user['institute']
-        dns = {user['dn']}
-        dns.add(rfc2253dn(user['dn']))
+        dns = {rfc2253dn(user['dn'])}
         email = user['email']
         account_type = "USER"
         policy = ''
