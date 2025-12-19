@@ -83,7 +83,6 @@ def map_cric_users(country, option, dry_run):
             profiles = user['profiles']
             for profile in profiles:
                 if 'dn' in profile:
-                    dns.add(profile['dn'])
                     dns.add(rfc2253dn(profile['dn']))
         except KeyError:
             continue
