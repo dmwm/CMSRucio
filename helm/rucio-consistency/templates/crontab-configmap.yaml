@@ -8,6 +8,7 @@ data:
     # It uses "DeterministicDelay" to space out the running of jobs within the interval specified.
     # The deterministic delay script is at {{ $.Values.consistency.detDelay }}
     SHELL=/bin/sh
+    PATH=/root/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     
     # Special scripts
      0  0 * * * root /consistency/cleanup.sh
