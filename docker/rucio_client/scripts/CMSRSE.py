@@ -17,19 +17,19 @@ DOMAINS_BY_TYPE = {
     'prod-real': {
         'wan': {'read': 1, 'write': 1, 'third_party_copy_write': 1, 'third_party_copy_read': 1,
                 'delete': 1},
-        'lan': {'read': 0, 'write': 0, 'delete': 0}},
+        'lan': {'read': None, 'write': None, 'delete': None}},
     'int-real': {
         'wan': {'read': 1, 'write': 1, 'third_party_copy_write': 1, 'third_party_copy_read': 1,
                 'delete': 1},
-        'lan': {'read': 0, 'write': 0, 'delete': 0}},
+        'lan': {'read': None, 'write': None, 'delete': None}},
     'test': {
         'wan': {'read': 1, 'write': 1, 'third_party_copy_write': 1, 'third_party_copy_read': 1,
                 'delete': 1},
-        'lan': {'read': 0, 'write': 0, 'delete': 0}},
+        'lan': {'read': None, 'write': None, 'delete': None}},
     'temp': {
         'wan': {'read': 1, 'write': 1, 'third_party_copy_write': 1, 'third_party_copy_read': 1,
                 'delete': 1},
-        'lan': {'read': 0, 'write': 0, 'delete': 0}},
+        'lan': {'read': None, 'write': None, 'delete': None}},
 }
 RUCIO_PROTOS = ['SRMv2', 'XRootD', 'WebDAV']
 PROTO_WEIGHT_TPC = {'WebDAV': 1, 'XRootD': 3, 'SRMv2': 2}
@@ -320,13 +320,13 @@ class CMSRSE:
                 if weight and protocol_name in PROTO_WEIGHT_TPC:
                     if method.startswith("third_party_copy"):
                         if access == 'global-ro' and method != 'third_party_copy_read':
-                            domains['wan'][method] = 0
+                            domains['wan'][method] = None
                         else:
                             domains['wan'][method] = PROTO_WEIGHT_TPC[protocol_name]
 
                     else:
                         if access == 'global-ro' and method != 'read':
-                            domains['wan'][method] = 0
+                            domains['wan'][method] = None
                         else:
                             domains['wan'][method] = PROTO_WEIGHT_RWD[protocol_name]
         except KeyError:
