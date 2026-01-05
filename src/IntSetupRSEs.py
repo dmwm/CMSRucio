@@ -134,11 +134,11 @@ def rewrite_protocols(protocols, pfns, read_write=False, enforce_prefix=True):
                 continue
 
     if read_write:
-        new_domains = {'lan': {'delete': 0, 'read': 0, 'write': 0},
+        new_domains = {'lan': {'delete': None, 'read': None, 'write': None},
                        'wan': {'delete': 1, 'read': 1, 'third_party_copy': 1, 'write': 1}}
     else:
-        new_domains = {'lan': {'delete': 0, 'read': 0, 'write': 0},
-                       'wan': {'delete': 0, 'read': 1, 'third_party_copy': 1, 'write': 0}}
+        new_domains = {'lan': {'delete': None, 'read': None, 'write': None},
+                       'wan': {'delete': None, 'read': 1, 'third_party_copy': 1, 'write': None}}
 
     for protocol in protocols:
         new_protocol = copy.deepcopy(protocol)
