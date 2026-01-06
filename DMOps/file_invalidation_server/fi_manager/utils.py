@@ -12,8 +12,15 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 src_dir = os.path.dirname(current_dir)
 yaml_path = os.path.join(src_dir, 'controllers', 'job.yaml')
 
+def get_cern_username(request):
+        return (
+            request.META.get("HTTP_X_FORWARDED_PREFERRED_USERNAME")
+            or request.META.get("HTTP_X_FORWARDED_USER")
+            or request.META.get("REMOTE_USER")
+        )
 
-def process_invalidation(request_id, reason, dry_run=True,mode='global',rse=None,to_process='queued',global_invalidate_last_replicas=False):
+
+def process_invalidation(request_id, reason, dry_run=True,mode='global',rse=None,to_process='approved',global_invalidate_last_replicas=False):
     file_records = FileInvalidationRequests.objects.filter(request_id=request_id,status=to_process)
     if file_records.count()==0:
         raise ValueError(f'There are no records in the db for the request_id: {request_id}')
