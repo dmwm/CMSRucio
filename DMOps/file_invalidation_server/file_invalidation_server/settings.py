@@ -26,7 +26,12 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1','0.0.0.0','file-invalidation.app.cern.ch']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1','0.0.0.0','file-invalidation.app.cern.ch','file-invalidation-test.app.cern.ch']
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://file-invalidation-test.app.cern.ch",
+    "https://file-invalidation.app.cern.ch",
+]
 
 
 # Application definition
