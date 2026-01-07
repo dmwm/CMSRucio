@@ -64,6 +64,9 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+DEFAULT_FROM_EMAIL = 'no-reply@file-invalidation-tool.cern.ch'
+ADMIN_EMAIL = 'juan.pablo.salas.galindo@cern.ch'
+
 ROOT_URLCONF = 'file_invalidation_server.urls'
 
 TEMPLATES = [
