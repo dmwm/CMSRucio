@@ -4,13 +4,10 @@ import copy
 import logging
 import pdb
 import re
+import argparse
 
 from rucio.client import Client
 from rucio.common.exception import RSEProtocolNotSupported, RSENotFound, Duplicate
-
-RSES_TO_SET = ['T2_CH_CERN']
-RSES_INPUT = ['T2_DE_DESY']
-
 
 
 INT_SETTINGS = {'availability_read': True, 'availability_write': True, 'availability_delete': True}
@@ -149,18 +146,27 @@ def rewrite_protocols(protocols, pfns, read_write=False, enforce_prefix=True):
 
     return new_protocols
 
+def main():
+    parser = argparse.ArgumentParser(description="A script to set up RSEs in the rucio integration cluster.")
+    parser.add_argument("rses_to_set",help="Comma-separated list of RSEs that will be configured in the integration cluster.")
+    parser.add_argument("rses_input",help="Comma-separated list of production RSEs from which the data will be transferred from.")
 
-if __name__ == '__main__':
+    args = parser.parse_args()
+
     rci = Client(rucio_host='http://cms-rucio-int.cern.ch', auth_host='https://cms-rucio-auth-int.cern.ch',
-                 account='root')
+                 account='transfer_ops')
     rcp = Client(rucio_host='http://cms-rucio.cern.ch', auth_host='https://cms-rucio-auth.cern.ch',
                  account='transfer_ops')
+    
+    RSES_TO_SET = args.rses_to_set.replace(' ','').split(',')#['T2_CH_CERN']
+    RSES_INPUT = args.rses_input.replace(' ','').split(',')#['T2_DE_DESY']
+
 
 
     input_rses = set(RSES_TO_SET+RSES_INPUT)
     write_rses = set(RSES_TO_SET)
 
-    for rse_name in set(RSES_TO_SET+RSES_WITHOUT_INPUT+RSES_ONLY_INPUT):
+    for rse_name in set(RSES_TO_SET+RSES_INPUT):
         # Fetch the values needed from the production RSE
         pfns = rcp.lfns2pfns(rse_name, ['cms:/store/test/rucio/int/'], operation='read')
         rse = rcp.get_rse(rse_name)
@@ -190,3 +196,7 @@ if __name__ == '__main__':
             rse_protocols = rse['protocols']
             input_protocols = rewrite_protocols(rse_protocols, pfns, read_write=False, enforce_prefix=False)
             overwrite_protocols(client=rci, rse_name=input_rse, new_protocols=input_protocols)
+
+
+if __name__ == '__main__':
+    main()
