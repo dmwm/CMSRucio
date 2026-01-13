@@ -2,6 +2,7 @@
 import json
 import logging
 from pprint import pprint
+import argparse
 
 from rucio.client import Client
 from rucio.common.exception import (DataIdentifierAlreadyExists, DuplicateContent, DuplicateRule, FileAlreadyExists,
@@ -44,18 +45,30 @@ def sync_block(rcp, rci, name, destinations=None):
         except DataIdentifierNotFound:
             print('%s not found' % lfn)
 
+def main():
+    parser = argparse.ArgumentParser(description="A script to sync production datasets with the integration cluster and transfer.")
+    parser.add_argument("containers",help="Either a .json file path with the containers in format {'name': name}, a .txt file path with the name of the containers or a comma-separated list of said containers to be transferred.")
+    parser.add_argument("destinations",help="Comma-separated list of RSEs where datasets will be transferred. These should be set up (if not already) using the IntSetupRSEs script.")
 
+    args = parser.parse_args()
 
-if __name__ == '__main__':
     rci = Client(rucio_host='http://cms-rucio-int.cern.ch', auth_host='https://cms-rucio-auth-int.cern.ch',
-                 account='root')
+                 account='transfer_ops')
     rcp = Client(rucio_host='http://cms-rucio.cern.ch', auth_host='https://cms-rucio-auth.cern.ch',
                  account='transfer_ops')
 
-    #with open('int_wmcore_datasets.json', 'r') as wmcore_file:
-    #    containers = json.load(wmcore_file)
-    containers = [{'name':'/JetMET1/Run2023D-22Sep2023_v1-v1/MINIAOD'}]
-    destinations = ['T2_CH_CERN']
+    if '.json' in args.containers:
+        with open(args.containers,'r') as containers_file:
+            containers = json.load(containers_file)
+    elif '.txt' in args.containers:
+        with open(args.containers,'r') as containers_file:
+            containers_names = containers_file.read().splitlines()
+        containers = [{'name':name} for name in containers_names]
+    else:
+        containers_names = args.containers.replace(' ','').split(',')
+        containers = [{'name':name} for name in containers_names] #[{'name':'/JetMET1/Run2023D-22Sep2023_v1-v1/MINIAOD'}]
+
+    destinations = args.destinations.replace(' ','').split(',')#['T2_CH_CERN']
 
     for container in containers:
         name = container['name']
@@ -94,3 +107,9 @@ if __name__ == '__main__':
                 rci.add_replication_rule(dids=[{'scope':'cms','name':name}], copies=1, rse_expression=dest_rse, account='transfer_ops')
             except DuplicateRule:
                 print('Rule already made for %s at %s' % (name, dest_rse))
+
+
+
+
+if __name__ == '__main__':
+    main()

@@ -163,7 +163,7 @@ def main():
 
 
 
-    input_rses = set(RSES_TO_SET+RSES_INPUT)
+    input_rses = set(RSES_INPUT)
     write_rses = set(RSES_TO_SET)
 
     for rse_name in set(RSES_TO_SET+RSES_INPUT):
