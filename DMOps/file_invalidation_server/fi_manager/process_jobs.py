@@ -26,7 +26,7 @@ def fetch_and_process():
         if not job.status.conditions:
             continue
 
-        if job.kind == "CronJob" or 'jobs-log-processor' in job_name:
+        if job.kind == "CronJob" or ('jobs-log-processor' in job_name) or ('approval-message' in job_name):
             continue
 
         condition_types = {cond.type: cond.status for cond in job.status.conditions}

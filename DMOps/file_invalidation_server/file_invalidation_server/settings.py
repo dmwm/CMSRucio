@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 from decouple import config
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -64,7 +65,17 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-DEFAULT_FROM_EMAIL = 'no-reply@file-invalidation-tool.cern.ch'
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+
+EMAIL_HOST = os.getenv("EMAIL_HOST")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "25"))
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
+
+EMAIL_HOST_USER = ""
+EMAIL_HOST_PASSWORD = ""
+
+EMAIL_USE_TLS = False
+EMAIL_USE_SSL = False
 ADMIN_EMAIL = 'juan.pablo.salas.galindo@cern.ch'
 
 ROOT_URLCONF = 'file_invalidation_server.urls'

@@ -24,10 +24,10 @@ class Command(BaseCommand):
         body_lines = []
         for request_id, items in grouped.items():
             user = items[0].request_user  # collect unique users
-            line = f"Request ID {request_id}: {len(items)} items waiting, submitted by {user}. Approve at: https://file-invalidation.app.cern.ch/api/approve/{r.request_id}"
+            line = f"\t-Request ID {request_id}\n\t\tFiles waiting approval:{len(items)}\n\t\tSubmitted by {user}\n\t\tApprove at: https://file-invalidation.app.cern.ch/api/approve/{request_id}"
             body_lines.append(line)
 
-        body = "\n".join(body_lines)
+        body = "\n\n".join(body_lines)
 
         # Send email
         send_mail(

@@ -108,8 +108,16 @@ class FileInvalidationRequestsView(APIView):
         response_message = raw_file_message + already_serviced_files
 
         return Response({"message": response_message,
-                         "redirect_url":f"https://file-invalidation.app.cern.ch/api/query/?request_id={request_id}",
-                         "redirect_description":"View request_id details"}, status=status.HTTP_201_CREATED)
+                         "actions": [
+                                {
+                                    "url": f"https://file-invalidation.app.cern.ch/api/query/?request_id={request_id}",
+                                    "description": "View request details."
+                                },
+                                {
+                                    "url": f"https://file-invalidation.app.cern.ch/api/approve/{request_id}",
+                                    "description": "Ask a data management operator to approve the invalidation request."
+                                }
+                            ]}, status=status.HTTP_201_CREATED)
 
 class FileQueryView(APIView):
     def get(self, request, *args, **kwargs):
@@ -146,7 +154,7 @@ class FileQueryView(APIView):
                     output_field=CharField() # Ensure the resulting field is a character field
                 )
             ).values(
-                'request_id','status','mode','dry_run','truncated_reason','job_id','logs'
+                'request_id','status','mode','rse','dry_run','global_invalidate_last_replicas','truncated_reason','request_user','approve_user','job_id','logs'
                 ).annotate(
                     total_objects=Count('id')
                 ).order_by(
@@ -160,7 +168,7 @@ class FileQueryView(APIView):
 
         
         return Response(
-            [{"request_id": f.request_id, "file_name": f.file_name, "status": f.status,"mode":f.mode,"dry_run":f.dry_run,"reason":f.reason,"job_id":f.job_id,"logs":f.logs,"request_user":f.request_user,"approve_user":f.approve_user} for f in files],
+            [{"request_id": f.request_id, "file_name": f.file_name, "status": f.status,"mode":f.mode,"dry_run":f.dry_run,"reason":f.reason,"job_id":f.job_id,"logs":f.logs,"rse":f.rse,"global_invalidate_last_replicas":f.global_invalidate_last_replicas,"request_user":f.request_user,"approve_user":f.approve_user} for f in files],
             status=status.HTTP_200_OK
         )
 
@@ -183,19 +191,19 @@ class InvalidationApproval(APIView):
             return Response({"message":f"Files with request_id {request_id} not found"},
                             status=status.HTTP_404_NOT_FOUND)
         
-        approval_user = get_cern_username(request)
+        approve_user = get_cern_username(request)
         request_user = files.first().request_user
 
-        if approval_user==request_user:
+        if approve_user==request_user:
             return Response({"message":f"Approval user cannot be the same as request user"},
                             status=status.HTTP_403_FORBIDDEN)
         
-        updated = files.update(status="approved",approval_user=approval_user)
-        reason = updated.first().reason
-        dry_run = updated.first().dry_run
-        mode = updated.first().mode
-        rse = updated.first().rse
-        global_invalidate_last_replicas = updated.first().global_invalidate_last_replicas
+        updated = files.update(status="approved",approve_user=approve_user)
+        reason = files.first().reason
+        dry_run = files.first().dry_run
+        mode = files.first().mode
+        rse = files.first().rse
+        global_invalidate_last_replicas = files.first().global_invalidate_last_replicas
 
         try:
             response_message = process_invalidation(request_id, reason, dry_run=dry_run, mode=mode, rse=rse,to_process="approved",global_invalidate_last_replicas=global_invalidate_last_replicas)
@@ -203,11 +211,7 @@ class InvalidationApproval(APIView):
                              "actions": [
                                 {
                                     "url": f"https://file-invalidation.app.cern.ch/api/query/?request_id={request_id}",
-                                    "description": "View request details."
-                                },
-                                {
-                                    "url": f"https://file-invalidation.app.cern.ch/api/approve/{request_id}",
-                                    "description": "Ask a data management operator to approve the invalidation request."
+                                    "description": "View invalidation job details."
                                 }
                             ]}, status=status.HTTP_201_CREATED)
 
