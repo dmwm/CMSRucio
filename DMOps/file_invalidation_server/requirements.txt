@@ -21,7 +21,7 @@ oauthlib==3.2.2
 packaging==24.2
 pbr==5.11.1
 podman==5.4.0.1
-pyasn1==0.6.1
+pyasn1==0.6.2
 pyasn1_modules==0.4.1
 Pygments==2.19.1
 PyJWT==2.10.1
