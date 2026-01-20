@@ -24,12 +24,12 @@ DEFAULT_SUFFIXES = {
 }
 
 DOMAINS_BYTYPE = {
-    'real': {'wan': {'read': 1, 'write': 0, 'third_party_copy': 1, 'delete': 0},
-             'lan': {'read': 0, 'write': 0, 'delete': 0}},
+    'real': {'wan': {'read': 1, 'write': None, 'third_party_copy': 1, 'delete': None},
+             'lan': {'read': None, 'write': None, 'delete': None}},
     'test': {'wan': {'read': 1, 'write': 1, 'third_party_copy': 1, 'delete': 1},
-             'lan': {'read': 0, 'write': 0, 'delete': 0}},
+             'lan': {'read': None, 'write': None, 'delete': None}},
     'temp': {'wan': {'read': 1, 'write': 1, 'third_party_copy': 1, 'delete': 1},
-             'lan': {'read': 0, 'write': 0, 'delete': 0}},
+             'lan': {'read': None, 'write': None, 'delete': None}},
 }
 
 LFN2PFN_BYTYPE = {

@@ -124,7 +124,7 @@ if __name__ == '__main__':
         'port': '2811'
     }
 
-    PROTO_ATTR_FNAL = {'domains': {'lan': {'delete': 0, 'read': 0, 'write': 0},
+    PROTO_ATTR_FNAL = {'domains': {'lan': {'delete': None, 'read': None, 'write': None},
                                    'wan': {'delete': 2,
                                            'read': 2,
                                            'third_party_copy_read': 2,
