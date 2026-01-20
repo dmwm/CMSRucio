@@ -26,7 +26,6 @@ while [[ $# -gt 0 ]]; do
             rse="$1"
             shift
             ;;
-        *)
         --mode)
             shift
             mode="$1"
@@ -80,7 +79,7 @@ fi
 # Initiate Kerberos Credentials
 kinit -kt /secrets/dmtops.keytab dmtops
 
-if ["$mode" == "spark" ]; then
+if [ "$mode" == "spark" ]; then
 
     # Load common utilities
     set -e

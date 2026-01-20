@@ -25,8 +25,7 @@ from pyspark.sql.window import Window
               help='Name of the text file having the datasets names')
 @click.option('--rse', required=False, default=None, type=str,
               help='RSE to look at')
-@click.option('--mode', required=False, type=click.Choice(['rucio','spark']), default='rucio', type=str,
-              help='List generation mode')
+@click.option('--mode', required=False, type=click.Choice(['rucio','spark']), default='rucio',help='List generation mode')
 def invalidate_datasets(filename,rse, mode):
     #TODO: Check rse option
     if mode=='rucio':
