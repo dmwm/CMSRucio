@@ -33,5 +33,7 @@ COPY ./src /src/
 # Set working directory
 WORKDIR /src
 
+RUN chmod 755 /src/submit_invalidation.sh
+
 # Set entrypoint
 ENTRYPOINT ["python3", "run_invalidations.py"]
