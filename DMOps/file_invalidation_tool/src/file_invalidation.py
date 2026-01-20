@@ -70,9 +70,8 @@ def invalidate_files(filename, rse, mode):
 
         if rse is not None:
             df_rules['includes_rse'] = df_rules['rse_expression'].apply(lambda exp: {'rse':rse} in list(rucio_client.list_rses(rse_expression=exp)))
-            df_rules = df_rules[df_rules.includes_rse]
+            df_rules = df_rules.loc[df_rules.includes_rse]
 
-        #TODO Check this with rse 
         #Rules protecting the replicas at File level
         df_rules_delete = df_rules[df_rules['did_type']=='FILE']
         #RSE is exported in case it's tape and require purge_replicas

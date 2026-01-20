@@ -79,7 +79,7 @@ def invalidate_containers(filename,rse, mode):
 
         if rse is not None:
             df_rules['includes_rse'] = df_rules['rse_expression'].apply(lambda exp: {'rse':rse} in list(rucio_client.list_rses(rse_expression=exp)))
-            df_rules = df_rules[df_rules.includes_rse]
+            df_rules = df_rules.loc[df_rules.includes_rse]
 
         df_rules.columns = df_rules.columns.str.upper()
         df_rules[['RULE_ID','RSE']].drop_duplicates().to_csv('/input/rucio_rules_delete.csv',index=False)

@@ -152,25 +152,14 @@ def init_proxy():
             raise ValueError(e.stderr)
 
 def submit_list_generation_job(did_level, input_file,rse=None,rucio_mode=False):
-    
+    submit_mode = 'rucio' if rucio_mode else 'spark'
     if rse is None:
         logging.info(f'>RSE is none, submitting invalidation, rucio mode {rucio_mode}')
-        if rucio_mode:
-            logging.info('Starting rucio list generation')
-            result = subprocess.run(['/src/submit_invalidation_rucio.sh', did_level, input_file], check=True, capture_output=True, text=True)
-            logging.info('Invalidation lists with rucio generated successfully')
-        else:
-            logging.info('Starting spark job')
-            result = subprocess.run(['/src/submit_invalidation.sh', did_level, input_file], check=True, capture_output=True, text=True)
+        result = subprocess.run(['/src/submit_invalidation.sh', did_level, input_file,'--mode',submit_mode], check=True, capture_output=True, text=True)
         logging.info(f'>Result is {result}')
     else:
         logging.info(f'>Submitting invalidation, rucio mode {rucio_mode}')
-        if rucio_mode:
-            logging.info('Starting rucio list generation')
-            result = subprocess.run(['/src/submit_invalidation_rucio.sh', did_level, input_file,'--rse' ,rse], check=True, capture_output=True, text=True)
-        else:
-            logging.info('Starting spark job list generation')
-            result = subprocess.run(['/src/submit_invalidation.sh', did_level, input_file,'--rse' ,rse], check=True, capture_output=True, text=True)
+        result = subprocess.run(['/src/submit_invalidation.sh', did_level, input_file,'--rse' ,rse,'--mode',submit_mode], check=True, capture_output=True, text=True)
     if result.returncode != 0:
         logging.info('>result.returncode is not 0')
         raise ValueError(result.stderr)
