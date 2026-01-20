@@ -14,7 +14,7 @@ jobs:
         
       - name: Get tag name
         id: tagname
-        run: echo "tag=${GITHUB_REF#refs/tags/loadtest-}" >> "$GITHUB_ENV"
+        run: echo "tag=${GITHUB_REF#refs/tags/fileinvalidation-}" >> "$GITHUB_ENV"
         
       - name: Login to CERN Harbour
         uses: docker/login-action@v2
