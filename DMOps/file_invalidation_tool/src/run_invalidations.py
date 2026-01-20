@@ -72,7 +72,9 @@ def check_arguments():
         return args.running_mode,replicas_df, args.dry_run, args.rucio_mode
 
     files = glob('/input/*.txt')
-    if len(files) != 1:
+    if len(files)==0:
+        raise ValueError('No .txt file was found as /input/ parameter')
+    elif len(files)>1:
         raise ValueError('Only one txt file is expected as /input/ parameter')
 
     dids = []
@@ -231,9 +233,15 @@ if __name__ == '__main__':
         _, input_file, did_level, dids, rse, reason, dry_run, rucio_mode, global_invalidate_last_replicas = args
         try:
             submit_list_generation_job(did_level, input_file, rse=rse,rucio_mode=rucio_mode)
-            rucio_invalidation(did_level, dids, reason, dry_run=dry_run, global_invalidate_last_replicas=global_invalidate_last_replicas)
-        except subprocess.CalledProcessError as e:
+        except Exception as e:
             logging.error("Error running shell script:")
+            logging.error(e.stderr)
+
+        logging.info("Lists generated successfully")
+        try:
+            rucio_invalidation(did_level, dids, reason, dry_run=dry_run, global_invalidate_last_replicas=global_invalidate_last_replicas)
+        except Exception as e:
+            logging.error("Error running invalidations:")
             logging.error(e.stderr)
     # Global, Rucio or DBS invalidation
     else:
