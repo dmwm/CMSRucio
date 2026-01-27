@@ -27,7 +27,7 @@ jobs:
         run: |
           cd DMOps/file_invalidation_tool && docker build . \
           --file Dockerfile \
-          --tag registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/file_invalidation_tool:${{ env.tag }}
+          --tag registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/file_invalidation_tool:${{ env.tag }} \
           --tag registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/file_invalidation_tool:latest
       
       - name: Push Image to CERN Harbour
