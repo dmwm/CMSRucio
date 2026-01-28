@@ -19,6 +19,23 @@ from pyspark.sql.functions import col, collect_list, concat_ws
 from pyspark.sql.window import Window
 import pandas as pd
 from rucio.client import Client
+from rucio.common.exception import InvalidRSEExpression, DataIdentifierNotFound
+
+def includes_rse_safe(client,exp, rse):
+    try:
+        return {'rse': rse} in list(
+            client.list_rses(rse_expression=exp)
+        )
+    except InvalidRSEExpression as e:
+        return False
+    except Exception as e:
+        return False
+    
+def list_rules_safe(client,d):
+    try:
+        return client.list_associated_rules_for_file(scope=d["scope"], name=d["name"])
+    except DataIdentifierNotFound:
+        return []
 
 
 @click.command()
@@ -59,16 +76,18 @@ def invalidate_files(filename, rse, mode):
         df_delete.drop_duplicates().to_csv('/input/rucio_replicas_inv.csv',index=False)
 
         #Replicas to the rules
-        df_rules = pd.DataFrame(columns=['subscription_id', 'rse_expression', 'source_replica_expression', 'ignore_account_limit', 'created_at', 'account', 'copies', 'activity', 'priority', 'updated_at', 'scope', 'expires_at', 'grouping', 'name', 'weight', 'notification', 'comments', 'did_type', 'locked', 'stuck_at', 'child_rule_id', 'state', 'locks_ok_cnt', 'purge_replicas', 'eol_at', 'id', 'error', 'locks_replicating_cnt', 'ignore_availability', 'split_container', 'locks_stuck_cnt', 'meta', 'bytes'])
-        rules = [list(rucio_client.list_associated_rules_for_file(scope=d['scope'],name=d['name'])) for d in dict_delete]
-        for r in rules:
-            if df_rules.shape[0]==0 and len(r)>0:
-                df_rules = pd.DataFrame(r)
-            else:
-                df_rules = pd.concat([df_rules,pd.DataFrame(r)],axis=0)
+        rules = [rule for d in dict_delete for rule in list_rules_safe(rucio_client,d)]
+        
+        df_rules = pd.DataFrame(
+                    rules,
+                    columns=['subscription_id', 'rse_expression', 'source_replica_expression','ignore_account_limit', 'created_at', 'account', 'copies', 'activity',
+                        'priority', 'updated_at', 'scope', 'expires_at', 'grouping', 'name','weight', 'notification', 'comments', 'did_type', 'locked', 'stuck_at',
+                        'child_rule_id', 'state', 'locks_ok_cnt', 'purge_replicas', 'eol_at','id', 'error', 'locks_replicating_cnt', 'ignore_availability',
+                        'split_container', 'locks_stuck_cnt', 'meta', 'bytes']
+                    )
 
         if rse is not None:
-            df_rules['includes_rse'] = df_rules['rse_expression'].apply(lambda exp: {'rse':rse} in list(rucio_client.list_rses(rse_expression=exp)))
+            df_rules['includes_rse'] = df_rules['rse_expression'].apply(lambda exp: includes_rse_safe(rucio_client,exp, rse))
             df_rules = df_rules.loc[df_rules.includes_rse]
 
         #Rules protecting the replicas at File level
