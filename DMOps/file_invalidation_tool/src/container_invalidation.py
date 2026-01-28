@@ -6,6 +6,7 @@ from pyspark.sql.functions import col, collect_list, concat_ws
 from CMSSpark.spark_utils import get_spark_session
 from hadoop_queries import get_df_rse_locks, get_df_rse_replicas, get_df_contents
 from pyspark.sql.window import Window
+from file_invalidation import includes_rse_safe
 
 
 @click.command()
@@ -15,7 +16,6 @@ from pyspark.sql.window import Window
               help='RSE to look at')
 @click.option('--mode', required=False, type=click.Choice(['rucio','spark']), default='rucio', help='List generation mode')
 def invalidate_containers(filename,rse, mode):
-    #TODO: Check rse option
 
     if mode=='rucio':
         #Start Rucio Client
@@ -77,7 +77,7 @@ def invalidate_containers(filename,rse, mode):
                     df_rules = pd.concat([df_rules,df_rules_i])
 
         if rse is not None:
-            df_rules['includes_rse'] = df_rules['rse_expression'].apply(lambda exp: {'rse':rse} in list(rucio_client.list_rses(rse_expression=exp)))
+            df_rules['includes_rse'] = df_rules['rse_expression'].apply(lambda exp: includes_rse_safe(rucio_client,exp, rse))
             df_rules = df_rules.loc[df_rules.includes_rse]
 
         df_rules.columns = df_rules.columns.str.upper()
