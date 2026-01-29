@@ -3,7 +3,7 @@ kind: CronJob
 metadata:
   name: approval-message
 spec:
-  schedule: "0 8 * * *"  # Every day at 08:00 UTC
+  schedule: "0 8 * * 1"  # Every Monday at 08:00 UTC
   jobTemplate:
     spec:
       template:
@@ -11,7 +11,7 @@ spec:
           restartPolicy: OnFailure
           containers:
           - name: approval-message
-            image: registry.paas.cern.ch/file-invalidation-tool/file-invalidation-tool:test
+            image: registry.paas.cern.ch/file-invalidation-tool/file-invalidation-tool:latest
             command: ["python", "manage.py", "approval_message"]
             env:
             - name: EMAIL_HOST

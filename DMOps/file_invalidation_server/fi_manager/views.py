@@ -5,7 +5,7 @@ from rest_framework import status, serializers
 from .models import FileInvalidationRequests
 import base64
 from django.http import HttpResponse
-from .utils import process_invalidation, get_cern_username
+from .utils import process_invalidation, get_cern_username, send_approval_alert
 from django.views.generic import TemplateView
 from django.db.models import Count, CharField, Value, F, Case, When
 from django.db.models.functions import StrIndex, Substr
@@ -104,6 +104,7 @@ class FileInvalidationRequestsView(APIView):
 
         logging.info(f'{cnt} of {len(file_lines)} files were created in the database with waiting_approval status.')
 
+        send_approval_alert(request_id)
 
         response_message = raw_file_message + already_serviced_files
 

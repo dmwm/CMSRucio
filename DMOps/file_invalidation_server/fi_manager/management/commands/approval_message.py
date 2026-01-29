@@ -29,12 +29,24 @@ class Command(BaseCommand):
 
         body = "\n\n".join(body_lines)
 
+        html_body = f"""
+            <html>
+            <body>
+            <h2>[File Invalidation] Weekly Waiting Requests Summary ({today})</h2>
+            <ul>
+            {''.join(f"<li>Request ID {request_id}\nFiles waiting for approval: {len(items)}\nSubmitted by {items[0].request_user}\nApprove at: https://file-invalidation.app.cern.ch/api/approve/{request_id}</li>" for request_id, items in grouped.items())}
+            </ul>
+            </body>
+            </html>
+        """
+
         # Send email
         send_mail(
-            subject=f"[File Invalidation] Daily Waiting Requests Summary ({today})",
+            subject=f"[File Invalidation] Weekly Waiting Requests Summary ({today})",
             message=body,
             from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[settings.ADMIN_EMAIL],
+            recipient_list=settings.ADMIN_EMAILS,
+            html_message=html_body,
         )
 
         self.stdout.write(f"Sent summary email with {waiting_requests.count()} requests.")
