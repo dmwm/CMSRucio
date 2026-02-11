@@ -30,7 +30,7 @@ python-dateutil==2.9.0.post0
 python-decouple==3.8
 PyYAML==6.0.2
 referencing==0.30.2
-requests==2.31.0
+requests==2.32.4
 requests-oauthlib==2.0.0
 rich==13.9.4
 rpds-py==0.10.4
