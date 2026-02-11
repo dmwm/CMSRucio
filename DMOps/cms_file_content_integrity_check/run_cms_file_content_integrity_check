@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+# Loads CMSSW environment and sets up a standard VOMS proxy with minimized output.
+
+set -e
+
+# -------------------------------
+# Usage function
+# -------------------------------
+usage() {
+  echo "Usage: $0 [OPTIONS] <ROOT file or .txt list>"
+  echo ""
+  echo "Runs the CMS file content integrity checker after setting up CMSSW environment and proxy."
+  echo ""
+  echo "Options:"
+  echo "  --full-scan      Disables event sampling and checks every event in the file."
+  echo "  --strict         Returns FAILED integrity status for files with non-fatal EDM errors."
+  echo "  --help, -h       Display this help message and exit."
+  echo ""
+  echo "The positional argument is either a local path, a list file (.txt), or a remote URL (davs:// or root://)."
+  echo ""
+  echo "Note: The underlying Python script has more options (--samples, --step-size, etc.)"
+}
+
+# -------------------------------
+# Parse optional arguments
+# -------------------------------
+PYTHON_ARGS=""
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --full-scan|--strict)
+      PYTHON_ARGS+="$1 "
+      shift
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    -*|--*)
+      echo "Unknown option $1"
+      exit 1
+      ;;
+    *)
+      POSITIONAL+=("$1")
+      shift
+      ;;
+  esac
+done
+set -- "${POSITIONAL[@]}"
+
+# -------------------------------
+# Check for required argument
+# -------------------------------
+if [ "$#" -lt 1 ]; then
+  echo "ERROR: Missing required file argument."
+  usage
+  exit 1
+fi
+
+INPUT_PATH="$1"
+
+# -------------------------------
+# Handle local vs. remote path
+# -------------------------------
+if [[ "$INPUT_PATH" == davs://* || "$INPUT_PATH" == root://* ]]; then
+    # Remote URL (e.g., DAVS, XROOTD)
+    FILE="$INPUT_PATH"
+    echo "Processing remote URL: $FILE"
+else
+    # Local file or list file. Use realpath to get the absolute path.
+    FILE="$(realpath "$INPUT_PATH")"
+    echo "Processing local path: $FILE"
+fi
+
+# -------------------------------
+# Detect script directory and check Python script
+# -------------------------------
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PYTHON_SCRIPT="$SCRIPT_DIR/cms_file_content_integrity_check.py"
+if [ ! -f "$PYTHON_SCRIPT" ]; then
+  echo "ERROR: Python script $PYTHON_SCRIPT not found next to wrapper"
+  exit 1
+fi
+
+# -------------------------------
+# Load CMS default environment
+# -------------------------------
+echo "Loading CMS environment..."
+source /cvmfs/cms.cern.ch/cmsset_default.sh
+export SCRAM_ARCH=el9_amd64_gcc12
+
+# -------------------------------
+# Pick latest CMSSW release
+# -------------------------------
+CMSSW_DIRS=(/cvmfs/cms.cern.ch/el9_amd64_gcc12/cms/cmssw/CMSSW_15_1_0_pre*)
+if [ "${#CMSSW_DIRS[@]}" -eq 0 ]; then
+  echo "ERROR: No CMSSW release found"
+  exit 2
+fi
+CMSSW_RELEASE="${CMSSW_DIRS[-1]}"
+echo "Using CMSSW release: $CMSSW_RELEASE"
+
+cd "$CMSSW_RELEASE/src" || { echo "ERROR: Cannot cd into $CMSSW_RELEASE/src"; exit 3; }
+
+cmsenv >/dev/null 2>&1
+
+# -------------------------------
+# Setup X.509 proxy
+# -------------------------------
+echo "Creating temporary X.509 proxy..."
+voms-proxy-init -voms cms -rfc -valid 192:00 &>/dev/null
+export X509_USER_PROXY=$(voms-proxy-info | grep -i path | awk '{print $3}')
+PROXY_SUBJECT=$(voms-proxy-info | grep 'subject' | awk '{ for (i=3; i<=NF; i++) printf "%s ", $i; printf "\n" }' | xargs)
+PROXY_TIME_LEFT=$(voms-proxy-info | grep 'timeleft' | awk '{print $3}')
+
+
+if [ -z "$X509_USER_PROXY" ]; then
+    echo "ERROR: Failed to create or locate X509 proxy."
+    exit 1
+fi
+
+echo "Proxy Subject (DN): $PROXY_SUBJECT"
+echo "X.509 proxy location: $X509_USER_PROXY"
+echo "Proxy time left: $PROXY_TIME_LEFT"
+
+# -------------------------------
+# Run Python integrity checker
+# -------------------------------
+python3 "$PYTHON_SCRIPT" "$FILE" $PYTHON_ARGS
