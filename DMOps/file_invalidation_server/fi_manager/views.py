@@ -5,13 +5,12 @@ from rest_framework import status, serializers
 from .models import FileInvalidationRequests
 import base64
 from django.http import HttpResponse
-from .tasks import process_invalidation
+from .utils import process_invalidation, get_cern_username, send_approval_alert
 from django.views.generic import TemplateView
 from django.db.models import Count, CharField, Value, F, Case, When
 from django.db.models.functions import StrIndex, Substr
 import logging
 import uuid
-dids_limit = 1000
 
 class FileInvalidationRequestSerializer(serializers.Serializer):
     reason = serializers.CharField(required=True,help_text="Enter the reason for the file invalidation request.")
@@ -81,10 +80,10 @@ class FileInvalidationRequestsView(APIView):
         
         file_lines = file_lines.splitlines()
         request_id = uuid.uuid4()
+        logging.info({k: v for k, v in request.META.items() if k.startswith("HTTP_") or k == "REMOTE_USER"})
+        user = get_cern_username(request)
 
         cnt = 0
-        if len(file_lines)>dids_limit:
-            return Response({"message": f"Request aborted. The file exceeds DIDs limit ({len(file_lines)}>{dids_limit})"}, status=status.HTTP_400_BAD_REQUEST)
 
         raw_file_message = ""
         already_serviced_files = ""
@@ -92,33 +91,34 @@ class FileInvalidationRequestsView(APIView):
             fn = fn.strip()
             fn = fn.replace('cms:/store','/store')
             obj = FileInvalidationRequests.objects.filter(file_name=fn).filter(dry_run=False).first()
-            if '/RAW/' in fn:
-                raw_file_message = raw_file_message +f'\nRequest aborted for file {fn}. File contains RAW data.'
-                input_vals = {'request_id':request_id,'file_name':fn,'status':'aborted','mode':mode,'dry_run':dry_run,'reason':reason,'logs':f'Request aborted for file {fn}. File contains RAW data.'}
-                file_record = FileInvalidationRequests.objects.create(**input_vals)
-            elif obj:
+            if obj:
                 already_serviced_files = already_serviced_files + f'\nRequest was not created for file {fn} because it has already been submitted and it is currently in status: {obj.status}.'
                 if obj.status=="in_progress":
                     already_serviced_files = already_serviced_files + ' Please wait 30min for the CronJob to update it on the database'
+                elif obj.status=="waiting_approval":
+                    already_serviced_files = already_serviced_files + ' Please ask DMOps to approve the invalidation.'
             else:
-                input_vals = {'request_id':request_id,'file_name':fn,'status':'queued','mode':mode,'dry_run':dry_run,'reason':reason,'global_invalidate_last_replicas':global_invalidate_last_replicas}
+                input_vals = {'request_id':request_id,'file_name':fn,'status':'waiting_approval','mode':mode,'dry_run':dry_run,'reason':reason,'global_invalidate_last_replicas':global_invalidate_last_replicas,'request_user':user, 'rse': rse}
                 file_record = FileInvalidationRequests.objects.create(**input_vals)
                 cnt += 1
 
-        logging.info(f'{cnt} of {len(file_lines)} files were created in the database with queued status.')
+        logging.info(f'{cnt} of {len(file_lines)} files were created in the database with waiting_approval status.')
 
-        response_message = ""
-        if cnt>0:
-            logging.info(f'Processing request id {request_id}...')
-            response_message = process_invalidation(request_id, reason,dry_run=dry_run,mode=mode,rse=rse,to_process='queued',global_invalidate_last_replicas=global_invalidate_last_replicas)
-        else:
-            return Response({"message": f"None of the files could be invalidated. {raw_file_message}, {already_serviced_files}"}, status=status.HTTP_400_BAD_REQUEST)
+        send_approval_alert(request_id)
 
-        response_message = response_message + raw_file_message + already_serviced_files
+        response_message = raw_file_message + already_serviced_files
 
         return Response({"message": response_message,
-                         "redirect_url":f"https://file-invalidation.app.cern.ch/api/query/?request_id={request_id}",
-                         "redirect_description":"View request_id details"}, status=status.HTTP_201_CREATED)
+                         "actions": [
+                                {
+                                    "url": f"https://file-invalidation.app.cern.ch/api/query/?request_id={request_id}",
+                                    "description": "View request details."
+                                },
+                                {
+                                    "url": f"https://file-invalidation.app.cern.ch/api/approve/{request_id}",
+                                    "description": "Ask a data management operator to approve the invalidation request."
+                                }
+                            ]}, status=status.HTTP_201_CREATED)
 
 class FileQueryView(APIView):
     def get(self, request, *args, **kwargs):
@@ -155,7 +155,7 @@ class FileQueryView(APIView):
                     output_field=CharField() # Ensure the resulting field is a character field
                 )
             ).values(
-                'request_id','status','mode','dry_run','truncated_reason','job_id','logs'
+                'request_id','status','mode','rse','dry_run','global_invalidate_last_replicas','truncated_reason','request_user','approve_user','job_id','logs'
                 ).annotate(
                     total_objects=Count('id')
                 ).order_by(
@@ -169,14 +169,52 @@ class FileQueryView(APIView):
 
         
         return Response(
-            [{"request_id": f.request_id, "file_name": f.file_name, "status": f.status,"mode":f.mode,"dry_run":f.dry_run,"reason":f.reason,"job_id":f.job_id,"logs":f.logs} for f in files],
+            [{"request_id": f.request_id, "file_name": f.file_name, "status": f.status,"mode":f.mode,"dry_run":f.dry_run,"reason":f.reason,"job_id":f.job_id,"logs":f.logs,"rse":f.rse,"global_invalidate_last_replicas":f.global_invalidate_last_replicas,"request_user":f.request_user,"approve_user":f.approve_user} for f in files],
             status=status.HTTP_200_OK
         )
 
 
-class HomePageView(TemplateView):
-    template_name = 'core/home.html'
+class InvalidationApproval(APIView):
+    
+    def get(self, request, request_id):
+        files = FileInvalidationRequests.objects.filter(request_id=request_id)
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        return context
+        return Response(
+            [{"request_id": f.request_id, "file_name": f.file_name, "status": f.status,"mode":f.mode,"dry_run":f.dry_run,"reason":f.reason,"job_id":f.job_id,"logs":f.logs,"request_user":f.request_user} for f in files],
+            status=status.HTTP_200_OK
+        )
+
+    
+    def post(self, request, request_id):
+        files = FileInvalidationRequests.objects.filter(request_id=request_id)
+
+        if not files.exists():
+            return Response({"message":f"Files with request_id {request_id} not found"},
+                            status=status.HTTP_404_NOT_FOUND)
+        
+        approve_user = get_cern_username(request)
+        request_user = files.first().request_user
+
+        if approve_user==request_user:
+            return Response({"message":f"Approval user cannot be the same as request user"},
+                            status=status.HTTP_403_FORBIDDEN)
+        
+        updated = files.update(status="approved",approve_user=approve_user)
+        reason = files.first().reason
+        dry_run = files.first().dry_run
+        mode = files.first().mode
+        rse = files.first().rse
+        global_invalidate_last_replicas = files.first().global_invalidate_last_replicas
+
+        try:
+            response_message = process_invalidation(request_id, reason, dry_run=dry_run, mode=mode, rse=rse,to_process="approved",global_invalidate_last_replicas=global_invalidate_last_replicas)
+            return Response({"message": response_message,
+                             "actions": [
+                                {
+                                    "url": f"https://file-invalidation.app.cern.ch/api/query/?request_id={request_id}",
+                                    "description": "View invalidation job details."
+                                }
+                            ]}, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            return Response({"message":f"None of the files could be invalidated - {str(e)}"})

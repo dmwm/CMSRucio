@@ -26,7 +26,7 @@ def fetch_and_process():
         if not job.status.conditions:
             continue
 
-        if job.kind == "CronJob" or 'jobs-log-processor' in job_name:
+        if job.kind == "CronJob" or ('jobs-log-processor' in job_name) or ('approval-message' in job_name):
             continue
 
         condition_types = {cond.type: cond.status for cond in job.status.conditions}
@@ -73,11 +73,10 @@ def fetch_and_process():
 
             delete_opts = client.V1DeleteOptions(propagation_policy='Foreground')
 
-            #batch_v1.delete_namespaced_job(
-            #        name=job_name,
-            #        namespace=namespace,
-            #           body=delete_opts)
-            logger.info(f"Job {job_name} would be deleted but is being kept for dev purposes.")
+            batch_v1.delete_namespaced_job(
+                    name=job_name,
+                    namespace=namespace,
+                       body=delete_opts)
 
 def parse_job_logs(logs: str):
     if "Error running shell script" in logs:

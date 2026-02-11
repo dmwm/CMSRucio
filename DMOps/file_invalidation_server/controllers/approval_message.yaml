@@ -1,0 +1,35 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: approval-message
+spec:
+  schedule: "0 8 * * 1"  # Every Monday at 08:00 UTC
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: approval-message
+            image: registry.paas.cern.ch/file-invalidation-tool/file-invalidation-tool:latest
+            command: ["python", "manage.py", "approval_message"]
+            env:
+            - name: EMAIL_HOST
+              value: cernmx.cern.ch
+            - name: EMAIL_PORT
+              value: "25"
+            - name: DEFAULT_FROM_EMAIL
+              value: file-invalidation-tool-noreply@cern.ch
+            envFrom:
+              - secretRef:
+                  name: django-secret-key
+              - secretRef:
+                  name: django-db-name
+              - secretRef:
+                  name: django-db-user
+              - secretRef:
+                  name: django-db-password
+              - secretRef:
+                  name: django-db-host
+              - secretRef:
+                  name: django-db-port

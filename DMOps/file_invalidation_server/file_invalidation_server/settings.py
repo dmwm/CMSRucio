@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 from decouple import config
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -26,7 +27,12 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1','0.0.0.0','file-invalidation.app.cern.ch']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1','0.0.0.0','file-invalidation.app.cern.ch','file-invalidation-test.app.cern.ch']
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://file-invalidation-test.app.cern.ch",
+    "https://file-invalidation.app.cern.ch",
+]
 
 
 # Application definition
@@ -58,6 +64,19 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+
+EMAIL_HOST = os.getenv("EMAIL_HOST")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "25"))
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
+
+EMAIL_HOST_USER = ""
+EMAIL_HOST_PASSWORD = ""
+
+EMAIL_USE_TLS = False
+EMAIL_USE_SSL = False
+ADMIN_EMAILS = ['juan.pablo.salas.galindo@cern.ch','christos.emmanouil@cern.ch','h.ozturk@cern.ch','panos.paparrigopoulos@cern.ch'] #cms-comp-ops-transfer-team@cern.ch
 
 ROOT_URLCONF = 'file_invalidation_server.urls'
 

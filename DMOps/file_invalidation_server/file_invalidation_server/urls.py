@@ -16,10 +16,8 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from fi_manager.views import HomePageView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("api/", include("fi_manager.urls")),
-    path("", HomePageView.as_view(), name='home')
 ]

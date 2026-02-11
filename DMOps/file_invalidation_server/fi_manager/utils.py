@@ -5,15 +5,91 @@ import subprocess
 import logging
 import yaml
 import uuid
+import re
 import time
 from kubernetes import client, config
+from django.core.mail import send_mail
+from django.conf import settings
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 src_dir = os.path.dirname(current_dir)
 yaml_path = os.path.join(src_dir, 'controllers', 'job.yaml')
 
+def get_cern_username(request):
+        return (
+            request.META.get("HTTP_X_FORWARDED_PREFERRED_USERNAME")
+            or request.META.get("HTTP_X_FORWARDED_USER")
+            or request.META.get("REMOTE_USER")
+        )
 
-def process_invalidation(request_id, reason, dry_run=True,mode='global',rse=None,to_process='queued',global_invalidate_last_replicas=False):
+def send_approval_alert(request_id):
+    files = FileInvalidationRequests.objects.filter(request_id=request_id)
+
+    request_user = files.first().request_user
+    reason = files.first().reason
+    reason = re.sub(r'(CMS(?:PROD|TRANSF|DM)\-\d+)',r'<a href="https://its.cern.ch/jira/browse/\1">\1</a>',reason)
+    count = files.count()
+    dry_run = files.first().dry_run
+    mode = files.first().mode
+    rse = files.first().rse
+    contains_raw = False
+
+    file_names_plain = []
+    for f in files:
+        if '/RAW/' in f.file_name:
+            contains_raw = True
+        file_names_plain.append(f"\t\t- {f.file_name}")
+
+    plain_text_body = "\n".join([
+        "A new file invalidation request has been submitted.",
+        "",
+        f"Request ID: {request_id}",
+        f"Reason: {reason}",
+        f"Mode: {mode}",
+        f"RSE: {rse}",
+        f"Dry run: {dry_run}",
+        f"Requested by: {request_user}",
+        f"Number of files: {count}",
+        f"Contains /RAW/: {contains_raw}",
+        "",
+        "File names:",
+        *file_names_plain,
+    ])
+
+    html_body = f"""
+        <html>
+        <body>
+            <h2>A new file invalidation request has been submitted and awaits approval</h2>
+
+            <p><b>Request ID:</b> {request_id}</p>
+            <p><b>Reason:</b> {reason}</p>
+            <p><b>Mode:</b> {mode}</p>
+            <p><b>RSE:</b> {rse}</p>
+            <p><b>Dry run:</b> {dry_run}</p>
+            <p><b>Requested by:</b> {request_user}</p>
+            <p><b>Number of files:</b> {count}</p>
+            <p><b>Contains /RAW/?:</b> {contains_raw}</p>
+
+            <p><b>File names:</b></p>
+            <ul>
+            {''.join(f"<li>{f.file_name}</li>" for f in files)}
+            </ul>
+        </body>
+        </html>
+        """
+    
+
+    # Send email
+    send_mail(
+        subject=f"[File Invalidation] A new file invalidation request has been submitted",
+        message=plain_text_body,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=settings.ADMIN_EMAILS,
+        html_message=html_body,
+    )
+
+
+def process_invalidation(request_id, reason, dry_run=True,mode='global',rse=None,to_process='approved',global_invalidate_last_replicas=False):
     file_records = FileInvalidationRequests.objects.filter(request_id=request_id,status=to_process)
     if file_records.count()==0:
         raise ValueError(f'There are no records in the db for the request_id: {request_id}')

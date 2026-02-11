@@ -3,7 +3,7 @@ kind: CronJob
 metadata:
   name: jobs-log-processor
 spec:
-  schedule: "*/5 * * * *"  # every 1 minutes
+  schedule: "*/5 * * * *"  # every 5 minutes
   jobTemplate:
     spec:
       template:
