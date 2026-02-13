@@ -76,7 +76,7 @@ EMAIL_HOST_PASSWORD = ""
 
 EMAIL_USE_TLS = False
 EMAIL_USE_SSL = False
-ADMIN_EMAILS = ['juan.pablo.salas.galindo@cern.ch','christos.emmanouil@cern.ch','h.ozturk@cern.ch','panos.paparrigopoulos@cern.ch'] #cms-comp-ops-transfer-team@cern.ch
+ADMIN_EMAILS = ['cms-dm-ops-core-team@cern.ch'] #cms-comp-ops-transfer-team@cern.ch
 
 ROOT_URLCONF = 'file_invalidation_server.urls'
 
