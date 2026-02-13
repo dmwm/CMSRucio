@@ -61,18 +61,18 @@ def send_approval_alert(request_id):
         <body>
             <h2>A new file invalidation request has been submitted and awaits approval</h2>
 
-            <p><b>Request ID:</b> {request_id}</p>
-            <p><b>Reason:</b> {reason}</p>
-            <p><b>Mode:</b> {mode}</p>
-            <p><b>RSE:</b> {rse}</p>
-            <p><b>Dry run:</b> {dry_run}</p>
-            <p><b>Requested by:</b> {request_user}</p>
-            <p><b>Number of files:</b> {count}</p>
-            <p><b>Contains /RAW/?:</b> {contains_raw}</p>
+            <p><b>Request ID:</b> <a href="https://file-invalidation.app.cern.ch/api/approve/{request_id}"> {request_id} </a> <br>
+            <b>Reason:</b> {reason}<br>
+            <b>Mode:</b> {mode}<br>
+            <b>RSE:</b> {rse}<br>
+            <b>Dry run:</b> {dry_run}<br>
+            <b>Requested by:</b> {request_user}<br>
+            <b>Number of files:</b> {count}<br>
+            <b>Contains /RAW/?:</b> {contains_raw}</p>
 
-            <p><b>File names:</b></p>
+            <p><b>File names preview (up to 10 files):</b></p>
             <ul>
-            {''.join(f"<li>{f.file_name}</li>" for f in files)}
+            {''.join(f"<li>{f.file_name}</li>" for f in files[:10])}
             </ul>
         </body>
         </html>
