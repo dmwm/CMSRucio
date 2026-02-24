@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-CMSSW-only ROOT/EDM integrity checker with JSON output and multi-file support.
+CMS ROOT/EDM integrity checker with JSON output and multi-file support.
 
 Usage (inside CMSSW environment):
-  python3 cms_file_content_integrity_check.py <file_or_txt_list> [options]
+  python3 check_integrity.py <file_or_txt_list> [options]
 
 Options:
   --skip-edmfileutil    Skip edmFileUtil --ls call
@@ -239,7 +239,7 @@ def check_file(filename, skip_edmfileutil=False, skip_fwlite=False, samples=5, s
 # Main
 # ------------------------------
 def main():
-    parser = argparse.ArgumentParser(description="CMSSW-only ROOT/EDM integrity checker (JSON output)")
+    parser = argparse.ArgumentParser(description="CMS ROOT integrity checker (JSON output)")
     parser.add_argument("file_or_list", help="Single ROOT file or text file containing list of ROOT files")
     parser.add_argument("--full-scan", action="store_true", help="Disables sampling and forces iteration over all events.")
     parser.add_argument("--strict", action="store_true", help="Returns FAILED integrity status even for non-fatal errors.")
