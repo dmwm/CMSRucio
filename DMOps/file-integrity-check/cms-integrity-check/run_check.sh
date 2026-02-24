@@ -76,7 +76,7 @@ fi
 # Detect script directory and check Python script
 # -------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PYTHON_SCRIPT="$SCRIPT_DIR/cms_file_content_integrity_check.py"
+PYTHON_SCRIPT="$SCRIPT_DIR/check_integrity.py"
 if [ ! -f "$PYTHON_SCRIPT" ]; then
   echo "ERROR: Python script $PYTHON_SCRIPT not found next to wrapper"
   exit 1
