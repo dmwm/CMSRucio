@@ -54,32 +54,3 @@ def validate_checksum(local_path: str, adler: str) -> (bool, ValidationStatus):
     except Exception as e:
         logger.error(f"Checksum validation failed for {local_path}: {e}")
         return False, ValidationStatus.ERROR
-    
-if __name__ == "__main__":
-    
-    logging.basicConfig(
-        level=logging.INFO, 
-        format='%(asctime)s - %(levelname)s - [%(filename)s:%(funcName)s] - %(message)s'
-    )
-    
-    test_local_dir = "./tmp"
-    
-    print("\n1.1. Testing copy_file_locally - valid PFN.")
-    test_pfn1 = "davs://hip-cms-se.csc.fi:2880/store/user/nbinnorj/RAWToPFNANO_v0p1/CRABOUTPUT/DYto2Mu-4Jets_Bin-MLL-50_TuneCP5_13p6TeV_madgraphMLM-pythia8/RunIII2024Summer24NanoAOD_HCalPFCuts_eta2829depth1_thresh4p0_RAWToPFNANO_v0p1/260224_232450/0001/NANOAODSIM_1721.root"
-    local_file1 = copy_file_locally(test_pfn1, test_local_dir)
-    print(f"Test 1.1. completed. local_file1 = '{local_file1}'")
-    
-    print("\n1.2. Testing copy_file_locally - invalid PFN.")
-    test_pfn2 = "davs://hip-cms-se.csc.fi:2880/store/user/nbinnorj/RAWToPFNANO_v0p1/CRABOUTPUT/DYto2Mu-4Jets_Bin-MLL-50_TuneCP5_13p6TeV_madgraphMLM-pythia8/RunIII2024Summer24NanoAOD_HCalPFCuts_eta2829depth1_thresh4p0_RAWToPFNANO_v0p1/260224_232450/0001/NANOAODSIM_1721_invalid.root"
-    local_file2 = copy_file_locally(test_pfn2, test_local_dir)
-    print(f"Test 1.2. completed. local_file2 = '{local_file2}'")
-
-    print("\n2.1. Testing validate_checksum - valid checksum.")
-    true_adler = "d34b712d"
-    is_valid, status = validate_checksum(local_file1, true_adler)
-    print(f"Test 2.1 completed. Validation result: {is_valid}, Status: {status}")
-    
-    print("\n2.2. Testing validate_checksum - invalid checksum.")
-    false_adler = "00000000"
-    is_valid, status = validate_checksum(local_file1, false_adler)
-    print(f"Test 2.2 completed. Validation result: {is_valid}, Status: {status}")
