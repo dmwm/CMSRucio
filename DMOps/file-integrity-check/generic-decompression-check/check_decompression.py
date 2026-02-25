@@ -7,9 +7,24 @@ from definitions import ValidationStatus
 
 logger = logging.getLogger(__name__)
 
-def integrity_check(file_path, full_scan=False, timeout_seconds=900) -> (bool, ValidationStatus):
+def integrity_check(
+    file_path: str, 
+    full_scan: bool = False, 
+    timeout_seconds: int=900
+) -> (bool, ValidationStatus):
+    """
+    Check the integrity of a ROOT file by attempting to read its contents. It tries to read all objects, and if it encounters a TTree, it attempts to read all baskets of its branches. The function can operate in two modes: "Fail-Fast" (default) where it stops at the first error, and "Full Scan" where it continues to check all items and reports the total number of passed, failed, and skipped items.
+    
+    Args:
+        file_path (str): Local path to the ROOT file to check.
+        full_scan (bool, optional): Perform a full scan by reading every basket (more time-consuming). Defaults to False (Fail-Fast mode).
+        timeout_seconds (int, optional): Timeout in seconds for the integrity check. Defaults to 900 seconds (15 minutes).
+        
+    Returns:
+        Tuple[bool, ValidationStatus]: A tuple where the first element indicates overall success and the second element is a ValidationStatus indicating OK, CORRUPTED, or ERROR.
+    """
     start_time = time.time()
-    logging.info(f"Mode: {'Full Scan' if full_scan else 'Fail-Fast'}")
+    logger.info(f"Mode: {'Full Scan' if full_scan else 'Fail-Fast'}")
     
     stats = {'passed': 0, 'skipped': 0, 'failed': 0}
     stats_msg = lambda: f"Checked: {stats['passed']}, Failed: {stats['failed']}, Skipped: {stats['skipped']}"
@@ -18,7 +33,7 @@ def integrity_check(file_path, full_scan=False, timeout_seconds=900) -> (bool, V
     
     try:
         with uproot.open(file_path) as f:
-            logging.info(f"Successfully opened: {file_path}")
+            logger.info(f"Successfully opened: {file_path}")
             
             for name, classname in f.classnames().items():
                 
@@ -38,7 +53,7 @@ def integrity_check(file_path, full_scan=False, timeout_seconds=900) -> (bool, V
                                 stats['passed'] += 1
                         except Exception as e:
                             stats['failed'] += 1
-                            logging.error(f"Tree '{name}', Branch '{branch.name}' is corrupt. ({type(e).__name__})")
+                            logger.error(f"Tree '{name}', Branch '{branch.name}' is corrupt. ({type(e).__name__})")
                             if not full_scan:
                                 current_status = ValidationStatus.CORRUPTED
                                 raise e
@@ -49,32 +64,41 @@ def integrity_check(file_path, full_scan=False, timeout_seconds=900) -> (bool, V
                         f[name].get()
                         stats['passed'] += 1
                     except Exception as e:
-                        logging.warning(f"Object '{name}' skipped. ({type(e).__name__})")
+                        logger.warning(f"Object '{name}' skipped. ({type(e).__name__})")
                         stats['skipped'] += 1
                         
         if full_scan and stats['failed'] > 0:
             current_status = ValidationStatus.CORRUPTED
-            logging.info(f"Run 'Fail-Fast' mode to see more details of failed items.")
+            logger.info(f"Run 'Fail-Fast' mode to see more details of failed items.")
             raise RuntimeError(f"{stats['failed']} failed item{'s' if stats['failed'] > 1 else ''} detected.")
 
-        logging.info(f"Integrity check PASSED. ({stats_msg()})")
+        logger.info(f"Integrity check PASSED. ({stats_msg()})")
         return True, current_status
 
     except Exception as e:
-        logging.error(e)
-        logging.error(f"Integrity check FAILED. ({stats_msg()})")
+        logger.error(e)
+        logger.error(f"Integrity check FAILED. ({stats_msg()})")
         if current_status == ValidationStatus.OK:
             current_status = ValidationStatus.ERROR
         return False, current_status
 
 if __name__ == "__main__":
     
-    logging.basicConfig(level=logging.INFO, format='%(name)s - %(levelname)s - %(message)s')
+    logging.basicConfig(
+        level=logging.INFO, 
+        format='%(asctime)s - %(levelname)s - [%(filename)s:%(funcName)s] - %(message)s'
+    )
     
-    parser = argparse.ArgumentParser(description="Check ROOT file integrity.")
-    parser.add_argument("file", help="Local .root file path")
-    parser.add_argument("--full-scan", action="store_true", help="Read every basket")
-    parser.add_argument("--timeout", type=int, default=900, help="Timeout in seconds")
+    parser = argparse.ArgumentParser(
+        description="Check ROOT file integrity.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+returns:
+  A tuple where the first element indicates overall success and the second element is a ValidationStatus indicating OK, CORRUPTED, or ERROR."""
+    )
+    parser.add_argument("file", help="Local path to the ROOT file to check.")
+    parser.add_argument("--full-scan", action="store_true", help="Perform a full scan by reading every basket (more time-consuming). Defaults to False (Fail-Fast mode)")
+    parser.add_argument("--timeout", type=int, default=900, help="Timeout in seconds for the integrity check. Defaults to 900 seconds (15 minutes)")
     
     args = parser.parse_args()
         
