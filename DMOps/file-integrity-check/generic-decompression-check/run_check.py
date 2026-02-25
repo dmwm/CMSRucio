@@ -1,6 +1,5 @@
 
 import os
-import sys
 import logging
 import argparse
 from typing import List, Dict
@@ -10,9 +9,10 @@ from rucio.client import Client as RucioClient
 from file_ops import copy_file_locally
 from file_ops import validate_checksum as checksum_check
 from check_decompression import integrity_check as content_check
-from definitions import ValidationStatus
+from utils import ValidationStatus, setup_logging
 
 logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 def check_files(
     lfns: List[str],
@@ -99,11 +99,6 @@ def check_files(
     return results
 
 if __name__ == "__main__":
-    
-    logging.basicConfig(
-        level=logging.INFO, 
-        format='%(asctime)s - %(levelname)s - [%(filename)s:%(funcName)s] - %(message)s'
-    )
         
     parser = argparse.ArgumentParser(
         description="Check integrity of files based on their LFNs by copying them locally, validating checksums and performing content checks by decompression.",
@@ -118,8 +113,11 @@ returns:
     parser.add_argument("--scope", default="cms", help="Rucio scope of the files. (default: 'cms')")
     parser.add_argument("--full-scan", action="store_true", help="Perform a full scan by reading every basket (more time-consuming). (default: False)")
     parser.add_argument("--timeout", type=int, default=900, help="Timeout in seconds for the integrity check of each file. (default: 900s)")
+    parser.add_argument("-v", "--verbose", action="count", default=0, help="Increase verbosity: -v (Warning), -vv (Info), -vvv (Debug). Default is Error.")
     
     args = parser.parse_args()
+    
+    setup_logging(args.verbose)
     
     lfns_list = []
     for arg in args.lfns:

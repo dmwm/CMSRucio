@@ -4,9 +4,10 @@ import random
 import logging
 import contextlib
 from pathlib import Path
-from definitions import ValidationStatus
+from utils import ValidationStatus
 
 logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 @contextlib.contextmanager
 def suppress_logs(logger_name):
@@ -22,7 +23,7 @@ def copy_file_locally(pfn: str, local_dir: str) -> str:
     
     local_filename = f"file-integrity-check-file-to-check-{random.randint(100000, 999999)}.root"
     local_path = Path(local_dir).resolve() / local_filename
-    logger.info(f"Copy '{pfn}' to '{local_path}'")
+    logger.info(f"Coping '{pfn}'.")
 
     try:
         os.makedirs(local_dir, exist_ok=True)
@@ -31,7 +32,7 @@ def copy_file_locally(pfn: str, local_dir: str) -> str:
         with suppress_logs('gfal2'):
             ctx.filecopy(pfn, f"file://{local_path}")
             
-        logger.info(f"Copy of '{pfn}' succeeded.")
+        logger.info(f"File '{pfn}' copied successfully to '{local_path}'.")
         return str(local_path)
 
     except Exception as e:
