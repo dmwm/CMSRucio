@@ -45,19 +45,22 @@ def validate_checksum(local_path: str, adler: str) -> (bool, ValidationStatus):
         checksum_ok = ctx.checksum(f"file://{local_path}", "adler32") == adler
 
         if checksum_ok:
-            logging.info(f"Checksum validation passed for {local_path}")
+            logger.info(f"Checksum validation passed for {local_path}")
             return True, ValidationStatus.OK
         else:
-            logging.warning(f"Checksum validation failed for {local_path}")
+            logger.warning(f"Checksum validation failed for {local_path}")
             return False, ValidationStatus.CORRUPTED
 
     except Exception as e:
-        logging.error(f"Checksum validation failed for {local_path}: {e}")
+        logger.error(f"Checksum validation failed for {local_path}: {e}")
         return False, ValidationStatus.ERROR
     
 if __name__ == "__main__":
     
-    logging.basicConfig(level=logging.INFO, format='%(name)s - %(levelname)s - %(message)s')
+    logging.basicConfig(
+        level=logging.INFO, 
+        format='%(asctime)s - %(levelname)s - [%(filename)s:%(funcName)s] - %(message)s'
+    )
     
     test_local_dir = "./tmp"
     
