@@ -34,7 +34,7 @@ class Command(BaseCommand):
             <body>
             <h2>[File Invalidation] Weekly Waiting Requests Summary ({today})</h2>
             <ul>
-            {''.join(f"<li>Request ID {request_id}\nFiles waiting for approval: {len(items)}\nSubmitted by {items[0].request_user}\nApprove at: https://file-invalidation.app.cern.ch/api/approve/{request_id}</li>" for request_id, items in grouped.items())}
+            {''.join(f"<li>Request ID {request_id}<br>Files waiting for approval: {len(items)}<br>Submitted by {items[0].request_user}<br>Approve at: https://file-invalidation.app.cern.ch/api/approve/{request_id}</li>" for request_id, items in grouped.items())}
             </ul>
             </body>
             </html>
