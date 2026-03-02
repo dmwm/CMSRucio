@@ -5,7 +5,7 @@ from rest_framework import status, serializers
 from .models import FileInvalidationRequests
 import base64
 from django.http import HttpResponse
-from .utils import process_invalidation, get_cern_username, send_approval_alert
+from .utils import process_invalidation, get_cern_username, send_approval_alert, create_ticket_for_invalidation
 from django.views.generic import TemplateView
 from django.db.models import Count, CharField, Value, F, Case, When
 from django.db.models.functions import StrIndex, Substr
@@ -102,6 +102,7 @@ class FileInvalidationRequestsView(APIView):
                 file_record = FileInvalidationRequests.objects.create(**input_vals)
                 try:
                     send_approval_alert(request_id)
+                    create_ticket_for_invalidation(request_id)
                 except Exception as e:
                     logging.warning(f"The approval alert for {request_id} was not sent.",exc_info=e)
                 cnt += 1

@@ -10,6 +10,7 @@ import time
 from kubernetes import client, config
 from django.core.mail import send_mail
 from django.conf import settings
+from jira import JIRA
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 src_dir = os.path.dirname(current_dir)
@@ -21,6 +22,51 @@ def get_cern_username(request):
             or request.META.get("HTTP_X_FORWARDED_USER")
             or request.META.get("REMOTE_USER")
         )
+
+def create_ticket_for_invalidation(request_id):
+    jira_client = JIRA(server="https://its.cern.ch/jira/",token_auth=settings.JIRA_PAT)
+
+    files = FileInvalidationRequests.objects.filter(request_id=request_id)
+
+    request_user = files.first().request_user
+    reason = files.first().reason
+    original_issue = reason.findall(pattern=r'(CMS(?:PROD|TRANSF|DM|TZ)\-\d+)',string=reason)
+    reason = re.sub(r'(CMS(?:PROD|TRANSF|DM)\-\d+)',r'<a href="https://its.cern.ch/jira/browse/\1">\1</a>',reason)
+    count = files.count()
+    dry_run = files.first().dry_run
+    mode = files.first().mode
+    rse = files.first().rse
+    contains_raw = False
+
+    file_names_plain = []
+    for f in files:
+        if '/RAW/' in f.file_name:
+            contains_raw = True
+        file_names_plain.append(f"\t\t- {f.file_name}")
+
+    summary = f"{mode.title()} invalidation request {request_id}"
+    description = f"""
+                Request ID: {request_id} \n
+                Reason: {reason} \n
+                Mode: {mode} \n
+                RSE: {rse} \n
+                Dry run: {dry_run} \n
+                Requested by: {request_user}  \n
+                Number of files: {count} \n
+                Contains /RAW/: {contains_raw} \n
+                File names preview (up to 10 files): {''.join(f'{f.file_name}\n' for f in files[:10])} \n
+
+                For more details see: https://file-invalidation.app.cern.ch/api/query/?request_id={request_id}
+                """
+
+    new_issue = jira_client.create_issue(project='CMSDM', summary=summary,
+                              description=description, issuetype={'name': 'Task'})
+
+    jira_client.transition_issue(new_issue.key,151) #151 transition id for blocked/waiting
+    
+    if len(original_issue)>0:
+        link = jira_client.create_issue_link(type='was triggered by',inwardIssue=new_issue.key,outwardIssue=original_issue[0])
+
 
 def send_approval_alert(request_id):
     files = FileInvalidationRequests.objects.filter(request_id=request_id)
