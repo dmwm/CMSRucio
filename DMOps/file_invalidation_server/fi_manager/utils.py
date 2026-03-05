@@ -11,10 +11,17 @@ from kubernetes import client, config
 from django.core.mail import send_mail
 from django.conf import settings
 from jira import JIRA
+from enum import Enum
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 src_dir = os.path.dirname(current_dir)
 yaml_path = os.path.join(src_dir, 'controllers', 'job.yaml')
+
+class JiraStatus(Enum):
+    #Check JIRA transition ids
+    WAITING_FOR_APPROVAL = 151
+    IN_PROGRESS = 161
+    DONE = 181
 
 def get_cern_username(request):
         return (
@@ -62,11 +69,20 @@ def create_ticket_for_invalidation(request_id):
     new_issue = jira_client.create_issue(project='CMSDM', summary=summary,
                               description=description, issuetype={'name': 'Task'})
 
-    jira_client.transition_issue(new_issue.key,151) #151 transition id for blocked/waiting
+    jira_client.transition_issue(new_issue.key,JiraStatus.WAITING_FOR_APPROVAL) 
     
     if len(original_issue)>0:
         link = jira_client.create_issue_link(type='was triggered by',inwardIssue=new_issue.key,outwardIssue=original_issue[0])
 
+def update_ticket(request_id: str,new_status: JiraStatus):
+    jira_client = JIRA(server="https://its.cern.ch/jira/",token_auth=settings.JIRA_PAT)
+    try: 
+        issue = jira_client.search_issues(f'summary ~ "{request_id}"')[0]
+        jira_client.transition_issue(issue.key,new_status) 
+        return True
+    except Exception as e:
+        logging.warning(f"Jira issue corresponding to request_id {request_id} failed to be updated. {e}",exc_info=True)
+        return False
 
 def send_approval_alert(request_id):
     files = FileInvalidationRequests.objects.filter(request_id=request_id)
@@ -175,6 +191,7 @@ def process_invalidation(request_id, reason, dry_run=True,mode='global',rse=None
 
     if status=='in_progress':
         message = f'{len(sent_requests)}/{len(file_records)} files are being invalidated corresponding to request id #{request_id} and job id #{job_unique_uuid}.'
+        update_ticket(request_id=request_id,new_status=JiraStatus.IN_PROGRESS)
     else:
         message= f'File invalidation job has failed for request id #{request_id} and job id #{job_unique_uuid}'
 
