@@ -2,11 +2,12 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework import status, serializers
+from rest_framework.renderers import JSONRenderer
+from .renderers import ApprovalBrowsableAPIRenderer
 from .models import FileInvalidationRequests
 import base64
 from django.http import HttpResponse
-from .utils import process_invalidation, get_cern_username, send_approval_alert
-from django.views.generic import TemplateView
+from .utils import process_invalidation, get_cern_username, send_approval_alert, create_ticket_for_invalidation
 from django.db.models import Count, CharField, Value, F, Case, When
 from django.db.models.functions import StrIndex, Substr
 import logging
@@ -100,11 +101,14 @@ class FileInvalidationRequestsView(APIView):
             else:
                 input_vals = {'request_id':request_id,'file_name':fn,'status':'waiting_approval','mode':mode,'dry_run':dry_run,'reason':reason,'global_invalidate_last_replicas':global_invalidate_last_replicas,'request_user':user, 'rse': rse}
                 file_record = FileInvalidationRequests.objects.create(**input_vals)
-                try:
-                    send_approval_alert(request_id)
-                except Exception as e:
-                    logging.warning(f"The approval alert for {request_id} was not sent.",exc_info=e)
                 cnt += 1
+
+        if cnt>0:
+            try:
+                send_approval_alert(request_id)
+                create_ticket_for_invalidation(request_id)
+            except Exception as e:
+                logging.warning(f"The approval alert for {request_id} was not sent.",exc_info=e)
 
         logging.info(f'{cnt} of {len(file_lines)} files were created in the database with waiting_approval status.')
 
@@ -113,7 +117,7 @@ class FileInvalidationRequestsView(APIView):
         return Response({"message": response_message,
                          "actions": [
                                 {
-                                    "url": f"https://file-invalidation.app.cern.ch/api/query/?request_id={request_id}",
+                                    "url": f"https://file-invalidation.app.cern.ch/api/query/{request_id}",
                                     "description": "View request details."
                                 },
                                 {
@@ -123,9 +127,9 @@ class FileInvalidationRequestsView(APIView):
                             ]}, status=status.HTTP_201_CREATED)
 
 class FileQueryView(APIView):
-    def get(self, request, *args, **kwargs):
+    def get(self, request, request_id=None, *args, **kwargs):
         file_status = request.query_params.get("status")
-        file_request_id = request.query_params.get("request_id")
+        file_request_id = request_id or request.query_params.get("request_id")
         job_id = request.query_params.get("job_id")
         file_name_regex = request.query_params.get("file_name_regex")
         reason_regex = request.query_params.get("reason_regex")
@@ -177,6 +181,8 @@ class FileQueryView(APIView):
 
 
 class InvalidationApproval(APIView):
+
+    renderer_classes = [ApprovalBrowsableAPIRenderer, JSONRenderer]
     
     def get(self, request, request_id):
         files = FileInvalidationRequests.objects.filter(request_id=request_id)
@@ -213,7 +219,7 @@ class InvalidationApproval(APIView):
             return Response({"message": response_message,
                              "actions": [
                                 {
-                                    "url": f"https://file-invalidation.app.cern.ch/api/query/?request_id={request_id}",
+                                    "url": f"https://file-invalidation.app.cern.ch/api/query/{request_id}",
                                     "description": "View invalidation job details."
                                 }
                             ]}, status=status.HTTP_201_CREATED)

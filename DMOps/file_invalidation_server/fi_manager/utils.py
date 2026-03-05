@@ -10,10 +10,18 @@ import time
 from kubernetes import client, config
 from django.core.mail import send_mail
 from django.conf import settings
+from jira import JIRA
+from enum import Enum
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 src_dir = os.path.dirname(current_dir)
 yaml_path = os.path.join(src_dir, 'controllers', 'job.yaml')
+
+class JiraStatus(Enum):
+    #Check JIRA transition ids
+    WAITING_FOR_APPROVAL = 151
+    IN_PROGRESS = 161
+    DONE = 181
 
 def get_cern_username(request):
         return (
@@ -21,6 +29,63 @@ def get_cern_username(request):
             or request.META.get("HTTP_X_FORWARDED_USER")
             or request.META.get("REMOTE_USER")
         )
+
+def create_ticket_for_invalidation(request_id):
+    jira_client = JIRA(server="https://its.cern.ch/jira/",token_auth=settings.JIRA_PAT)
+
+    files = FileInvalidationRequests.objects.filter(request_id=request_id)
+
+    request_user = files.first().request_user
+    reason = files.first().reason
+    original_issue = re.findall(pattern=r'(CMS(?:PROD|TRANSF|DM|TZ)\-\d+)',string=reason)
+    count = files.count()
+    dry_run = files.first().dry_run
+    mode = files.first().mode
+    rse = files.first().rse
+    contains_raw = False
+
+    file_names_plain = []
+    for f in files:
+        if '/RAW/' in f.file_name:
+            contains_raw = True
+        file_names_plain.append(f"\t\t- {f.file_name}")
+
+    summary = f"{mode.title()} invalidation request {request_id}"
+    file_preview = '\n'.join(f'- {f.file_name}' for f in files[:10])
+    description = f"""
+                *Request ID:* {request_id}
+                *Reason:* {reason} 
+                *Mode:* {mode} 
+                *RSE:* {rse} 
+                *Dry run:* {dry_run} 
+                *Requested by:* [~{request_user}]
+                *Number of files:* {count} 
+                *Contains /RAW/:* {contains_raw} 
+                *File names preview (up to 10 files):* {file_preview}
+
+                _For more details see_ https://file-invalidation.app.cern.ch/api/query/{request_id}
+                """
+
+    new_issue = jira_client.create_issue(project='CMSDM', summary=summary,
+                              description=description, issuetype={'name': 'Task'})
+
+    jira_client.transition_issue(new_issue.key,JiraStatus.WAITING_FOR_APPROVAL.value) 
+    
+    if len(original_issue)>0:
+        link = jira_client.create_issue_link(type='was triggered by',inwardIssue=new_issue.key,outwardIssue=original_issue[0])
+
+def update_ticket(request_id: str,new_status: JiraStatus, **kwargs):
+    jira_client = JIRA(server="https://its.cern.ch/jira/",token_auth=settings.JIRA_PAT)
+    try: 
+        issue = jira_client.search_issues(f'summary ~ "{request_id}"')[0]
+        jira_client.transition_issue(issue.key,new_status)
+        if new_status==JiraStatus.IN_PROGRESS and 'approval_user' in kwargs:
+            approval_user = kwargs['approval_user']
+            jira_client.add_comment(issue.key, f"Approved by: [~{approval_user}] ")
+        return True
+    except Exception as e:
+        logging.warning(f"Jira issue corresponding to request_id {request_id} failed to be updated. {e}",exc_info=True)
+        return False
 
 def send_approval_alert(request_id):
     files = FileInvalidationRequests.objects.filter(request_id=request_id)
@@ -129,6 +194,8 @@ def process_invalidation(request_id, reason, dry_run=True,mode='global',rse=None
 
     if status=='in_progress':
         message = f'{len(sent_requests)}/{len(file_records)} files are being invalidated corresponding to request id #{request_id} and job id #{job_unique_uuid}.'
+        approval_user = sent_requests.first().approve_user
+        update_ticket(request_id=request_id,new_status=JiraStatus.IN_PROGRESS.value,approval_user=approval_user)
     else:
         message= f'File invalidation job has failed for request id #{request_id} and job id #{job_unique_uuid}'
 
