@@ -1,45 +1,8 @@
-# CMS Integrity Check
+## CMS Specific Check
 
-This tool is designed to verify the integrity of CMS ROOT files by leveraging the official CMSSW Framework.
-
-## Purpose
-
-The tool performs a three-tiered validation:
-
-### ROOT Level
-Checks if the file is a "Zombie" or has a corrupted internal directory structure.
-
-### EDM Metadata
-Uses edmFileUtil to verify that the CMS-specific file catalog and metadata are readable.
-
-### Event Sampling (FWLite)
-Uses a sampling algorithm to "touch" and decompress specific events to ensure the data products are physically intact.
-
-## How to Run
-
-### Automatic Environment Setup (Recommended)
-
-The bash wrapper automatically sets up your CMSSW environment and X.509 proxy.
-
-```
-$ ./run_check.sh --help
-Usage: ./run_check.sh [OPTIONS] <ROOT file or .txt list>
-
-Runs the CMS file content integrity checker after setting up CMSSW environment and proxy.
-
-Options:
-  --full-scan      Disables event sampling and checks every event in the file.
-  --strict         Returns FAILED integrity status for files with non-fatal EDM errors.
-  --help, -h       Display this help message and exit.
-
-The positional argument is either a local path, a list file (.txt), or a remote URL (davs:// or root://).
-
-Note: The underlying Python script has more options (--samples, --step-size, etc.)
-```
-
-### Advanced Manual Usage
-
-Use the Python engine directly for specific sampling needs:
+While decompression-based tool verifies a file's physical health, this tool ensures that CMS physics objects and metadata structures are consistent and compatible with the CMSSW framework. More specific, the tool:
+- Uses edmFileUtil to verify that the CMS-specific file catalog and metadata are readable.
+- Uses a sampling algorithm to decompress specific events, ensuring that data are physically intact.
 
 ```
 $ python3 check_integrity.py --help
@@ -63,23 +26,41 @@ optional arguments:
   --verbose
 ```
 
-## Understanding Results
+[[Source Code](https://github.com/eachristgr/CMSRucio/blob/bb5b0b64555eebac7645121ee37644f1a4e1fb44/DMOps/file-integrity-check/cms-integrity-check/check_integrity.py)]]
 
-The tool outputs a JSON block for each file. Key fields include:
-
-- `integrity` Either PASSED or FAILED.
-- `root_open_ok` If false, the file is physically broken at the header level.
-- `failed_checks` A list of specific stages that failed (e.g., FWLite_Sampling).
-
-### Exit Codes:
-
-- `0` Success (File is healthy).
-- `1` Failure (Corruption detected).
-- `2` Environment Error (Missing CMSSW/ROOT).
-
-Example Output:
+The following wrapper handles the activation of the required environment in lxplus.
 ```
-$ /afs/cern.ch/user/d/dmtops/public/cms_file_content_integrity_check/run_cms_file_content_integrity_check davs://ccdavcms.in2p3.fr:2880/disk/data/store/data/Run2024E/Muon0/RAW-RECO/ZMu-PromptReco-v2/000/381/384/00000/053dfc81-a3a5-4ab3-a534-2905f542f12f.root
+$ ./run_check.sh --help
+Usage: ./run_check.sh [OPTIONS] <ROOT file or .txt list>
+
+Runs the CMS file content integrity checker after setting up CMSSW environment and proxy.
+
+Options:
+  --full-scan      Disables event sampling and checks every event in the file.
+  --strict         Returns FAILED integrity status for files with non-fatal EDM errors.
+  --help, -h       Display this help message and exit.
+
+The positional argument is either a local path, a list file (.txt), or a remote URL (davs:// or root://).
+
+Note: The underlying Python script has more options (--samples, --step-size, etc.)
+```
+
+[[Source Code](https://github.com/eachristgr/CMSRucio/blob/bb5b0b64555eebac7645121ee37644f1a4e1fb44/DMOps/file-integrity-check/cms-integrity-check/run_check.sh)]
+
+**Important Note**
+
+This tool is not a complete integrity check. Because it only samples events, it might miss corruption in other parts of the file. Conversely, it might fail a healthy file if the CMSSW version you are using doesn't match the file's version.
+
+<details>
+<summary><b>Execution Example</b></summary>
+
+Command:
+```Bash
+$ ./run_check.sh davs://ccdavcms.in2p3.fr:2880/disk/data/store/data/Run2024E/Muon0/RAW-RECO/ZMu-PromptReco-v2/000/381/384/00000/053dfc81-a3a5-4ab3-a534-2905f542f12f.root
+```
+
+Expected Output:
+```bash
 Processing remote URL: davs://ccdavcms.in2p3.fr:2880/disk/data/store/data/Run2024E/Muon0/RAW-RECO/ZMu-PromptReco-v2/000/381/384/00000/053dfc81-a3a5-4ab3-a534-2905f542f12f.root
 Loading CMS environment...
 Using CMSSW release: xxx
@@ -102,4 +83,4 @@ Proxy time left: xxx
 
 Summary: 1 passed, 0 failed out of 1 files.
 ```
-
+</details>
