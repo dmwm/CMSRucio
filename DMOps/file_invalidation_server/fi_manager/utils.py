@@ -37,8 +37,7 @@ def create_ticket_for_invalidation(request_id):
 
     request_user = files.first().request_user
     reason = files.first().reason
-    original_issue = reason.findall(pattern=r'(CMS(?:PROD|TRANSF|DM|TZ)\-\d+)',string=reason)
-    reason = re.sub(r'(CMS(?:PROD|TRANSF|DM)\-\d+)',r'<a href="https://its.cern.ch/jira/browse/\1">\1</a>',reason)
+    original_issue = re.findall(pattern=r'(CMS(?:PROD|TRANSF|DM|TZ)\-\d+)',string=reason)
     count = files.count()
     dry_run = files.first().dry_run
     mode = files.first().mode
@@ -52,24 +51,25 @@ def create_ticket_for_invalidation(request_id):
         file_names_plain.append(f"\t\t- {f.file_name}")
 
     summary = f"{mode.title()} invalidation request {request_id}"
+    file_preview = '\n'.join(f'- {f.file_name}' for f in files[:10])
     description = f"""
-                Request ID: {request_id} \n
-                Reason: {reason} \n
-                Mode: {mode} \n
-                RSE: {rse} \n
-                Dry run: {dry_run} \n
-                Requested by: {request_user}  \n
-                Number of files: {count} \n
-                Contains /RAW/: {contains_raw} \n
-                File names preview (up to 10 files): {''.join(f'{f.file_name}\n' for f in files[:10])} \n
+                *Request ID:* {request_id}
+                *Reason:* {reason} 
+                *Mode:* {mode} 
+                *RSE:* {rse} 
+                *Dry run:* {dry_run} 
+                *Requested by:* {request_user}  
+                *Number of files:* {count} 
+                *Contains /RAW/:* {contains_raw} 
+                *File names preview (up to 10 files):* {file_preview}
 
-                For more details see: https://file-invalidation.app.cern.ch/api/query/?request_id={request_id}
+                _For more details see_ https://file-invalidation.app.cern.ch/api/query/{request_id}
                 """
 
     new_issue = jira_client.create_issue(project='CMSDM', summary=summary,
                               description=description, issuetype={'name': 'Task'})
 
-    jira_client.transition_issue(new_issue.key,JiraStatus.WAITING_FOR_APPROVAL) 
+    jira_client.transition_issue(new_issue.key,JiraStatus.WAITING_FOR_APPROVAL.value) 
     
     if len(original_issue)>0:
         link = jira_client.create_issue_link(type='was triggered by',inwardIssue=new_issue.key,outwardIssue=original_issue[0])
@@ -191,7 +191,7 @@ def process_invalidation(request_id, reason, dry_run=True,mode='global',rse=None
 
     if status=='in_progress':
         message = f'{len(sent_requests)}/{len(file_records)} files are being invalidated corresponding to request id #{request_id} and job id #{job_unique_uuid}.'
-        update_ticket(request_id=request_id,new_status=JiraStatus.IN_PROGRESS)
+        update_ticket(request_id=request_id,new_status=JiraStatus.IN_PROGRESS.value)
     else:
         message= f'File invalidation job has failed for request id #{request_id} and job id #{job_unique_uuid}'
 

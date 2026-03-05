@@ -114,7 +114,7 @@ class FileInvalidationRequestsView(APIView):
         return Response({"message": response_message,
                          "actions": [
                                 {
-                                    "url": f"https://file-invalidation.app.cern.ch/api/query/?request_id={request_id}",
+                                    "url": f"https://file-invalidation.app.cern.ch/api/query/{request_id}",
                                     "description": "View request details."
                                 },
                                 {
@@ -214,7 +214,7 @@ class InvalidationApproval(APIView):
             return Response({"message": response_message,
                              "actions": [
                                 {
-                                    "url": f"https://file-invalidation.app.cern.ch/api/query/?request_id={request_id}",
+                                    "url": f"https://file-invalidation.app.cern.ch/api/query/{request_id}",
                                     "description": "View invalidation job details."
                                 }
                             ]}, status=status.HTTP_201_CREATED)

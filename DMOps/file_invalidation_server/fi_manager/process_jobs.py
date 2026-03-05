@@ -124,7 +124,7 @@ def update_database(job_name, rucio_list, dbs_list, dry_run):
 
     if only_rucio_invalidated.count()+only_dbs_invalidated.count()+global_invalidated.count()>0:
         request_id = job_files.first().request_id
-        update_ticket(request_id=request_id,new_status=JiraStatus.DONE)
+        update_ticket(request_id=request_id,new_status=JiraStatus.DONE.value)
 
 def update_database_for_failed_job(job_name,logs):
     job_id = re.findall(pattern='file-invalidation-job-(\w{8})-\w',string=job_name)[0]
