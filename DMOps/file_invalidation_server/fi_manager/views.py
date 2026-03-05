@@ -124,9 +124,9 @@ class FileInvalidationRequestsView(APIView):
                             ]}, status=status.HTTP_201_CREATED)
 
 class FileQueryView(APIView):
-    def get(self, request, *args, **kwargs):
+    def get(self, request, request_id=None, *args, **kwargs):
         file_status = request.query_params.get("status")
-        file_request_id = request.query_params.get("request_id")
+        file_request_id = request_id or request.query_params.get("request_id")
         job_id = request.query_params.get("job_id")
         file_name_regex = request.query_params.get("file_name_regex")
         reason_regex = request.query_params.get("reason_regex")
