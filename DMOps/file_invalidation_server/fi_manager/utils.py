@@ -58,7 +58,7 @@ def create_ticket_for_invalidation(request_id):
                 *Mode:* {mode} 
                 *RSE:* {rse} 
                 *Dry run:* {dry_run} 
-                *Requested by:* {request_user}  
+                *Requested by:* [~{request_user}]
                 *Number of files:* {count} 
                 *Contains /RAW/:* {contains_raw} 
                 *File names preview (up to 10 files):* {file_preview}
@@ -74,11 +74,14 @@ def create_ticket_for_invalidation(request_id):
     if len(original_issue)>0:
         link = jira_client.create_issue_link(type='was triggered by',inwardIssue=new_issue.key,outwardIssue=original_issue[0])
 
-def update_ticket(request_id: str,new_status: JiraStatus):
+def update_ticket(request_id: str,new_status: JiraStatus, **kwargs):
     jira_client = JIRA(server="https://its.cern.ch/jira/",token_auth=settings.JIRA_PAT)
     try: 
         issue = jira_client.search_issues(f'summary ~ "{request_id}"')[0]
-        jira_client.transition_issue(issue.key,new_status) 
+        jira_client.transition_issue(issue.key,new_status)
+        if new_status==JiraStatus.IN_PROGRESS and 'approval_user' in kwargs:
+            approval_user = kwargs['approval_user']
+            jira_client.add_comment(issue.key, f"Approved by: [~{approval_user}] ")
         return True
     except Exception as e:
         logging.warning(f"Jira issue corresponding to request_id {request_id} failed to be updated. {e}",exc_info=True)
@@ -191,7 +194,8 @@ def process_invalidation(request_id, reason, dry_run=True,mode='global',rse=None
 
     if status=='in_progress':
         message = f'{len(sent_requests)}/{len(file_records)} files are being invalidated corresponding to request id #{request_id} and job id #{job_unique_uuid}.'
-        update_ticket(request_id=request_id,new_status=JiraStatus.IN_PROGRESS.value)
+        approval_user = sent_requests.first().approve_user
+        update_ticket(request_id=request_id,new_status=JiraStatus.IN_PROGRESS.value,approval_user=approval_user)
     else:
         message= f'File invalidation job has failed for request id #{request_id} and job id #{job_unique_uuid}'
 

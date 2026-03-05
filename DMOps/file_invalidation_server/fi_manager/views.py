@@ -100,12 +100,14 @@ class FileInvalidationRequestsView(APIView):
             else:
                 input_vals = {'request_id':request_id,'file_name':fn,'status':'waiting_approval','mode':mode,'dry_run':dry_run,'reason':reason,'global_invalidate_last_replicas':global_invalidate_last_replicas,'request_user':user, 'rse': rse}
                 file_record = FileInvalidationRequests.objects.create(**input_vals)
-                try:
-                    send_approval_alert(request_id)
-                    create_ticket_for_invalidation(request_id)
-                except Exception as e:
-                    logging.warning(f"The approval alert for {request_id} was not sent.",exc_info=e)
                 cnt += 1
+
+        if cnt>0:
+            try:
+                send_approval_alert(request_id)
+                create_ticket_for_invalidation(request_id)
+            except Exception as e:
+                logging.warning(f"The approval alert for {request_id} was not sent.",exc_info=e)
 
         logging.info(f'{cnt} of {len(file_lines)} files were created in the database with waiting_approval status.')
 

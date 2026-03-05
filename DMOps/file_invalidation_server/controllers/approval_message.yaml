@@ -33,3 +33,5 @@ spec:
                   name: django-db-host
               - secretRef:
                   name: django-db-port
+              - secretRef:
+                  name: jira-pat
