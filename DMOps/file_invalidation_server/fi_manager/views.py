@@ -2,11 +2,12 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework import status, serializers
+from rest_framework.renderers import JSONRenderer
+from .renderers import ApprovalBrowsableAPIRenderer
 from .models import FileInvalidationRequests
 import base64
 from django.http import HttpResponse
 from .utils import process_invalidation, get_cern_username, send_approval_alert, create_ticket_for_invalidation
-from django.views.generic import TemplateView
 from django.db.models import Count, CharField, Value, F, Case, When
 from django.db.models.functions import StrIndex, Substr
 import logging
@@ -180,6 +181,8 @@ class FileQueryView(APIView):
 
 
 class InvalidationApproval(APIView):
+
+    renderer_classes = [ApprovalBrowsableAPIRenderer, JSONRenderer]
     
     def get(self, request, request_id):
         files = FileInvalidationRequests.objects.filter(request_id=request_id)
