@@ -25,7 +25,5 @@ class ApprovalBrowsableAPIRenderer(BrowsableAPIRenderer):
     
     def render(self, data, accepted_media_type=None, renderer_context=None):
         html = super().render(data, accepted_media_type, renderer_context)
-        html = html.replace('>Django REST framework<', '>CMS DM File Invalidation Tool<')
-        html = html.replace('href="https://www.django-rest-framework.org/"', 'href="/"')
         html = html.replace('>POST<', '>APPROVE<')
         return html
