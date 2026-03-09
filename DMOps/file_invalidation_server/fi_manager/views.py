@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework import status, serializers
 from rest_framework.renderers import JSONRenderer
+from rest_framework.pagination import PageNumberPagination
 from .renderers import ApprovalBrowsableAPIRenderer
 from .models import FileInvalidationRequests
 import base64
@@ -127,6 +128,8 @@ class FileInvalidationRequestsView(APIView):
                             ]}, status=status.HTTP_201_CREATED)
 
 class FileQueryView(APIView):
+    pagination_class = PageNumberPagination
+
     def get(self, request, request_id=None, *args, **kwargs):
         file_status = request.query_params.get("status")
         file_request_id = request_id or request.query_params.get("request_id")
@@ -172,25 +175,33 @@ class FileQueryView(APIView):
             grouped,
             status=status.HTTP_200_OK)
             return response
-
+        else:
         
-        return Response(
-            [{"request_id": f.request_id, "file_name": f.file_name, "status": f.status,"mode":f.mode,"dry_run":f.dry_run,"reason":f.reason,"job_id":f.job_id,"logs":f.logs,"rse":f.rse,"global_invalidate_last_replicas":f.global_invalidate_last_replicas,"request_user":f.request_user,"approve_user":f.approve_user} for f in files],
-            status=status.HTTP_200_OK
-        )
+            paginator = self.pagination_class()
+            page = paginator.paginate_queryset(files, request)
+
+            if page is not None:
+                data = [{"request_id": f.request_id, "file_name": f.file_name, "status": f.status,"mode":f.mode,"dry_run":f.dry_run,"reason":f.reason,"job_id":f.job_id,"logs":f.logs,"rse":f.rse,"global_invalidate_last_replicas":f.global_invalidate_last_replicas,"request_user":f.request_user,"approve_user":f.approve_user} for f in page]
+                return paginator.get_paginated_response(data)
 
 
 class InvalidationApproval(APIView):
 
+    pagination_class = PageNumberPagination
     renderer_classes = [ApprovalBrowsableAPIRenderer, JSONRenderer]
     
     def get(self, request, request_id):
         files = FileInvalidationRequests.objects.filter(request_id=request_id)
 
-        return Response(
-            [{"request_id": f.request_id, "file_name": f.file_name, "status": f.status,"mode":f.mode,"dry_run":f.dry_run,"reason":f.reason,"job_id":f.job_id,"logs":f.logs,"request_user":f.request_user} for f in files],
-            status=status.HTTP_200_OK
-        )
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(files, request)
+
+        if page is not None:
+            data = [{"request_id": f.request_id, "file_name": f.file_name, "status": f.status, "mode": f.mode, "dry_run": f.dry_run, "reason": f.reason, "job_id": f.job_id, "logs": f.logs, "request_user": f.request_user} for f in page]
+            return paginator.get_paginated_response(data)
+
+        data = [{"request_id": f.request_id, "file_name": f.file_name, "status": f.status, "mode": f.mode, "dry_run": f.dry_run, "reason": f.reason, "job_id": f.job_id, "logs": f.logs, "request_user": f.request_user} for f in files]
+        return Response(data, status=status.HTTP_200_OK)
 
     
     def post(self, request, request_id):

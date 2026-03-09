@@ -19,6 +19,7 @@ class ApprovalBrowsableAPIRenderer(BrowsableAPIRenderer):
             <li> Verify RSE and mode are correct before approving </li>
             <li> Check the original ticket to understand why the files are being invalidated </li>
             <li> Check that there are no /RAW/ files being invalidated (unless exceptionally requested by T0)</li>
+            <li> For large requests (300+), pagination is activated so make sure you browse all results</li>
             </ul>
         """)
         return context
