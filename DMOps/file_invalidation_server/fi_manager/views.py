@@ -100,18 +100,22 @@ class FileInvalidationRequestsView(APIView):
                 elif obj.status=="waiting_approval":
                     already_serviced_files = already_serviced_files + ' Please ask DMOps to approve the invalidation.'
             else:
-                input_vals = {'request_id':request_id,'file_name':fn,'status':'waiting_approval','mode':mode,'dry_run':dry_run,'reason':reason,'global_invalidate_last_replicas':global_invalidate_last_replicas,'request_user':user, 'rse': rse}
+                input_vals = {'request_id':request_id,'file_name':fn,'status':'queued' if dry_run else 'waiting_approval','mode':mode,'dry_run':dry_run,'reason':reason,'global_invalidate_last_replicas':global_invalidate_last_replicas,'request_user':user, 'rse': rse}
                 file_record = FileInvalidationRequests.objects.create(**input_vals)
                 cnt += 1
-
+        
         if cnt>0:
-            try:
-                send_approval_alert(request_id)
-                create_ticket_for_invalidation(request_id)
-            except Exception as e:
-                logging.warning(f"The approval alert for {request_id} was not sent.",exc_info=e)
+            if dry_run:
+                logging.info(f'Processing dry_run request id {request_id}...')
+                response_message = process_invalidation(request_id, reason, dry_run=dry_run, mode=mode, rse=rse,to_process="queued",global_invalidate_last_replicas=global_invalidate_last_replicas)
+            else:
+                logging.info(f'{cnt} of {len(file_lines)} files were created in the database with waiting_approval status.')
+                try:
+                    send_approval_alert(request_id)
+                    create_ticket_for_invalidation(request_id)
+                except Exception as e:
+                    logging.warning(f"The approval alert for {request_id} was not sent.",exc_info=e)
 
-        logging.info(f'{cnt} of {len(file_lines)} files were created in the database with waiting_approval status.')
 
         response_message = raw_file_message + already_serviced_files
 
