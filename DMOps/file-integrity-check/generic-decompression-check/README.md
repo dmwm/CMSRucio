@@ -35,19 +35,18 @@ The recommended way for inducting an in-depth integrity check is by using the fo
 
 ```
 $ python3 run_check.py --help
-usage: run_check.py [-h] [--rse-expression RSE_EXPRESSION] [--scope SCOPE] [--full-scan] [--timeout TIMEOUT] [-v] lfns [lfns ...] workdir
+usage: run_check.py [-h] [--rse-expression RSE_EXPRESSION] [--full-scan] [--timeout TIMEOUT] [-v] lfns [lfns ...] workdir
 
 Check integrity of files based on their LFNs by copying them locally, validating checksums and performing content checks by decompression.
 
 positional arguments:
-  lfns                  A .txt file with a list of LFNs to check.
+  lfns                  Files to check in the format '<scope>:<lfn>' (e.g., 'cms:/store/data/...'). A .txt file with a list of LFNs in this format is also accepted. If no scope is provided, 'cms' is used as default.
   workdir               Local directory to use for copying files.
 
 optional arguments:
   -h, --help            show this help message and exit
   --rse-expression RSE_EXPRESSION
                         RSE expression to filter replicas. (default: None - check all replicas).
-  --scope SCOPE         Rucio scope of the files. (default: 'cms')
   --full-scan           Perform a full scan by reading every basket (more time-consuming). (default: False)
   --timeout TIMEOUT     Timeout in seconds for the integrity check of each file. (default: 900s)
   -v, --verbose         Increase verbosity: -v (Warning), -vv (Info), -vvv (Debug). Default is Error.

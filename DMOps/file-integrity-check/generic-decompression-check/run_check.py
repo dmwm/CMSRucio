@@ -18,7 +18,6 @@ def check_files(
     lfns: List[str],
     workdir: str,
     rse_expression: str = None,
-    scope: str = "cms",
     full_scan: bool = False,
     timeout_seconds: int = 900
 ) -> List[Dict]:
@@ -26,10 +25,10 @@ def check_files(
     Check integrity of files based on their LFNs by copying them locally, validating checksums and performing content checks by decompression.
     
     Args:
-        lfns (List[str]): List of LFNs to check.
+        lfns (List[str]): List of files in the format '<scope>:<lfn>'. Example: 'cms:/store/data/...'. 
+                          If no scope is provided, 'cms' is used as the default.
         workdir (str): Local directory to use for copying files.
         rse_expression (str, optional): RSE expression to filter replicas. (default: None - check all replicas).
-        scope (str, optional): Rucio scope of the files. (default: 'cms')
         full_scan (bool, optional): Perform a full scan by reading every basket (more time-consuming). (default: False)
         timeout_seconds (int, optional): Timeout in seconds for the integrity check of each file. (default: 900s)
     
@@ -40,9 +39,16 @@ def check_files(
     client = RucioClient()
     results = []
 
-    for lfn in lfns:
+    for lfn_with_scope in lfns:
+        # Parse scope:lfn format, default to 'cms' if no scope provided
+        if ':' in lfn_with_scope:
+            scope, lfn = lfn_with_scope.split(':', 1)
+        else:
+            scope = 'cms'
+            lfn = lfn_with_scope
+            logger.warning(f"No scope provided for '{lfn}'. Using default scope 'cms'.")
 
-        file_result = {"filename": lfn,"replicas": []}
+        file_result = {"filename": lfn_with_scope, "replicas": []}
 
         try:
             replicas = client.list_replicas(
@@ -107,10 +113,9 @@ if __name__ == "__main__":
 returns:
   A list of results for each LFN, including replica information and validation status."""
     )
-    parser.add_argument("lfns", nargs="+", help="A .txt file with a list of LFNs to check.")
+    parser.add_argument("lfns", nargs="+", help="Files to check in the format '<scope>:<lfn>' (e.g., 'cms:/store/data/...'). A .txt file with a list of LFNs in this format is also accepted. If no scope is provided, 'cms' is used as default.")
     parser.add_argument("workdir", help="Local directory to use for copying files.")
     parser.add_argument("--rse-expression", default=None, help="RSE expression to filter replicas. (default: None - check all replicas).")
-    parser.add_argument("--scope", default="cms", help="Rucio scope of the files. (default: 'cms')")
     parser.add_argument("--full-scan", action="store_true", help="Perform a full scan by reading every basket (more time-consuming). (default: False)")
     parser.add_argument("--timeout", type=int, default=900, help="Timeout in seconds for the integrity check of each file. (default: 900s)")
     parser.add_argument("-v", "--verbose", action="count", default=0, help="Increase verbosity: -v (Warning), -vv (Info), -vvv (Debug). Default is Error.")
@@ -131,7 +136,6 @@ returns:
         lfns=lfns_list,
         workdir=args.workdir,
         rse_expression=args.rse_expression,
-        scope=args.scope,
         full_scan=args.full_scan,
         timeout_seconds=args.timeout
     )
