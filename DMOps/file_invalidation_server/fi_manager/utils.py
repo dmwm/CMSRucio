@@ -19,9 +19,12 @@ yaml_path = os.path.join(src_dir, 'controllers', 'job.yaml')
 
 class JiraStatus(Enum):
     #Check JIRA transition ids
-    WAITING_FOR_APPROVAL = 151
-    IN_PROGRESS = 161
-    DONE = 181
+    UNDER_REVIEW = 11320 #Waiting for approval
+    APPROVED = 10009
+    IN_PROGRESS = 3 # In_progress
+    DONE = 10012
+    REJECTED = 10007
+    CANCELLED = 10016 # Aborted
 
 def get_cern_username(request):
         return (
@@ -66,10 +69,10 @@ def create_ticket_for_invalidation(request_id):
                 _For more details see_ https://file-invalidation.app.cern.ch/api/query/{request_id}
                 """
 
-    new_issue = jira_client.create_issue(project='CMSDM', summary=summary,
+    new_issue = jira_client.create_issue(project='CMSDMAUTO', summary=summary,
                               description=description, issuetype={'name': 'Task'})
 
-    jira_client.transition_issue(new_issue.key,JiraStatus.WAITING_FOR_APPROVAL.value) 
+    jira_client.transition_issue(new_issue.key,JiraStatus.UNDER_REVIEW.value) 
     
     if len(original_issue)>0:
         link = jira_client.create_issue_link(type='was triggered by',inwardIssue=new_issue.key,outwardIssue=original_issue[0])
@@ -79,7 +82,7 @@ def update_ticket(request_id: str,new_status: JiraStatus, **kwargs):
     try: 
         issue = jira_client.search_issues(f'summary ~ "{request_id}"')[0]
         jira_client.transition_issue(issue.key,new_status)
-        if new_status==JiraStatus.IN_PROGRESS and 'approval_user' in kwargs:
+        if new_status==JiraStatus.APPROVED and 'approval_user' in kwargs:
             approval_user = kwargs['approval_user']
             jira_client.add_comment(issue.key, f"Approved by: [~{approval_user}] ")
         return True
@@ -191,13 +194,16 @@ def process_invalidation(request_id, reason, dry_run=True,mode='global',rse=None
         sent_requests.update(status=status)
         sent_requests.update(job_id=job_unique_uuid)
 
+        approval_user = sent_requests.first().approve_user
+        update_ticket(request_id=request_id,new_status=JiraStatus.APPROVED.value,approval_user=approval_user)
+
 
     if status=='in_progress':
         message = f'{len(sent_requests)}/{len(file_records)} files are being invalidated corresponding to request id #{request_id} and job id #{job_unique_uuid}.'
-        approval_user = sent_requests.first().approve_user
-        update_ticket(request_id=request_id,new_status=JiraStatus.IN_PROGRESS.value,approval_user=approval_user)
+        update_ticket(request_id=request_id,new_status=JiraStatus.IN_PROGRESS.value) 
     else:
         message= f'File invalidation job has failed for request id #{request_id} and job id #{job_unique_uuid}'
+        update_ticket(request_id=request_id,new_status=JiraStatus.CANCELLED.value)
 
         
     return message

@@ -19,13 +19,12 @@ class ApprovalBrowsableAPIRenderer(BrowsableAPIRenderer):
             <li> Verify RSE and mode are correct before approving </li>
             <li> Check the original ticket to understand why the files are being invalidated </li>
             <li> Check that there are no /RAW/ files being invalidated (unless exceptionally requested by T0)</li>
+            <li> For large requests (300+), pagination is activated so make sure you browse all results</li>
             </ul>
         """)
         return context
     
     def render(self, data, accepted_media_type=None, renderer_context=None):
         html = super().render(data, accepted_media_type, renderer_context)
-        html = html.replace('>Django REST framework<', '>CMS DM File Invalidation Tool<')
-        html = html.replace('href="https://www.django-rest-framework.org/"', 'href="/"')
         html = html.replace('>POST<', '>APPROVE<')
         return html
