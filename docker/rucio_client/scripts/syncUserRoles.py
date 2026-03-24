@@ -5,7 +5,7 @@ from collections import defaultdict
 
 import requests
 from rucio.client.client import Client
-from rucio.common.exception import RSEAttributeNotFound, Duplicate, AccountNotFound, InvalidObject
+from rucio.common.exception import RSEAttributeNotFound, Duplicate, AccountNotFound, InvalidObject, DatabaseException
 from legacydn_converter import rfc2253dn
 
 TO_STRIP = ['_Disk', '_Tape', '_Temp', '_Disk_Temp', '_Test', '_Disk_Test', '_Tape_Test', '_Ceph']
@@ -177,6 +177,8 @@ def sync_roles_to_groups(client, users):
 
         except (KeyError, InvalidObject) as e:
             print(f"Could not make account for {site}. Perhaps the facility is not defined or the name is too long.")
+        except DatabaseException:
+            print(f"Target identities {dns} were not added to account {account} due to DatabaseException.")
 
     for group, dns in group_users.items():
         try:
@@ -195,6 +197,8 @@ def sync_roles_to_groups(client, users):
 
         except (KeyError, InvalidObject):
             print(f"Could not make account for {group}.")
+        except DatabaseException:
+            print(f"Target identities {dns} were not added to account {account} due to DatabaseException.")
 
 
 def set_identities(client, account, egroup, dn_email_map, target_identities=set()):
