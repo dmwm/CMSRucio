@@ -120,6 +120,8 @@ class FileInvalidationRequestsView(APIView):
         response_message = raw_file_message + already_serviced_files
 
         return Response({"message": response_message,
+                         "request_id": f"{request_id}",
+                         "num_files": f"{cnt}",
                          "actions": [
                                 {
                                     "url": f"https://file-invalidation.app.cern.ch/api/query/{request_id}",
@@ -129,7 +131,7 @@ class FileInvalidationRequestsView(APIView):
                                     "url": f"https://file-invalidation.app.cern.ch/api/approve/{request_id}",
                                     "description": "Ask a data management operator to approve the invalidation request."
                                 }
-                            ]}, status=status.HTTP_201_CREATED)
+                            ]}, status=status.HTTP_200_OK)
 
 class FileQueryView(APIView):
     pagination_class = PageNumberPagination
