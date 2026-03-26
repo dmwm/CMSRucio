@@ -125,7 +125,7 @@ DATABASES = {
         'HOST': config('DB_HOST', default='localhost'),
         'PORT': config('DB_PORT', default='5432', cast=int),
         'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'; SET SESSION sort_buffer_size = 256*1024*1024"
+            'init_command': f"SET sql_mode='STRICT_TRANS_TABLES', sort_buffer_size = {5*1024*1024}"#5*1024*1024
         }
     }
 }
