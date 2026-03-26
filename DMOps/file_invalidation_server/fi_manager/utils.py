@@ -80,14 +80,18 @@ def create_ticket_for_invalidation(request_id):
 def update_ticket(request_id: str,new_status: JiraStatus, **kwargs):
     jira_client = JIRA(server="https://its.cern.ch/jira/",token_auth=settings.JIRA_PAT)
     try: 
-        issue = jira_client.search_issues(f'summary ~ "{request_id}"')[0]
-        jira_client.transition_issue(issue.key,new_status)
-        if new_status==JiraStatus.APPROVED and 'approval_user' in kwargs:
-            approval_user = kwargs['approval_user']
-            jira_client.add_comment(issue.key, f"Approved by: [~{approval_user}] ")
-        return True
+        issues = jira_client.search_issues(f'summary ~ "{request_id}"')
+        if len(issues)>0:
+            issue = jira_client.search_issues(f'summary ~ "{request_id}"')[0]
+            jira_client.transition_issue(issue.key,new_status)
+            if new_status==JiraStatus.APPROVED and 'approval_user' in kwargs:
+                approval_user = kwargs['approval_user']
+                jira_client.add_comment(issue.key, f"Approved by: [~{approval_user}] ")
+            return True
+        else:
+            return False
     except Exception as e:
-        logging.warning(f"Jira issue corresponding to request_id {request_id} failed to be updated. {e}",exc_info=True)
+        logging.warning(f"Jira issue corresponding to request_id {request_id} failed to be updated: {e}",exc_info=True)
         return False
 
 def send_approval_alert(request_id):
