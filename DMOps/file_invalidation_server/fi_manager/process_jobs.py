@@ -90,6 +90,9 @@ def parse_job_logs(logs: str):
 
         dbs_invalidated_files = re.findall(pattern='(?:Would invalidate file on DBS:) (\/[\w\/\-]+.root)\s',
                                                 string=logs)
+        
+        dbs_invalidated_dataset = re.findall(pattern='(?:Would invalidate dataset on DBS:) (\/[\w\/\-]+.root)\s',
+                                                string=logs)
     else:
         rucio_invalidated_files = re.findall(pattern='(?:Declared file) (\/[\w\/\-]+.root) as bad at',
                                                 string=logs)
