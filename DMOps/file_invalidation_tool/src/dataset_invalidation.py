@@ -43,7 +43,10 @@ def invalidate_datasets(filename,rse, mode):
 
         # Files to invalidate on DBS
         df_dataset_files = pd.DataFrame(list(rucio_client.bulk_list_files(dict_delete)))
-        df_dataset_files[['name']].rename(columns={'name':'FILENAME'}).drop_duplicates().to_csv('/input/dbs_files_inv.txt',index=False, header = False)
+        if not df_dataset_files.empty:
+            df_dataset_files[['name']].rename(columns={'name':'FILENAME'}).drop_duplicates().to_csv('/input/dbs_files_inv.txt',index=False, header = False)
+        else:
+            pd.DataFrame(columns=['FILENAME']).to_csv('/input/dbs_files_inv.txt', index=False, header=True)
 
         #Replicas to declare as bad
         file_list = [{'scope':'cms','name':name} for name in df_dataset_files['name']]
@@ -55,7 +58,11 @@ def invalidate_datasets(filename,rse, mode):
             df_replicas = df_replicas[df_replicas.rses.str.contains(rse)]
             df_replicas.loc[:,'rses'] = rse
 
-        df_replicas[['name','rses']].rename(columns={'name':'FILENAME','rses':'RSES'}).drop_duplicates().to_csv('/input/rucio_replicas_inv.csv',index=False)
+        if not df_replicas.empty:
+            df_replicas[['name','rses']].rename(columns={'name':'FILENAME','rses':'RSES'}).drop_duplicates().to_csv('/input/rucio_replicas_inv.csv',index=False)
+        else:
+            pd.DataFrame(columns=['FILENAME','RSES']).drop_duplicates().to_csv('/input/rucio_replicas_inv.csv',index=False)
+
 
         #Rules to erase
         #RSE is exported in case it's tape and require purge_replicas
