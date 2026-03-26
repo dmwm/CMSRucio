@@ -221,6 +221,11 @@ def create_job_from_yaml(filename,reason,filepath,job_id,dry_run,mode,rse,global
         arg_list = ["global","--reason", "$(REASON)", "--rucio-mode"]
     elif mode == 'local':
         arg_list = ["site-invalidation","--reason", "$(REASON)","--rse",f"{rse}","--rucio-mode"]
+    elif mode == 'dbs-only':
+        arg_list = ["only-dbs","--reason", "$(REASON)","--rucio-mode"]
+    elif mode == 'rucio-only':
+        arg_list = ["only-rucio","--reason", "$(REASON)","--rucio-mode"]
+
 
     if dry_run:
         arg_list.append("--dry-run")
