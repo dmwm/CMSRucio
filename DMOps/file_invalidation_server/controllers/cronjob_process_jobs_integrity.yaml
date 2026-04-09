@@ -1,0 +1,24 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: integrity-jobs-log-processor
+spec:
+  schedule: "*/5 * * * *"  # every 5 minutes, same as existing cronjob
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: integrity-log-processor
+              image: registry.paas.cern.ch/file-invalidation-tool/file-invalidation-tool:latest
+              command: ["python3", "file_integrity_checker/process_jobs.py"]
+              volumeMounts:
+                # matches PVC_MOUNT_PATH_HOST in tasks.py
+                - name: integrity-input-file
+                  mountPath: "/shared-data-integrity"
+          restartPolicy: Never
+          serviceAccountName: job-reader
+          volumes:
+            - name: integrity-input-file
+              persistentVolumeClaim:
+                claimName: integrity-input-file-pvc
