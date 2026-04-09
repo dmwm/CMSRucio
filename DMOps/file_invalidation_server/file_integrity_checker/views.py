@@ -89,7 +89,9 @@ class FileIntegrityQueryView(APIView):
     def get(self, request):
         request_id = request.query_params.get('request_id')
         query_status = request.query_params.get('status')
-
+        # Default True — replicas included unless explicitly excluded
+        include_replicas = request.query_params.get('include_replicas', 'true').lower() != 'false'
+        
         # Query by request_id — return full detail with replicas
         if request_id:
             try:
@@ -102,30 +104,32 @@ class FileIntegrityQueryView(APIView):
                     status=status.HTTP_404_NOT_FOUND
                 )
 
-            replicas = integrity_request.replicas.all()
-            return Response(
-                {
-                    "request_id":     str(integrity_request.request_id),
-                    "requested_by":   integrity_request.requested_by,
-                    "rse_expression": integrity_request.rse_expression,
-                    "full_scan":      integrity_request.full_scan,
-                    "status":         integrity_request.status,
-                    "job_id":         integrity_request.job_id,
-                    "logs":           integrity_request.logs,
-                    "created_at":     integrity_request.created_at,
-                    "updated_at":     integrity_request.updated_at,
-                    "replicas": [
-                        {
-                            "scope":  r.scope,
-                            "lfn":    r.lfn,
-                            "rse":    r.rse,
-                            "status": r.status,
-                        }
-                        for r in replicas
-                    ]
-                },
-                status=status.HTTP_200_OK
-            )
+            response_data = {
+                "request_id":     str(integrity_request.request_id),
+                "requested_by":   integrity_request.requested_by,
+                "rse_expression": integrity_request.rse_expression,
+                "full_scan":      integrity_request.full_scan,
+                "status":         integrity_request.status,
+                "job_id":         integrity_request.job_id,
+                "logs":           integrity_request.logs,
+                "created_at":     integrity_request.created_at,
+                "updated_at":     integrity_request.updated_at,
+                "replica_count":  integrity_request.replicas.count(),
+            }
+
+            if include_replicas:
+                response_data["replicas"] = [
+                    {
+                        "scope":  r.scope,
+                        "lfn":    r.lfn,
+                        "rse":    r.rse,
+                        "pfn":    r.pfn,
+                        "status": r.status,
+                    }
+                    for r in integrity_request.replicas.all()
+                ]
+
+            return Response(response_data, status=status.HTTP_200_OK)
 
         # Query by status — return list of matching requests (no replicas)
         if query_status:
