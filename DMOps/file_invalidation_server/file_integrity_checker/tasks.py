@@ -32,6 +32,8 @@ JOB_WORKDIR = "/tmp"
 # Kubernetes namespace where jobs are created
 NAMESPACE = "file-invalidation-tool"
 
+JOB_LOG_VERBOSITY = 2  # 1=Warning, 2=Info, 3=Debug
+
 # ---------------------------------------------------------------------------
 
 
@@ -135,6 +137,9 @@ def trigger_job(integrity_request):
 
     if integrity_request.full_scan:
         args.append("--full-scan")
+        
+    if JOB_LOG_VERBOSITY > 0:
+        args.append("-" + "v" * JOB_LOG_VERBOSITY)
 
     # Load yaml template and patch name and args
     with open(yaml_path) as f:

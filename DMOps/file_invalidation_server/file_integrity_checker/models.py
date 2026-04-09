@@ -36,6 +36,7 @@ class FileReplica(models.Model):
     )
     scope  = models.CharField(max_length=50)
     lfn    = models.CharField(max_length=512)
+    pfn    = models.CharField(max_length=1024, blank=True, null=True)
     rse    = models.CharField(max_length=255, blank=True, null=True)
     status = models.CharField(max_length=20)
 
