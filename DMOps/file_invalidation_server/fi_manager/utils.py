@@ -20,10 +20,10 @@ yaml_path = os.path.join(src_dir, 'controllers', 'job.yaml')
 class JiraStatus(Enum):
     #Check JIRA transition ids
     UNDER_REVIEW = 151 #Waiting for approval
-    APPROVED = 10009
+    APPROVED = 31
     IN_PROGRESS = 3 # In_progress
     DONE = 10012
-    REJECTED = 10007
+    REJECTED = 131
     CANCELLED = 10016 # Aborted
 
 def get_cern_username(request):
