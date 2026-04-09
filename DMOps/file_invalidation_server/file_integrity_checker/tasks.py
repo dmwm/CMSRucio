@@ -17,14 +17,14 @@ MAX_LFNS_PER_REQUEST = decouple_config('FIC_MAX_LFNS_PER_REQUEST', default=20, c
 # Resolved path to the job yaml template, relative to this file
 current_dir = os.path.dirname(os.path.abspath(__file__))
 src_dir     = os.path.dirname(current_dir)
-yaml_path   = os.path.join(src_dir, 'controllers', 'job_file_integrity_check.yaml')
+yaml_path   = os.path.join(src_dir, 'controllers', 'job_integrity.yaml')
 
 # Where the Django pod mounts the integrity PVC
 # Must match the Django deployment yaml volumeMount for integrity-input-file-pvc
 PVC_MOUNT_PATH_HOST = decouple_config('FIC_PVC_MOUNT_PATH_HOST', default='/shared-data-integrity')
 
 # Where the job container mounts the same PVC
-# Must match mountPath of integrity-input-file in job_file_integrity_check.yaml
+# Must match mountPath of integrity-input-file in job_integrity.yaml
 PVC_MOUNT_PATH_CONTAINER = decouple_config('FIC_PVC_MOUNT_PATH_CONTAINER', default='/input')
 
 # Workdir passed to run_check.py — writable directory inside the job container
