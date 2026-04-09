@@ -239,7 +239,7 @@ class InvalidationApproval(APIView):
                                     "url": f"https://file-invalidation.app.cern.ch/api/query/{request_id}",
                                     "description": "View invalidation job details."
                                 }
-                            ]}, status=status.HTTP_201_CREATED)
+                            ]}, status=status.HTTP_200_OK)
 
         except Exception as e:
             return Response({"message":f"None of the files could be invalidated - {str(e)}"})

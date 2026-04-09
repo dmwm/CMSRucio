@@ -21,9 +21,10 @@ class JiraStatus(Enum):
     #Check JIRA transition ids
     UNDER_REVIEW = 151 #Waiting for approval
     APPROVED = 31
-    IN_PROGRESS = 3 # In_progress
+    IN_PROGRESS = 161 # In_progress
     DONE = 10012
     REJECTED = 131
+    FAILED = 181
     CANCELLED = 10016 # Aborted
 
 def get_cern_username(request):
@@ -83,6 +84,7 @@ def update_ticket(request_id: str,new_status: JiraStatus, **kwargs):
         issues = jira_client.search_issues(f'summary ~ "{request_id}"')
         if len(issues)>0:
             issue = jira_client.search_issues(f'summary ~ "{request_id}"')[0]
+            logging.info(f"Transitioning issue {issue} to Jira Status {new_status}. kwargs: {kwargs}")
             jira_client.transition_issue(issue.key,new_status)
             if new_status==JiraStatus.APPROVED and 'approval_user' in kwargs:
                 approval_user = kwargs['approval_user']
@@ -207,7 +209,7 @@ def process_invalidation(request_id, reason, dry_run=True,mode='global',rse=None
         update_ticket(request_id=request_id,new_status=JiraStatus.IN_PROGRESS.value) 
     else:
         message= f'File invalidation job has failed for request id #{request_id} and job id #{job_unique_uuid}'
-        update_ticket(request_id=request_id,new_status=JiraStatus.CANCELLED.value)
+        update_ticket(request_id=request_id,new_status=JiraStatus.FAILED.value)
 
         
     return message
