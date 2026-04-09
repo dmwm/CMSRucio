@@ -84,6 +84,8 @@ class FileIntegrityQueryView(APIView):
     GET ?request_id=<uuid>  — returns one request with all its replicas
     GET ?status=<status>    — returns all requests with that status
     GET (no params)         — returns all requests (summary, no replicas)
+    Optional query parameter:
+    GET ?request_id=<uuid>&include_replicas=false — returns request details without replica list
     """
 
     def get(self, request):
