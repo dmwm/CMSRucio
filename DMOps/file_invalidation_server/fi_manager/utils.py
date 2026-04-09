@@ -86,7 +86,7 @@ def update_ticket(request_id: str,new_status: JiraStatus, **kwargs):
             issue = jira_client.search_issues(f'summary ~ "{request_id}"')[0]
             logging.info(f"Transitioning issue {issue} to Jira Status {new_status}. kwargs: {kwargs}")
             jira_client.transition_issue(issue.key,new_status)
-            if new_status==JiraStatus.APPROVED and 'approval_user' in kwargs:
+            if new_status==JiraStatus.APPROVED.value and 'approval_user' in kwargs:
                 approval_user = kwargs['approval_user']
                 jira_client.add_comment(issue.key, f"Approved by: [~{approval_user}] ")
             return True
