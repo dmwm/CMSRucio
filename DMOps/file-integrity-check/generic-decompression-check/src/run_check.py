@@ -1,5 +1,6 @@
 
 import os
+import json
 import logging
 import argparse
 from typing import List, Dict
@@ -139,4 +140,4 @@ returns:
         full_scan=args.full_scan,
         timeout_seconds=args.timeout
     )
-    print(results)
+    print(json.dumps(results))
