@@ -22,10 +22,10 @@ class JiraStatus(Enum):
     UNDER_REVIEW = 151 #Waiting for approval
     APPROVED = 31
     IN_PROGRESS = 161 # In_progress
-    DONE = 10012
+    DONE = 171
     REJECTED = 131
     FAILED = 181
-    CANCELLED = 10016 # Aborted
+    CANCELLED = 111 # Aborted
 
 def get_cern_username(request):
         return (
