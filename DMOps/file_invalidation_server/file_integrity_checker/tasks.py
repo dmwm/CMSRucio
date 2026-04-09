@@ -2,12 +2,13 @@ import os
 import uuid
 import yaml
 import logging
-from kubernetes import client, config
+from decouple import config as decouple_config
+from kubernetes import client, config as k8s_config
 from .models import FileIntegrityRequest, FileReplica
 
 logger = logging.getLogger(__name__)
 
-MAX_LFNS_PER_REQUEST = 20
+MAX_LFNS_PER_REQUEST = decouple_config('FIC_MAX_LFNS_PER_REQUEST', default=20, cast=int)
 
 # ---------------------------------------------------------------------------
 # Path constants — change these if mount paths or filenames change
@@ -20,19 +21,20 @@ yaml_path   = os.path.join(src_dir, 'controllers', 'job_file_integrity_check.yam
 
 # Where the Django pod mounts the integrity PVC
 # Must match the Django deployment yaml volumeMount for integrity-input-file-pvc
-PVC_MOUNT_PATH_HOST = "/shared-data-integrity"
+PVC_MOUNT_PATH_HOST = decouple_config('FIC_PVC_MOUNT_PATH_HOST', default='/shared-data-integrity')
 
 # Where the job container mounts the same PVC
 # Must match mountPath of integrity-input-file in job_file_integrity_check.yaml
-PVC_MOUNT_PATH_CONTAINER = "/input"
+PVC_MOUNT_PATH_CONTAINER = decouple_config('FIC_PVC_MOUNT_PATH_CONTAINER', default='/input')
 
 # Workdir passed to run_check.py — writable directory inside the job container
-JOB_WORKDIR = "/tmp"
+JOB_WORKDIR = decouple_config('FIC_JOB_WORKDIR', default='/tmp')
 
 # Kubernetes namespace where jobs are created
-NAMESPACE = "file-invalidation-tool"
+NAMESPACE = decouple_config('FIC_NAMESPACE', default='file-invalidation-tool')
 
-JOB_LOG_VERBOSITY = 2  # 1=Warning, 2=Info, 3=Debug
+# Job log verbosity (0=warning, 1=info, 2=debug) passed as -v flags to run_check.py
+JOB_LOG_VERBOSITY = decouple_config('FIC_JOB_LOG_VERBOSITY', default=2, cast=int)
 
 # ---------------------------------------------------------------------------
 
@@ -151,8 +153,8 @@ def trigger_job(integrity_request):
     # Submit to Kubernetes
     try:
         try:
-            config.load_incluster_config()
-        except config.ConfigException:
+            k8s_config.load_incluster_config()
+        except k8s_config.ConfigException:
             raise Exception(
                 "Could not load in-cluster Kubernetes config. "
                 "Job submission only works inside the OKD cluster."
