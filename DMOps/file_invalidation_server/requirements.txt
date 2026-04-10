@@ -45,3 +45,4 @@ tomli==2.2.1
 typing_extensions==4.8.0
 urllib3==2.6.3
 websocket-client==1.8.0
+cryptography>=41.0.0
