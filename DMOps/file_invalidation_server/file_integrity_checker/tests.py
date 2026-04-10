@@ -1,8 +1,11 @@
 import json
+import uuid
 from unittest.mock import patch
-from django.test import TestCase
+from django.test import TestCase, Client
+from django.urls import reverse
 from .models import FileIntegrityRequest, FileReplica
 from .tasks import process_integrity_check, split_scope, FileIntegrityRequest
+from .views import derive_file_status, build_request_summary, _format_lfns_per_rse
 from file_integrity_checker.process_jobs import parse_tool_output, update_replicas
 
 
@@ -289,3 +292,187 @@ class UpdateReplicasTest(TestCase):
             replica.pfn,
             'davs://cmsdcadisk.fnal.gov:2880/file1.root'
         )
+
+
+class DeriveFileStatusTest(TestCase):
+
+    def test_all_corrupted(self):
+        self.assertEqual(
+            derive_file_status(['CORRUPTED', 'CORRUPTED']),
+            'FULLY_CORRUPTED'
+        )
+
+    def test_some_corrupted(self):
+        self.assertEqual(
+            derive_file_status(['CORRUPTED', 'OK']),
+            'PARTIALLY_CORRUPTED'
+        )
+
+    def test_all_ok(self):
+        self.assertEqual(
+            derive_file_status(['OK', 'OK']),
+            'FULLY_OK'
+        )
+
+    def test_some_ok(self):
+        self.assertEqual(
+            derive_file_status(['OK', 'ERROR']),
+            'OK'
+        )
+
+    def test_pending(self):
+        self.assertEqual(
+            derive_file_status(['pending', 'pending']),
+            'PENDING'
+        )
+
+    def test_all_error(self):
+        self.assertEqual(
+            derive_file_status(['ERROR', 'ERROR']),
+            'ERROR'
+        )
+
+    def test_empty(self):
+        self.assertEqual(derive_file_status([]), 'UNKNOWN')
+
+
+class FormatLfnsPerRseTest(TestCase):
+
+    def test_groups_by_rse(self):
+        # Build minimal replica-like objects
+        class FakeReplica:
+            def __init__(self, lfn, rse):
+                self.lfn = lfn
+                self.rse = rse
+
+        replicas = [
+            FakeReplica('/store/file1.root', 'T1_US_FNAL_Disk'),
+            FakeReplica('/store/file2.root', 'T1_US_FNAL_Disk'),
+            FakeReplica('/store/file1.root', 'T1_UK_RAL_Disk'),
+        ]
+        output = _format_lfns_per_rse(replicas)
+        self.assertIn('T1_US_FNAL_Disk', output)
+        self.assertIn('T1_UK_RAL_Disk', output)
+        # RSEs are separated by blank line
+        self.assertIn('\n\n', output)
+
+    def test_no_duplicate_lfns_per_rse(self):
+        class FakeReplica:
+            def __init__(self, lfn, rse):
+                self.lfn = lfn
+                self.rse = rse
+
+        # Same LFN appears twice for same RSE — should only appear once
+        replicas = [
+            FakeReplica('/store/file1.root', 'T1_US_FNAL_Disk'),
+            FakeReplica('/store/file1.root', 'T1_US_FNAL_Disk'),
+        ]
+        output = _format_lfns_per_rse(replicas)
+        self.assertEqual(output.count('/store/file1.root'), 1)
+
+
+class ViewEndpointTest(TestCase):
+
+    def setUp(self):
+        self.client = Client(HTTP_ACCEPT='application/json')
+        self.request = FileIntegrityRequest.objects.create(
+            requested_by='testuser',
+            status=FileIntegrityRequest.Status.COMPLETED,
+            job_id='aabb1122'
+        )
+        FileReplica.objects.create(
+            request=self.request, scope='cms',
+            lfn='/store/data/file1.root',
+            rse='T1_US_FNAL_Disk', status='OK'
+        )
+        FileReplica.objects.create(
+            request=self.request, scope='cms',
+            lfn='/store/data/file1.root',
+            rse='T1_UK_RAL_Disk', status='CORRUPTED'
+        )
+        FileReplica.objects.create(
+            request=self.request, scope='cms',
+            lfn='/store/data/file2.root',
+            rse='T1_US_FNAL_Disk', status='CORRUPTED'
+        )
+
+    def test_query_list_returns_200(self):
+        r = self.client.get('/api/integrity/query/')
+        self.assertEqual(r.status_code, 200)
+
+    def test_query_detail_returns_200(self):
+        r = self.client.get(
+            f'/api/integrity/query/?request_id={self.request.request_id}'
+        )
+        self.assertEqual(r.status_code, 200)
+
+    def test_query_detail_missing_returns_404(self):
+        r = self.client.get(
+            f'/api/integrity/query/?request_id={uuid.uuid4()}'
+        )
+        self.assertEqual(r.status_code, 404)
+
+    def test_files_requires_request_id(self):
+        r = self.client.get('/api/integrity/files/')
+        self.assertEqual(r.status_code, 400)
+
+    def test_files_returns_grouped_by_lfn(self):
+        r = self.client.get(
+            f'/api/integrity/files/?request_id={self.request.request_id}'
+        )
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertEqual(len(data), 2)  # 2 distinct LFNs
+
+    def test_files_file_status_filter(self):
+        r = self.client.get(
+            f'/api/integrity/files/?request_id={self.request.request_id}'
+            f'&file_status=PARTIALLY_CORRUPTED'
+        )
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        # file1 has one OK and one CORRUPTED → PARTIALLY_CORRUPTED
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]['lfn'], '/store/data/file1.root')
+
+    def test_files_output_lfns_is_plain_text(self):
+        r = self.client.get(
+            f'/api/integrity/files/?request_id={self.request.request_id}'
+            f'&output=lfns'
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertIn('text/plain', r['Content-Type'])
+        lines = r.content.decode().strip().splitlines()
+        self.assertEqual(len(lines), 2)
+
+    def test_replicas_requires_request_id(self):
+        r = self.client.get('/api/integrity/replicas/')
+        self.assertEqual(r.status_code, 400)
+
+    def test_replicas_status_filter(self):
+        r = self.client.get(
+            f'/api/integrity/replicas/?request_id={self.request.request_id}'
+            f'&replica_status=CORRUPTED'
+        )
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertEqual(len(data), 2)
+        self.assertTrue(all(rep['status'] == 'CORRUPTED' for rep in data))
+
+    def test_replicas_lfn_filter(self):
+        r = self.client.get(
+            f'/api/integrity/replicas/?request_id={self.request.request_id}'
+            f'&lfn=/store/data/file1.root'
+        )
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertEqual(len(data), 2)
+
+    def test_replicas_output_lfns_per_rse_is_plain_text(self):
+        r = self.client.get(
+            f'/api/integrity/replicas/?request_id={self.request.request_id}'
+            f'&output=lfns_per_rse'
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertIn('text/plain', r['Content-Type'])
+        self.assertIn('T1_US_FNAL_Disk', r.content.decode())
