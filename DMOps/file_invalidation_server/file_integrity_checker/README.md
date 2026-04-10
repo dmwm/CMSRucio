@@ -299,6 +299,9 @@ All variables use the `FIC_` prefix (File Integrity Checker). All have sensible 
 The server uses MySQL in production but SQLite locally. Add `USE_SQLITE=true` to your `.env` and patch the `DATABASES` block in `../file_invalidation_server/settings.py`:
 
 ```python
+# Replace 'JIRA_PAT = config('JIRA_PAT')' with:
+JIRA_PAT = config('JIRA_PAT', default='')
+
 # Replace the DATABASES block with:
 if config('USE_SQLITE', default='false') == 'true':
     DATABASES = {
