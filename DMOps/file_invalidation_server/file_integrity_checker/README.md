@@ -131,16 +131,20 @@ Submit a new file integrity check request.
 ```json
 {
     "message": "2 LFN(s) submitted for integrity check. Job ID: abc12345.",
-    "request_id": "9f11159f-b0cf-4722-8c95-fd3d42e665c6",
+    "request_id": "...",
     "job_id": "abc12345",
     "status": "IN_PROGRESS",
-    "query_url": "/api/integrity/query/?request_id=9f11159f-b0cf-4722-8c95-fd3d42e665c6"
+    "links": {
+        "detail":   "https://file-invalidation.app.cern.ch/api/integrity/query/requests/?request_id=...",
+        "files":    "https://file-invalidation.app.cern.ch/api/integrity/query/files/?request_id=...",
+        "replicas": "https://file-invalidation.app.cern.ch/api/integrity/query/replicas/?request_id=..."
+    }
 }
 ```
 
 ---
 
-### GET `/api/integrity/query/`
+### GET `/api/integrity/query/requests/`
 
 Query requests.
 
@@ -171,6 +175,13 @@ Query requests.
     "requested_by": "username_c",
     "status": "COMPLETED",
     "job_id": "abc12345",
+    "created_at": "2026-04-10T20:06:38.131276Z",
+    "updated_at": "2026-04-11T21:00:03.470805Z",
+    "links": {
+        "details":   "https://file-invalidation.app.cern.ch/api/integrity/query/requests/?request_id=...",
+        "files":    "https://file-invalidation.app.cern.ch/api/integrity/query/files/?request_id=...",
+        "replicas": "https://file-invalidation.app.cern.ch/api/integrity/query/replicas/?request_id=..."
+    }
     "summary": {
         "lfn_count": 2,
         "replica_count": 5,
@@ -181,8 +192,8 @@ Query requests.
     },
     "files": [
         {
-            "lfn": "/store/data/Run2024/file1.root",
             "scope": "cms",
+            "lfn": "/store/data/Run2024/file1.root",
             "file_status": "PARTIALLY_CORRUPTED",
             "summary": {"replica_count": 3, "OK": 2, "CORRUPTED": 1, "ERROR": 0, "pending": 0},
             "replicas": [
@@ -196,7 +207,7 @@ Query requests.
 
 ---
 
-### GET `/api/integrity/files/`
+### GET `/api/integrity/query/files/`
 
 Query files (LFNs) within a request. `request_id` always required.
 
@@ -222,9 +233,9 @@ Query files (LFNs) within a request. `request_id` always required.
 
 **Examples:**
 ```
-GET /api/integrity/files/?request_id=<uuid>
-GET /api/integrity/files/?request_id=<uuid>&file_status=FULLY_CORRUPTED
-GET /api/integrity/files/?request_id=<uuid>&file_status=FULLY_CORRUPTED&output=lfns
+GET /api/integrity/query/files/?request_id=<uuid>
+GET /api/integrity/query/files/?request_id=<uuid>&file_status=FULLY_CORRUPTED
+GET /api/integrity/query/files/?request_id=<uuid>&file_status=FULLY_CORRUPTED&output=lfns
 ```
 
 **Plain text output (`output=lfns`):**
@@ -235,7 +246,7 @@ GET /api/integrity/files/?request_id=<uuid>&file_status=FULLY_CORRUPTED&output=l
 
 ---
 
-### GET `/api/integrity/replicas/`
+### GET `/api/integrity/query/replicas/`
 
 Query individual replicas within a request. `request_id` always required.
 
@@ -252,10 +263,10 @@ The `output=lfns_per_rse` parameter works with any combination of filters.
 
 **Examples:**
 ```
-GET /api/integrity/replicas/?request_id=<uuid>
-GET /api/integrity/replicas/?request_id=<uuid>&replica_status=CORRUPTED
-GET /api/integrity/replicas/?request_id=<uuid>&lfn=/store/data/Run2024/file1.root
-GET /api/integrity/replicas/?request_id=<uuid>&replica_status=CORRUPTED&output=lfns_per_rse
+GET /api/integrity/query/replicas/?request_id=<uuid>
+GET /api/integrity/query/replicas/?request_id=<uuid>&replica_status=CORRUPTED
+GET /api/integrity/query/replicas/?request_id=<uuid>&lfn=/store/data/Run2024/file1.root
+GET /api/integrity/query/replicas/?request_id=<uuid>&replica_status=CORRUPTED&output=lfns_per_rse
 ```
 
 **Plain text output (`output=lfns_per_rse`):**

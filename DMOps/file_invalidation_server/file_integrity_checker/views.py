@@ -114,8 +114,8 @@ def build_files_view(integrity_request):
             status_counts[s] += 1
 
         result.append({
-            'lfn':         lfn,
             'scope':       data['scope'],
+            'lfn':         lfn,
             'file_status': derive_file_status(replica_statuses),
             'summary': {
                 'replica_count': len(data['replicas']),
@@ -145,11 +145,30 @@ def get_request_or_error(request_id):
         )
 
 
+def build_links(request_obj, base_request):
+    """
+    Builds full absolute URLs for the three query views for a given request.
+    base_request is the Django HTTP request object, used to build absolute URIs.
+    """
+    rid = str(request_obj.request_id)
+    return {
+        "details":   base_request.build_absolute_uri(
+            f"/api/integrity/query/requests/?request_id={rid}"
+        ),
+        "files":    base_request.build_absolute_uri(
+            f"/api/integrity/query/files/?request_id={rid}"
+        ),
+        "replicas": base_request.build_absolute_uri(
+            f"/api/integrity/query/replicas/?request_id={rid}"
+        ),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Submit view
 # ---------------------------------------------------------------------------
 
-class FileIntegrityRequestView(APIView):
+class FileIntegritySubmitRequestView(APIView):
     """
     Submit a new file integrity check request.
 
@@ -223,10 +242,7 @@ class FileIntegrityRequestView(APIView):
                 'request_id': str(integrity_request.request_id),
                 'job_id':     job_id,
                 'status':     job_status,
-                'query_url':  (
-                    f"/api/integrity/query/"
-                    f"?request_id={integrity_request.request_id}"
-                ),
+                'links':      build_links(integrity_request, request),
             },
             status=status.HTTP_201_CREATED
         )
@@ -236,13 +252,13 @@ class FileIntegrityRequestView(APIView):
 # Query view — requests
 # ---------------------------------------------------------------------------
 
-class FileIntegrityQueryView(APIView):
+class FileIntegrityQueryRequestView(APIView):
     """
     Query file integrity check requests.
 
     --- Detail (always requires request_id) ---
 
-    GET /api/integrity/query/?request_id=<uuid>
+    GET /api/integrity/query/requests/?request_id=<uuid>
         Returns full detail for one request with files grouped by LFN.
         Each file shows its derived file_status and per-replica breakdown.
 
@@ -258,17 +274,17 @@ class FileIntegrityQueryView(APIView):
 
     --- List (no request_id) ---
 
-    GET /api/integrity/query/
+    GET /api/integrity/query/requests/
         Returns all requests with basic fields.
 
-    GET /api/integrity/query/?status=<status>
+    GET /api/integrity/query/requests/?status=<status>
         Filters requests by status.
         Valid values: SUBMITTED, IN_PROGRESS, COMPLETED, FAILED
 
-    GET /api/integrity/query/?requested_by=<username>
+    GET /api/integrity/query/requests/?requested_by=<username>
         Filters requests by the user who submitted them.
 
-    GET /api/integrity/query/?status=<status>&requested_by=<username>
+    GET /api/integrity/query/requests/?status=<status>&requested_by=<username>
         Combines status and requested_by filters.
 
     Optional params for list view:
@@ -298,15 +314,17 @@ class FileIntegrityQueryView(APIView):
             if err:
                 return err
 
+            links = build_links(integrity_request, request)
             response_data = {
                 'request_id':     str(integrity_request.request_id),
                 'requested_by':   integrity_request.requested_by,
+                'status':         integrity_request.status,
                 'rse_expression': integrity_request.rse_expression,
                 'full_scan':      integrity_request.full_scan,
-                'status':         integrity_request.status,
                 'job_id':         integrity_request.job_id,
                 'created_at':     integrity_request.created_at,
                 'updated_at':     integrity_request.updated_at,
+                'links':          {"files": links['files'], "replicas": links['replicas']},
             }
 
             if include_summary:
@@ -338,10 +356,12 @@ class FileIntegrityQueryView(APIView):
                 'request_id':     str(r.request_id),
                 'requested_by':   r.requested_by,
                 'status':         r.status,
-                'job_id':         r.job_id,
                 'rse_expression': r.rse_expression,
                 'full_scan':      r.full_scan,
+                'job_id':         r.job_id,
                 'created_at':     r.created_at,
+                'updated_at':     r.updated_at,
+                'links':          build_links(r, request),
             }
             if include_summary:
                 entry['summary'] = build_request_summary(r)
@@ -354,16 +374,16 @@ class FileIntegrityQueryView(APIView):
 # Files view — query files (LFNs) by file_status
 # ---------------------------------------------------------------------------
 
-class FileIntegrityFilesView(APIView):
+class FileIntegrityQueryFilesView(APIView):
     """
     Query files (LFNs) within a specific request.
     request_id is always required.
 
-    GET /api/integrity/files/?request_id=<uuid>
+    GET /api/integrity/query/files/?request_id=<uuid>
         Returns all files for the request, each with derived file_status,
         per-file summary counts, and full replica breakdown.
 
-    GET /api/integrity/files/?request_id=<uuid>&file_status=<status>
+    GET /api/integrity/query/files/?request_id=<uuid>&file_status=<status>
         Filters files by their derived file_status.
         Valid values:
             FULLY_CORRUPTED      — all replicas corrupted
@@ -377,10 +397,10 @@ class FileIntegrityFilesView(APIView):
     The output=lfns parameter can be added to ANY of the above
     to switch from JSON to a plain text LFN list. Examples:
 
-    GET /api/integrity/files/?request_id=<uuid>&output=lfns
+    GET /api/integrity/query/files/?request_id=<uuid>&output=lfns
         All LFNs in the request, one per line.
 
-    GET /api/integrity/files/?request_id=<uuid>&file_status=<status>&output=lfns
+    GET /api/integrity/query/files/?request_id=<uuid>&file_status=<status>&output=lfns
         LFNs filtered by file_status, one per line.
 
     Plain text output format:
@@ -418,6 +438,15 @@ class FileIntegrityFilesView(APIView):
             lfn_list = '\n'.join(f['lfn'] for f in files)
             return HttpResponse(lfn_list, content_type='text/plain')
 
+        links = build_links(integrity_request, request)
+        files = [
+            {
+                'request_id': request_id,
+                'links': {"request": links['details'], "replicas": links['replicas']},
+                **f,
+            }
+            for f in files
+        ]
         return Response(files, status=status.HTTP_200_OK)
 
 
@@ -425,38 +454,38 @@ class FileIntegrityFilesView(APIView):
 # Replicas view — query individual replicas
 # ---------------------------------------------------------------------------
 
-class FileIntegrityReplicasView(APIView):
+class FileIntegrityQueryReplicasView(APIView):
     """
     Query individual replicas within a specific request.
     request_id is always required.
 
-    GET /api/integrity/replicas/?request_id=<uuid>
+    GET /api/integrity/query/replicas/?request_id=<uuid>
         Returns all replicas for the request.
 
-    GET /api/integrity/replicas/?request_id=<uuid>&replica_status=<status>
+    GET /api/integrity/query/replicas/?request_id=<uuid>&replica_status=<status>
         Filters replicas by their raw status.
         Valid values: OK, CORRUPTED, ERROR, pending
         Any value the tool returns is accepted.
 
-    GET /api/integrity/replicas/?request_id=<uuid>&lfn=<lfn>
+    GET /api/integrity/query/replicas/?request_id=<uuid>&lfn=<lfn>
         Returns all replicas for a specific LFN within this request.
 
-    GET /api/integrity/replicas/?request_id=<uuid>&lfn=<lfn>&replica_status=<status>
+    GET /api/integrity/query/replicas/?request_id=<uuid>&lfn=<lfn>&replica_status=<status>
         Combines LFN and status filters.
 
     The output=lfns_per_rse parameter can be added to ANY of the above
     to switch from JSON to plain text grouped by RSE. Examples:
 
-    GET /api/integrity/replicas/?request_id=<uuid>&output=lfns_per_rse
+    GET /api/integrity/query/replicas/?request_id=<uuid>&output=lfns_per_rse
         All replicas grouped by RSE.
 
-    GET /api/integrity/replicas/?request_id=<uuid>&replica_status=<status>&output=lfns_per_rse
+    GET /api/integrity/query/replicas/?request_id=<uuid>&replica_status=<status>&output=lfns_per_rse
         Replicas with a specific status, grouped by RSE.
 
-    GET /api/integrity/replicas/?request_id=<uuid>&lfn=<lfn>&output=lfns_per_rse
+    GET /api/integrity/query/replicas/?request_id=<uuid>&lfn=<lfn>&output=lfns_per_rse
         All replicas for a specific LFN, grouped by RSE.
 
-    GET /api/integrity/replicas/?request_id=<uuid>&lfn=<lfn>&replica_status=<status>&output=lfns_per_rse
+    GET /api/integrity/query/replicas/?request_id=<uuid>&lfn=<lfn>&replica_status=<status>&output=lfns_per_rse
         Both filters applied, grouped by RSE.
 
     Plain text output format:
@@ -502,14 +531,17 @@ class FileIntegrityReplicasView(APIView):
                 content_type='text/plain'
             )
 
+        links = build_links(integrity_request, request)
         return Response(
             [
                 {
-                    'lfn':    r.lfn,
-                    'scope':  r.scope,
-                    'rse':    r.rse,
-                    'pfn':    r.pfn,
-                    'status': r.status,
+                    'request_id':      request_id,
+                    'links':           {"request": links['details'], "files": links['files']},
+                    'rse':             r.rse,
+                    'scope':           r.scope,
+                    'lfn':             r.lfn,
+                    'pfn':             r.pfn,
+                    'status':          r.status,
                 }
                 for r in replicas
             ],

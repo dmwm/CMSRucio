@@ -397,28 +397,28 @@ class ViewEndpointTest(TestCase):
         )
 
     def test_query_list_returns_200(self):
-        r = self.client.get('/api/integrity/query/')
+        r = self.client.get('/api/integrity/query/requests/')
         self.assertEqual(r.status_code, 200)
 
     def test_query_detail_returns_200(self):
         r = self.client.get(
-            f'/api/integrity/query/?request_id={self.request.request_id}'
+            f'/api/integrity/query/requests/?request_id={self.request.request_id}'
         )
         self.assertEqual(r.status_code, 200)
 
     def test_query_detail_missing_returns_404(self):
         r = self.client.get(
-            f'/api/integrity/query/?request_id={uuid.uuid4()}'
+            f'/api/integrity/query/requests/?request_id={uuid.uuid4()}'
         )
         self.assertEqual(r.status_code, 404)
 
     def test_files_requires_request_id(self):
-        r = self.client.get('/api/integrity/files/')
+        r = self.client.get('/api/integrity/query/files/')
         self.assertEqual(r.status_code, 400)
 
     def test_files_returns_grouped_by_lfn(self):
         r = self.client.get(
-            f'/api/integrity/files/?request_id={self.request.request_id}'
+            f'/api/integrity/query/files/?request_id={self.request.request_id}'
         )
         self.assertEqual(r.status_code, 200)
         data = r.json()
@@ -426,7 +426,7 @@ class ViewEndpointTest(TestCase):
 
     def test_files_file_status_filter(self):
         r = self.client.get(
-            f'/api/integrity/files/?request_id={self.request.request_id}'
+            f'/api/integrity/query/files/?request_id={self.request.request_id}'
             f'&file_status=PARTIALLY_CORRUPTED'
         )
         self.assertEqual(r.status_code, 200)
@@ -437,7 +437,7 @@ class ViewEndpointTest(TestCase):
 
     def test_files_output_lfns_is_plain_text(self):
         r = self.client.get(
-            f'/api/integrity/files/?request_id={self.request.request_id}'
+            f'/api/integrity/query/files/?request_id={self.request.request_id}'
             f'&output=lfns'
         )
         self.assertEqual(r.status_code, 200)
@@ -446,12 +446,12 @@ class ViewEndpointTest(TestCase):
         self.assertEqual(len(lines), 2)
 
     def test_replicas_requires_request_id(self):
-        r = self.client.get('/api/integrity/replicas/')
+        r = self.client.get('/api/integrity/query/replicas/')
         self.assertEqual(r.status_code, 400)
 
     def test_replicas_status_filter(self):
         r = self.client.get(
-            f'/api/integrity/replicas/?request_id={self.request.request_id}'
+            f'/api/integrity/query/replicas/?request_id={self.request.request_id}'
             f'&replica_status=CORRUPTED'
         )
         self.assertEqual(r.status_code, 200)
@@ -461,7 +461,7 @@ class ViewEndpointTest(TestCase):
 
     def test_replicas_lfn_filter(self):
         r = self.client.get(
-            f'/api/integrity/replicas/?request_id={self.request.request_id}'
+            f'/api/integrity/query/replicas/?request_id={self.request.request_id}'
             f'&lfn=/store/data/file1.root'
         )
         self.assertEqual(r.status_code, 200)
@@ -470,7 +470,7 @@ class ViewEndpointTest(TestCase):
 
     def test_replicas_output_lfns_per_rse_is_plain_text(self):
         r = self.client.get(
-            f'/api/integrity/replicas/?request_id={self.request.request_id}'
+            f'/api/integrity/query/replicas/?request_id={self.request.request_id}'
             f'&output=lfns_per_rse'
         )
         self.assertEqual(r.status_code, 200)

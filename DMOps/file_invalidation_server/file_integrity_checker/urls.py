@@ -1,34 +1,34 @@
 from django.urls import path
 from .views import (
-    FileIntegrityRequestView,
-    FileIntegrityQueryView,
-    FileIntegrityFilesView,
-    FileIntegrityReplicasView,
+    FileIntegritySubmitRequestView,
+    FileIntegrityQueryRequestView,
+    FileIntegrityQueryFilesView,
+    FileIntegrityQueryReplicasView,
 )
 
 urlpatterns = [
     # Submit a new file integrity check request
     path(
         'integrity/submit/',
-        FileIntegrityRequestView.as_view(),
+        FileIntegritySubmitRequestView.as_view(),
         name='integrity-submit'
     ),
     # Query requests — list or detail
     path(
-        'integrity/query/',
-        FileIntegrityQueryView.as_view(),
-        name='integrity-query'
+        'integrity/query/requests/',
+        FileIntegrityQueryRequestView.as_view(),
+        name='integrity-query-requests'
     ),
     # Query files (LFNs) by file_status within a request
     path(
-        'integrity/files/',
-        FileIntegrityFilesView.as_view(),
-        name='integrity-files'
+        'integrity/query/files/',
+        FileIntegrityQueryFilesView.as_view(),
+        name='integrity-query-files'
     ),
     # Query individual replicas within a request
     path(
-        'integrity/replicas/',
-        FileIntegrityReplicasView.as_view(),
-        name='integrity-replicas'
+        'integrity/query/replicas/',
+        FileIntegrityQueryReplicasView.as_view(),
+        name='integrity-query-replicas'
     ),
 ]
