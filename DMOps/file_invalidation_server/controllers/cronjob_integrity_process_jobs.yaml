@@ -1,0 +1,77 @@
+# CronJob: integrity-jobs-log-processor
+# Polls Kubernetes for completed file integrity check jobs,
+# parses their output and updates the database.
+# Runs every 5 minutes — same cadence as the invalidation tool processor.
+#
+# Image: must match the Django deployment image.
+# Update the image tag here when promoting from :test to :latest.
+#
+# Apply: kubectl apply -f controllers/cronjob_process_jobs_integrity.yaml -n file-invalidation-tool
+
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: integrity-jobs-log-processor
+  namespace: file-invalidation-tool
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Allow
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  suspend: false
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: Never
+          serviceAccountName: job-reader
+          containers:
+            - name: integrity-log-processor
+              image: registry.paas.cern.ch/file-invalidation-tool/file-invalidation-tool:test
+              imagePullPolicy: Always
+              command:
+                - python3
+                - file_integrity_checker/process_jobs.py
+              env:
+                - name: SECRET_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: django-secret-key
+                      key: SECRET_KEY
+                - name: JIRA_PAT
+                  valueFrom:
+                    secretKeyRef:
+                      name: jira-pat
+                      key: JIRA_PAT
+                - name: DB_NAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: django-db-name
+                      key: DB_NAME
+                - name: DB_HOST
+                  valueFrom:
+                    secretKeyRef:
+                      name: django-db-host
+                      key: DB_HOST
+                - name: DB_PORT
+                  valueFrom:
+                    secretKeyRef:
+                      name: django-db-port
+                      key: DB_PORT
+                - name: DB_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: django-db-user
+                      key: DB_USER
+                - name: DB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: django-db-password
+                      key: DB_PASSWORD
+              volumeMounts:
+                - name: integrity-input-file
+                  mountPath: /shared-data-integrity
+          volumes:
+            - name: integrity-input-file
+              persistentVolumeClaim:
+                claimName: integrity-input-file-pvc

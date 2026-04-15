@@ -68,8 +68,8 @@ file_invalidation_server/
 │
 └── controllers/
     ├── job_integrity.yaml                      — Kubernetes Job template for the checker
-    ├── cronjob_process_jobs_integrity.yaml     — CronJob for process_jobs.py
-    └── cronjob_cleanup_jobs_integrity.yaml     — CronJob for cleanup_jobs.py
+    ├── cronjob_integrity_process_jobs.yaml     — CronJob for process_jobs.py
+    └── cronjob_integrity_cleanup_jobs.yaml     — CronJob for cleanup_jobs.py
 ```
 
 ---
