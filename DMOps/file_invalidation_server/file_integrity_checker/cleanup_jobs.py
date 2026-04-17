@@ -22,7 +22,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-JOB_NAME_PREFIX      = "file-integrity-job-"
+JOB_NAME_PREFIX      = "integrity-job-"
 # Files older than this with no running job are considered orphaned
 ORPHAN_FILE_MAX_AGE_SECONDS = 3 * 3600  # 3 hours
 # Completed/failed jobs older than this are deleted from K8s

@@ -109,7 +109,7 @@ def trigger_job(integrity_request):
     ]
 
     job_id   = uuid.uuid4().hex[:8]
-    job_name = f"file-integrity-job-{job_id}"
+    job_name = f"integrity-job-{job_id}"
 
     # Unique filename per job — no global PVC wipe, safe for concurrent jobs.
     # Cleanup of this file is handled by process_jobs.py after job completion,

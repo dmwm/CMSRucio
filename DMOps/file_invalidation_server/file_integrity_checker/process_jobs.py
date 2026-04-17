@@ -23,7 +23,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-JOB_NAME_PREFIX = "file-integrity-job-"
+JOB_NAME_PREFIX = "integrity-job-"
 
 
 def fetch_and_process():
