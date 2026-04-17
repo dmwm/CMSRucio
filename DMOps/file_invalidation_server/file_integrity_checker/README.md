@@ -46,7 +46,7 @@ User queries results via API
 file_invalidation_server/
 ├── manage.py
 ├── requirements.txt
-├── populate_db_integrity.py     ← seed script for local testingseed script for local testing of this app
+├── populate_db_integrity.py     ← seed script for local testing seed script for local testing of this app
 │
 ├── file_invalidation_server/    ← Django project settings
 │   ├── settings.py
