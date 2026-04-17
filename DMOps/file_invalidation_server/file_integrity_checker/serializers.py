@@ -35,7 +35,11 @@ class FileIntegrityRequestSerializer(serializers.Serializer):
 
     def validate_lfns(self, value):
         lines = [l.strip() for l in value.splitlines() if l.strip()]
-
+        
+        # Check for duplicates
+        if len(lines) != len(set(lines)):
+            raise serializers.ValidationError("Duplicate LFNs provided.")
+        
         if not lines:
             raise serializers.ValidationError("No LFNs provided.")
 
