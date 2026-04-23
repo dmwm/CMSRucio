@@ -33,7 +33,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for file in files %}
+                            {% for file in data %}
                             <tr>
                                 <td>{{ file.file_name }}</td>
                                 <td>
@@ -78,11 +78,6 @@
                     <hr>
                     <form method="post">
                         {% csrf_token %}
-                        <div class="mb-3">
-                            <label for="approve_user" class="form-label">Approve User <span class="text-danger">*</span></label>
-                            <input type="text" name="approve_user" class="form-control" id="approve_user" required>
-                            <div class="form-text">Enter your username to approve this request.</div>
-                        </div>
                         <button type="submit" class="btn btn-success">Approve Request</button>
                         <a href="{% url 'file-query-filters' %}" class="btn btn-secondary">Back to Query</a>
                     </form>

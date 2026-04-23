@@ -232,24 +232,18 @@ class InvalidationApproval(APIView):
     def get(self, request, request_id):
         files = FileInvalidationRequests.objects.filter(request_id=request_id)
 
-        paginator = self.pagination_class()
-        page = paginator.paginate_queryset(files, request)
+        data = [{"request_id": f.request_id, "file_name": f.file_name, "status": f.status, "mode": f.mode, "dry_run": f.dry_run, "reason": f.reason, "job_id": f.job_id, "logs": f.logs, "request_user": f.request_user} for f in files]
 
+        items_per_page = 50
+        paginator = Paginator(data, items_per_page) 
+        page_number = int(self.request.GET.get('page')) if self.request.GET.get('page') else 1
+        page_obj = paginator.get_page(page_number)
+        custom_range = page_obj.paginator.get_elided_page_range(page_number, on_each_side=4, on_ends=3)
+
+        context = {'data': page_obj.object_list, "page_obj":page_obj, "is_paginated": page_obj.has_other_pages(),'page_range': custom_range, 'total_objects':files.count()}    
         if self.request.accepted_renderer.format == 'html':
-            context = {
-                'files': page.object_list if page else files,
-                'paginator': paginator,
-                'is_paginated': page is not None,
-                'page_obj': page,
-                'request_id': request_id,
-            }
-            return render(self.request, 'fi_manager/approve.html', context)
+            return render(self.request, self.template_name, context)
         else:
-            if page is not None:
-                data = [{"request_id": f.request_id, "file_name": f.file_name, "status": f.status, "mode": f.mode, "dry_run": f.dry_run, "reason": f.reason, "job_id": f.job_id, "logs": f.logs, "request_user": f.request_user} for f in page]
-                return paginator.get_paginated_response(data)
-
-            data = [{"request_id": f.request_id, "file_name": f.file_name, "status": f.status, "mode": f.mode, "dry_run": f.dry_run, "reason": f.reason, "job_id": f.job_id, "logs": f.logs, "request_user": f.request_user} for f in files]
             return Response(data, status=status.HTTP_200_OK)
 
     
