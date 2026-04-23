@@ -38,9 +38,9 @@
                                 <td>{{ file.file_name }}</td>
                                 <td>
                                     <span class="badge 
-                                        {% if file.status == 'approved' %}bg-success
-                                        {% elif file.status == 'pending' %}bg-warning
-                                        {% elif file.status == 'rejected' %}bg-danger
+                                        {% if file.status == 'success' %}bg-success
+                                        {% elif file.status == 'waiting_approval' %}bg-warning
+                                        {% elif file.status == 'failed' %}bg-danger
                                         {% else %}bg-secondary{% endif %}">
                                         {{ file.status }}
                                     </span>

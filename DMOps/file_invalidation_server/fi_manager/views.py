@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework import status, serializers
 from rest_framework.renderers import JSONRenderer, TemplateHTMLRenderer
-from rest_framework.pagination import PageNumberPagination
+from django.core.paginator import Paginator
 from .renderers import ApprovalBrowsableAPIRenderer
 from .models import FileInvalidationRequests
 import base64
@@ -11,7 +11,7 @@ from django.http import HttpResponse
 from django.shortcuts import render
 from django.views.generic import TemplateView
 from .utils import process_invalidation, get_cern_username, send_approval_alert, create_ticket_for_invalidation
-from django.db.models import Count, CharField, Value, F, Case, When
+from django.db.models import Count, CharField, Value, F, Case, When, IntegerField
 from django.db.models.functions import StrIndex, Substr
 import logging
 import uuid
@@ -111,11 +111,11 @@ class FileInvalidationRequestsView(APIView):
                     already_serviced_files = already_serviced_files + ' Please ask DMOps to approve the invalidation.'
             else:
                 input_vals = {'request_id':request_id,'file_name':fn,'status':'queued' if dry_run else 'waiting_approval','mode':mode,'dry_run':dry_run,'reason':reason,'global_invalidate_last_replicas':global_invalidate_last_replicas,'request_user':user, 'rse': rse}
-                file_records.append(input_vals)
+                file_records.append(FileInvalidationRequests(**input_vals))
                 cnt += 1
         
         if cnt>0:
-            FileInvalidationRequests.objects.bulk_create(**input_vals)
+            FileInvalidationRequests.objects.bulk_create(file_records, batch_size=100)
             if dry_run:
                 logging.info(f'Processing dry_run request id {request_id}...')
                 response_message = process_invalidation(request_id, reason, dry_run=dry_run, mode=mode, rse=rse,to_process="queued",global_invalidate_last_replicas=global_invalidate_last_replicas)
@@ -145,9 +145,9 @@ class FileInvalidationRequestsView(APIView):
                             ]}, status=status.HTTP_200_OK)
 
 class FileQueryView(APIView):
-    pagination_class = PageNumberPagination
     renderer_classes = [TemplateHTMLRenderer, JSONRenderer]
     template_name = 'fi_manager/query.html'
+    grouped_template_name = 'fi_manager/groupedquery.html'
 
     def get(self, request, request_id=None, *args, **kwargs):
         file_status = request.query_params.get("status")
@@ -155,6 +155,8 @@ class FileQueryView(APIView):
         job_id = request.query_params.get("job_id")
         file_name_regex = request.query_params.get("file_name_regex")
         reason_regex = request.query_params.get("reason_regex")
+        request_user = request.query_params.get("request_user")
+        approve_user = request.query_params.get("approve_user")
         files = FileInvalidationRequests.objects.all()
         
         if file_request_id:
@@ -172,49 +174,58 @@ class FileQueryView(APIView):
         if reason_regex:
             files = files.filter(reason__regex=reason_regex)
 
-        paginator = self.pagination_class()
-        page = paginator.paginate_queryset(files, self.request)
+        if request_user:
+            files = files.filter(request_user=request_user)
 
-        if self.request.accepted_renderer.format == 'html':
-            context = {
-                'files': page.object_list if page else files,
-                'paginator': paginator,
-                'is_paginated': page is not None,
-                'page_obj': page,
-            }
-            return render(self.request, 'fi_manager/query.html', context)
+        if approve_user:
+            files = files.filter(approve_user=approve_user)
+
+        grouped = files.values('request_id').distinct().count()>1
+
+        status_order = ["aborted","failed","in_progress","queued","waiting_approval","dbs_only","rucio_only","success"]
+        ordering = Case(
+                *[When(status=status, then=Value(i)) for i, status in enumerate(status_order)],
+                default=Value(len(status_order)), # Put any unknown statuses at the end
+                output_field=IntegerField(),
+            )
+
+        if grouped:
+            group = files.annotate(
+                delimiter_position=StrIndex('reason',Value('- Request aborted')),
+                truncated_reason = Case(
+                    # Check if the delimiter was found (StrIndex returns > 0 if found)
+                    When(delimiter_position__gt=0, then=Substr('reason', Value(1), F('delimiter_position') - 1)),
+                    # If delimiter not found (delimiter_position is 0), use the original reason
+                    default=F('reason'),
+                    output_field=CharField() # Ensure the resulting field is a character field
+                )
+            ).values(
+                'request_id','status','mode','rse','dry_run','global_invalidate_last_replicas','truncated_reason','request_user','approve_user','job_id'
+                ).annotate(
+                    total_objects=Count('id'),
+                    status_priority=ordering
+                ).order_by(
+                    'status_priority','total_objects','request_id')
+            
+            data = list(group)
+
         else:
-            if not file_request_id and not file_status and not file_name_regex and not reason_regex and not job_id:
-                grouped = FileInvalidationRequests.objects.annotate(
-                    delimiter_position=StrIndex('reason',Value('- Request aborted')),
-                    truncated_reason = Case(
-                        # Check if the delimiter was found (StrIndex returns > 0 if found)
-                        When(delimiter_position__gt=0, then=Substr('reason', Value(1), F('delimiter_position') - 1)),
-                        # If delimiter not found (delimiter_position is 0), use the original reason
-                        default=F('reason'),
-                        output_field=CharField() # Ensure the resulting field is a character field
-                    )
-                ).values(
-                    'request_id','status','mode','rse','dry_run','global_invalidate_last_replicas','truncated_reason','request_user','approve_user','job_id','logs'
-                    ).annotate(
-                        total_objects=Count('id')
-                    ).order_by(
-                        'request_id', 'status'
-                    )
-                            
-                return Response(grouped, status=status.HTTP_200_OK)
-            else:
-                if page is not None:
-                    data = [{"request_id": f.request_id, "file_name": f.file_name, "status": f.status,"mode":f.mode,"dry_run":f.dry_run,"reason":f.reason,"job_id":f.job_id,"logs":f.logs,"rse":f.rse,"global_invalidate_last_replicas":f.global_invalidate_last_replicas,"request_user":f.request_user,"approve_user":f.approve_user} for f in page]
-                    return paginator.get_paginated_response(data)
+            data = [{"request_id": f.request_id, "file_name": f.file_name, "status": f.status,"mode":f.mode,"dry_run":f.dry_run,"reason":f.reason,"job_id":f.job_id,"logs":f.logs,"rse":f.rse,"global_invalidate_last_replicas":f.global_invalidate_last_replicas,"request_user":f.request_user,"approve_user":f.approve_user} for f in files]
 
-                data = [{"request_id": f.request_id, "file_name": f.file_name, "status": f.status,"mode":f.mode,"dry_run":f.dry_run,"reason":f.reason,"job_id":f.job_id,"logs":f.logs,"rse":f.rse,"global_invalidate_last_replicas":f.global_invalidate_last_replicas,"request_user":f.request_user,"approve_user":f.approve_user} for f in files]
-                return Response(data)
+        items_per_page = 10 if grouped else 50
+        paginator = Paginator(data, items_per_page) 
+        page_number = int(self.request.GET.get('page')) if self.request.GET.get('page') else 1
+        page_obj = paginator.get_page(page_number)
+        custom_range = page_obj.paginator.get_elided_page_range(page_number, on_each_side=2, on_ends=1)
+
+        context = {'grouped': grouped, 'data': page_obj.object_list, "page_obj":page_obj, "is_paginated": page_obj.has_other_pages(),'page_range': custom_range}    
+        if self.request.accepted_renderer.format == 'html':
+            return render(self.request, self.grouped_template_name if context["grouped"] else self.template_name, context)
+        else:
+            return Response(data, status=status.HTTP_200_OK)
 
 
 class InvalidationApproval(APIView):
-
-    pagination_class = PageNumberPagination
     renderer_classes = [TemplateHTMLRenderer, JSONRenderer]
     template_name = 'fi_manager/approve.html'
     

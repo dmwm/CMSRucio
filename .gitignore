@@ -2,3 +2,4 @@
 *.pyc
 venv/
 dist
+DMOps/file_invalidation_server/fi_manager/migrations/
