@@ -6,6 +6,7 @@
 #   * Remove `managed = False` lines if you wish to allow Django to create, modify, and delete the table
 # Feel free to rename the models, but don't rename db_table values or field names.
 from django.db import models
+from django.conf import settings
 import uuid
 
 class FileInvalidationRequests(models.Model):
@@ -24,7 +25,7 @@ class FileInvalidationRequests(models.Model):
     approve_user = models.TextField()
 
     class Meta:
-        managed = False
+        managed = True if settings.LOCAL_TESTING else False
         db_table = 'file_invalidation_requests'
         unique_together = (('request_id', 'file_name'),)
 

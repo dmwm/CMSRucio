@@ -2,12 +2,14 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework import status, serializers
-from rest_framework.renderers import JSONRenderer
+from rest_framework.renderers import JSONRenderer, TemplateHTMLRenderer
 from rest_framework.pagination import PageNumberPagination
 from .renderers import ApprovalBrowsableAPIRenderer
 from .models import FileInvalidationRequests
 import base64
 from django.http import HttpResponse
+from django.shortcuts import render
+from django.views.generic import TemplateView
 from .utils import process_invalidation, get_cern_username, send_approval_alert, create_ticket_for_invalidation
 from django.db.models import Count, CharField, Value, F, Case, When
 from django.db.models.functions import StrIndex, Substr
@@ -51,19 +53,26 @@ class FileInvalidationRequestSerializer(serializers.Serializer):
 
         return data
 
+class HomeView(TemplateView):
+    template_name = 'fi_manager/home.html'
+
 class FileInvalidationRequestsView(APIView):
     serializer_class = FileInvalidationRequestSerializer
     parser_classes = [MultiPartParser, JSONParser]
+    renderer_classes = [TemplateHTMLRenderer, JSONRenderer]
+    template_name = 'fi_manager/upload.html'
 
     def get_serializer_class(self, *args, **kwargs):
         return self.serializer_class(*args, **kwargs)
 
     def get(self, request):
-
-        return Response(
-            [{"POST": "Upload file invalidation requests"}],
-            status=status.HTTP_200_OK
-        )
+        if self.request.accepted_renderer.format == 'html':
+            return render(self.request, 'fi_manager/upload.html')
+        else:
+            return Response(
+                [{"POST": "Upload file invalidation requests"}],
+                status=status.HTTP_200_OK
+            )
 
     def post(self, request, *args, **kwargs):
         serializer = FileInvalidationRequestSerializer(data=request.data)
@@ -137,6 +146,8 @@ class FileInvalidationRequestsView(APIView):
 
 class FileQueryView(APIView):
     pagination_class = PageNumberPagination
+    renderer_classes = [TemplateHTMLRenderer, JSONRenderer]
+    template_name = 'fi_manager/query.html'
 
     def get(self, request, request_id=None, *args, **kwargs):
         file_status = request.query_params.get("status")
@@ -161,42 +172,51 @@ class FileQueryView(APIView):
         if reason_regex:
             files = files.filter(reason__regex=reason_regex)
 
-        if not file_request_id and not file_status and not file_name_regex and not reason_regex and not job_id:
-            grouped = FileInvalidationRequests.objects.annotate(
-                delimiter_position=StrIndex('reason',Value('- Request aborted')),
-                truncated_reason = Case(
-                    # Check if the delimiter was found (StrIndex returns > 0 if found)
-                    When(delimiter_position__gt=0, then=Substr('reason', Value(1), F('delimiter_position') - 1)),
-                    # If delimiter not found (delimiter_position is 0), use the original reason
-                    default=F('reason'),
-                    output_field=CharField() # Ensure the resulting field is a character field
-                )
-            ).values(
-                'request_id','status','mode','rse','dry_run','global_invalidate_last_replicas','truncated_reason','request_user','approve_user','job_id','logs'
-                ).annotate(
-                    total_objects=Count('id')
-                ).order_by(
-                    'request_id', 'status'
-                )
-                        
-            response = Response(
-            grouped,
-            status=status.HTTP_200_OK)
-            return response
-        else:
-        
-            paginator = self.pagination_class()
-            page = paginator.paginate_queryset(files, request)
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(files, self.request)
 
-            if page is not None:
-                data = [{"request_id": f.request_id, "file_name": f.file_name, "status": f.status,"mode":f.mode,"dry_run":f.dry_run,"reason":f.reason,"job_id":f.job_id,"logs":f.logs,"rse":f.rse,"global_invalidate_last_replicas":f.global_invalidate_last_replicas,"request_user":f.request_user,"approve_user":f.approve_user} for f in page]
-                return paginator.get_paginated_response(data)
+        if self.request.accepted_renderer.format == 'html':
+            context = {
+                'files': page.object_list if page else files,
+                'paginator': paginator,
+                'is_paginated': page is not None,
+                'page_obj': page,
+            }
+            return render(self.request, 'fi_manager/query.html', context)
+        else:
+            if not file_request_id and not file_status and not file_name_regex and not reason_regex and not job_id:
+                grouped = FileInvalidationRequests.objects.annotate(
+                    delimiter_position=StrIndex('reason',Value('- Request aborted')),
+                    truncated_reason = Case(
+                        # Check if the delimiter was found (StrIndex returns > 0 if found)
+                        When(delimiter_position__gt=0, then=Substr('reason', Value(1), F('delimiter_position') - 1)),
+                        # If delimiter not found (delimiter_position is 0), use the original reason
+                        default=F('reason'),
+                        output_field=CharField() # Ensure the resulting field is a character field
+                    )
+                ).values(
+                    'request_id','status','mode','rse','dry_run','global_invalidate_last_replicas','truncated_reason','request_user','approve_user','job_id','logs'
+                    ).annotate(
+                        total_objects=Count('id')
+                    ).order_by(
+                        'request_id', 'status'
+                    )
+                            
+                return Response(grouped, status=status.HTTP_200_OK)
+            else:
+                if page is not None:
+                    data = [{"request_id": f.request_id, "file_name": f.file_name, "status": f.status,"mode":f.mode,"dry_run":f.dry_run,"reason":f.reason,"job_id":f.job_id,"logs":f.logs,"rse":f.rse,"global_invalidate_last_replicas":f.global_invalidate_last_replicas,"request_user":f.request_user,"approve_user":f.approve_user} for f in page]
+                    return paginator.get_paginated_response(data)
+
+                data = [{"request_id": f.request_id, "file_name": f.file_name, "status": f.status,"mode":f.mode,"dry_run":f.dry_run,"reason":f.reason,"job_id":f.job_id,"logs":f.logs,"rse":f.rse,"global_invalidate_last_replicas":f.global_invalidate_last_replicas,"request_user":f.request_user,"approve_user":f.approve_user} for f in files]
+                return Response(data)
 
 
 class InvalidationApproval(APIView):
 
     pagination_class = PageNumberPagination
-    renderer_classes = [ApprovalBrowsableAPIRenderer, JSONRenderer]
+    renderer_classes = [TemplateHTMLRenderer, JSONRenderer]
+    template_name = 'fi_manager/approve.html'
     
     def get(self, request, request_id):
         files = FileInvalidationRequests.objects.filter(request_id=request_id)
@@ -204,12 +224,22 @@ class InvalidationApproval(APIView):
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(files, request)
 
-        if page is not None:
-            data = [{"request_id": f.request_id, "file_name": f.file_name, "status": f.status, "mode": f.mode, "dry_run": f.dry_run, "reason": f.reason, "job_id": f.job_id, "logs": f.logs, "request_user": f.request_user} for f in page]
-            return paginator.get_paginated_response(data)
+        if self.request.accepted_renderer.format == 'html':
+            context = {
+                'files': page.object_list if page else files,
+                'paginator': paginator,
+                'is_paginated': page is not None,
+                'page_obj': page,
+                'request_id': request_id,
+            }
+            return render(self.request, 'fi_manager/approve.html', context)
+        else:
+            if page is not None:
+                data = [{"request_id": f.request_id, "file_name": f.file_name, "status": f.status, "mode": f.mode, "dry_run": f.dry_run, "reason": f.reason, "job_id": f.job_id, "logs": f.logs, "request_user": f.request_user} for f in page]
+                return paginator.get_paginated_response(data)
 
-        data = [{"request_id": f.request_id, "file_name": f.file_name, "status": f.status, "mode": f.mode, "dry_run": f.dry_run, "reason": f.reason, "job_id": f.job_id, "logs": f.logs, "request_user": f.request_user} for f in files]
-        return Response(data, status=status.HTTP_200_OK)
+            data = [{"request_id": f.request_id, "file_name": f.file_name, "status": f.status, "mode": f.mode, "dry_run": f.dry_run, "reason": f.reason, "job_id": f.job_id, "logs": f.logs, "request_user": f.request_user} for f in files]
+            return Response(data, status=status.HTTP_200_OK)
 
     
     def post(self, request, request_id):
