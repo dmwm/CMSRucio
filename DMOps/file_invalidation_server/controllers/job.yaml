@@ -77,12 +77,12 @@ spec:
       restartPolicy: Never
       serviceAccountName: job-runner
       resources:
-        requests:
-          memory: "256Mi"
-          cpu: "20m"
         limits:
-          memory: "512Mi"
-          cpu: "1000m"
+          cpu: '1'
+          memory: 5Gi
+        requests:
+          cpu: 100m
+          memory: 512Mi
       volumes:
       - name: input-file
         persistentVolumeClaim:

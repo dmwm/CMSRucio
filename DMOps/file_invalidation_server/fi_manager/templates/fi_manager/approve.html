@@ -28,6 +28,10 @@
                                 <th>File Name</th>
                                 <th>Status</th>
                                 <th>Mode</th>
+                                <th>Dry run</th>
+                                {% if data.0.mode == 'local'  %}
+                                <th>Global inv. last</th>
+                                {% endif  %}
                                 <th>RSE</th>
                                 <th>Request User</th>
                             </tr>
@@ -46,6 +50,10 @@
                                     </span>
                                 </td>
                                 <td>{{ file.mode }}</td>
+                                <td>{{ file.dry_run }}</td>
+                                {% if data.0.mode == 'local'  %}
+                                <td>{{ file.global_invalidate_last_replicas }}</td>
+                                {% endif  %}
                                 <td>{{ file.rse }}</td>
                                 <td>{{ file.request_user }}</td>
                             </tr>
@@ -55,20 +63,28 @@
 
                     {% if is_paginated %}
                     <nav aria-label="Page navigation">
-                        <ul class="pagination pagination-sm justify-content-center">
+                        <ul class="pagination justify-content-center">
                             {% if page_obj.has_previous %}
                             <li class="page-item">
-                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}">Previous</a>
                             </li>
                             {% endif %}
-                            {% for num in page_obj.paginator.page_range %}
-                            <li class="page-item {% if page_obj.number == num %}active{% endif %}">
-                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
-                            </li>
+
+                            {% for num in page_range %}
+                                {% if num == page_obj.paginator.ELLIPSIS %}
+                                    <li class="page-item disabled"><span class="page-link">{{ num }}</span></li>
+                                {% elif num == page_obj.number %}
+                                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                                {% else %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ num }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}">{{ num }}</a>
+                                    </li>
+                                {% endif %}
                             {% endfor %}
+
                             {% if page_obj.has_next %}
                             <li class="page-item">
-                                <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}">Next</a>
                             </li>
                             {% endif %}
                         </ul>
