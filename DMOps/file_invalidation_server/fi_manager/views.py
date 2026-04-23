@@ -89,6 +89,7 @@ class FileInvalidationRequestsView(APIView):
 
         raw_file_message = ""
         already_serviced_files = ""
+        file_records = []
         for fn in file_lines:
             fn = fn.strip()
             fn = fn.replace('cms:/store','/store')
@@ -101,10 +102,11 @@ class FileInvalidationRequestsView(APIView):
                     already_serviced_files = already_serviced_files + ' Please ask DMOps to approve the invalidation.'
             else:
                 input_vals = {'request_id':request_id,'file_name':fn,'status':'queued' if dry_run else 'waiting_approval','mode':mode,'dry_run':dry_run,'reason':reason,'global_invalidate_last_replicas':global_invalidate_last_replicas,'request_user':user, 'rse': rse}
-                file_record = FileInvalidationRequests.objects.create(**input_vals)
+                file_records.append(input_vals)
                 cnt += 1
         
         if cnt>0:
+            FileInvalidationRequests.objects.bulk_create(**input_vals)
             if dry_run:
                 logging.info(f'Processing dry_run request id {request_id}...')
                 response_message = process_invalidation(request_id, reason, dry_run=dry_run, mode=mode, rse=rse,to_process="queued",global_invalidate_last_replicas=global_invalidate_last_replicas)

@@ -76,6 +76,13 @@ spec:
           value: "your_reason_here" #replace with your reason.
       restartPolicy: Never
       serviceAccountName: job-runner
+      resources:
+        requests:
+          memory: "256Mi"
+          cpu: "20m"
+        limits:
+          memory: "512Mi"
+          cpu: "1000m"
       volumes:
       - name: input-file
         persistentVolumeClaim:
