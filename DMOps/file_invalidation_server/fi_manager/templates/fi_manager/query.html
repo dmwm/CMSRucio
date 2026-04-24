@@ -73,9 +73,32 @@
                     {% if file.status == 'success' %}bg-success
                     {% elif file.status == 'waiting_approval' %}bg-warning
                     {% elif file.status == 'failed' %}bg-danger
-                    {% else %}bg-secondary{% endif %}">
+                    {% else %}bg-secondary{% endif %}"
+                    {% if file.status == 'failed' %}
+                    style="cursor: pointer; user-select: none; display: inline-block;" 
+                    data-bs-toggle="modal" 
+                    data-bs-target="#modal-{{ forloop.counter }}"
+                    {% endif %}>
                     {{ file.status }}
                 </span>
+                {% if file.status == 'failed' %}
+                <div class="modal fade" id="modal-{{ forloop.counter }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Logs: {{ file.file_name }}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; max-height: 400px; overflow-y: auto;"><code>{{ file.logs }}</code></div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
             </td>
         </tr>
         {% endfor %}

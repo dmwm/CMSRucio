@@ -38,6 +38,12 @@ jobs:
   okd-pipeline:
     runs-on: ubuntu-latest
     steps:
+      - name: Install oc
+        uses: redhat-actions/openshift-tools-installer@v1
+        with:
+          oc: "4.14"
+      - name: Verify Installation
+        run: oc version --client
       - name: Log in to OKD
         uses: redhat-actions/oc-login@v1
         with:

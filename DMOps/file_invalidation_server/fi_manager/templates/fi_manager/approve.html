@@ -7,7 +7,12 @@
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">Approve File Invalidation Request</h3>
-                    <p class="mb-0">Request ID: {{ request_id }}</p>
+                    <p class="mb-0">Request ID: {{ data.0.request_id }}</p>
+                    <p class="mb-0">Number of files: {{ total_objects }}</p>
+                    <p class="mb-0">Reason: {{ data.0.reason }}</p>
+                    <p class="mb-0">Requested by: {{ data.0.request_user }}</p>
+                    <p class="mb-0">Mode: {{ data.0.mode }}{% if data.0.dry_run %}, dry run{% endif %}{% if data.0.global_invalidate_last_replicas %}, global_invalidate_last_replicas{% endif %}</p>
+                    <p class="mb-0">RSE: {{ data.0.rse }}</p>
                 </div>
                 <div class="card-body">
                     <div class="alert alert-warning" role="alert">
@@ -27,13 +32,6 @@
                             <tr>
                                 <th>File Name</th>
                                 <th>Status</th>
-                                <th>Mode</th>
-                                <th>Dry run</th>
-                                {% if data.0.mode == 'local'  %}
-                                <th>Global inv. last</th>
-                                {% endif  %}
-                                <th>RSE</th>
-                                <th>Request User</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -49,13 +47,6 @@
                                         {{ file.status }}
                                     </span>
                                 </td>
-                                <td>{{ file.mode }}</td>
-                                <td>{{ file.dry_run }}</td>
-                                {% if data.0.mode == 'local'  %}
-                                <td>{{ file.global_invalidate_last_replicas }}</td>
-                                {% endif  %}
-                                <td>{{ file.rse }}</td>
-                                <td>{{ file.request_user }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
