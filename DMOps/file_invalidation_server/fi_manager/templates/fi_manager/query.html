@@ -46,7 +46,8 @@
     </div>     
     <div class="col-md-3">
         <label for="mode">Mode:</label>
-        <p>{{ data.0.mode }}</p>
+        <p>{{ data.0.mode }}{% if data.0.dry_run %}, dry run{% endif %}{% if data.0.global_invalidate_last_replicas %}, global_invalidate_last_replicas{% endif %}
+        </p>
     </div>    
     <div class="col-md-3">
         <label for="rse">RSE:</label>
