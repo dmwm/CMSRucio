@@ -35,3 +35,25 @@ jobs:
           docker push registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/file_invalidation_tool:${{ env.tag }}
           docker push registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/file_invalidation_tool:latest
 
+  okd-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log in to OKD
+        uses: redhat-actions/oc-login@v1
+        with:
+          openshift_server_url: ${{ secrets.OPENSHIFT_SERVER }}
+          openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
+          insecure_skip_tls_verify: true
+
+      - name: Start OKD Build
+        run: |
+          # Start the build from your BuildConfig
+          # --wait blocks the action until the build finishes
+          # --follow shows the logs in your GitHub Action console
+          oc start-build file-invalidation-tool --follow --wait
+
+      - name: Rollout Deployment
+        run: |
+          # Manually trigger a new rollout of the deployment
+          oc rollout restart deployment/file-invalidation-tool
+
