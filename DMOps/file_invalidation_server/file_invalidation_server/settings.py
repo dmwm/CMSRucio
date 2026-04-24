@@ -27,6 +27,7 @@ JIRA_PAT = config('JIRA_PAT')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+LOCAL_TESTING = False
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1','0.0.0.0','file-invalidation.app.cern.ch','file-invalidation-test.app.cern.ch']
 
@@ -54,8 +55,6 @@ REST_FRAMEWORK = {
          'rest_framework.authentication.TokenAuthentication',
          'rest_framework.authentication.SessionAuthentication'
     ],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 300,
     'DEFAULT_RENDERER_CLASSES': [
         'fi_manager.renderers.CustomBrowsableAPIRenderer',
         'rest_framework.renderers.JSONRenderer',
@@ -109,27 +108,29 @@ WSGI_APPLICATION = 'file_invalidation_server.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-#DATABASES = {
-#    'default': {
-#        'ENGINE': 'django.db.backends.sqlite3',
-#        'NAME': BASE_DIR / 'db.sqlite3',
-#    }
-#}
+if LOCAL_TESTING:
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',  # Use MySQL backend
-        'NAME': config('DB_NAME'),
-        'USER': config('DB_USER'),
-        'PASSWORD': config('DB_PASSWORD'), 
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='5432', cast=int),
-        'OPTIONS': {
-            'init_command': f"SET sql_mode='STRICT_TRANS_TABLES', sort_buffer_size = {5*1024*1024}"#5*1024*1024
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
-}
 
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',  # Use MySQL backend
+            'NAME': config('DB_NAME'),
+            'USER': config('DB_USER'),
+            'PASSWORD': config('DB_PASSWORD'), 
+            'HOST': config('DB_HOST', default='localhost'),
+            'PORT': config('DB_PORT', default='5432', cast=int),
+            'OPTIONS': {
+                'init_command': f"SET sql_mode='STRICT_TRANS_TABLES', sort_buffer_size = {5*1024*1024}"#5*1024*1024
+            }
+        }
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators

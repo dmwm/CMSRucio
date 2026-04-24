@@ -1,17 +1,36 @@
 /* static/css/styles.css */
 body {
-    font-family: sans-serif;
-    margin: 0;
-    padding: 0;
-    background-color: #f4f4f4;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
 }
 
-header, footer {
-    background-color: #e0e0e0;
-    padding: 20px;
-    text-align: center;
+header {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-main {
-    padding: 20px;
+footer {
+    border-top: 1px solid #dee2e6;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+}
+
+.btn-outline-primary:hover {
+    color: #fff;
+}
+
+.badge {
+    font-size: 0.75em;
 }

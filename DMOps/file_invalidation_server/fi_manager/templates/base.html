@@ -4,22 +4,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}File Invalidation Tool{% endblock %}</title>
+    <title>{% block title %}File Invalidation Server{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="{% static 'css/styles.css' %}"> {% block head %}{% endblock %}
 </head>
 <body>
-    <header>
-        <h1>File Invalidation Tool</h1>
+    <header class="bg-light p-3">
+        <div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-4">
+        <h1 class="mb-0">File Invalidation Server</h1>
         <nav>
-            </nav>
+            <a href="{% url 'home' %}" class="btn btn-outline-primary">
+                <i class="bi bi-house"></i>
+            </a>
+        </nav>
+    </div>
+</div>
     </header>
-    <main>
+    <main class="container mt-4">
         {% block content %}{% endblock %}
     </main>
-    <footer>
-        <p>CMS DM Comp Ops</p>
+    <footer class="bg-light p-3 mt-4">
+        <div class="container text-center">
+            <p>CMS DM Comp Ops</p>
+        </div>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

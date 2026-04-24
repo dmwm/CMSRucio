@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Upload File Invalidation Request</h3>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Submit a new file invalidation request by providing the reason and uploading a list of DIDs.</p>
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="reason" class="form-label">Reason <span class="text-danger">*</span></label>
+                            <input type="text" name="reason" class="form-control" id="reason" required>
+                            <div class="form-text">Enter the reason for the file invalidation request.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="file_content" class="form-label">File Content <span class="text-danger">*</span></label>
+                            <textarea name="file_content" class="form-control" id="file_content" rows="8" cols="100" required style="resize: none;"></textarea>
+                            <div class="form-text">Please enter the list of DIDs to be invalidated. The file content should be a list of DIDs without the scope prefix, one per line.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="dry_run" class="form-label">Dry Run</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="dry_run" id="dry_run" checked>
+                                <label class="form-check-label" for="dry_run">
+                                    Perform a dry run (recommended for testing)
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="mode" class="form-label">Mode <span class="text-danger">*</span></label>
+                            <select name="mode" class="form-select" id="mode" required>
+                                <option value="global">Global</option>
+                                <option value="local">Local</option>
+                                <option value="dbs-only">DBS Only</option>
+                                <option value="rucio-only">Rucio Only</option>
+                            </select>
+                        </div>
+                        <div class="mb-3" id="rse_field" style="display: none;">
+                            <label for="rse" class="form-label">RSE</label>
+                            <input type="text" name="rse" class="form-control" id="rse">
+                            <div class="form-text">ONLY FOR LOCAL MODE. The RSE at which the list of files should be invalidated.</div>
+                        </div>
+                        <div class="mb-3" id="global_invalidate_field" style="display: none;">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="global_invalidate_last_replicas" id="global_invalidate_last_replicas">
+                                <label class="form-check-label" for="global_invalidate_last_replicas">
+                                    ONLY FOR LOCAL MODE. If set to True, files with their last available replica under invalidation will be invalidated globally.
+                                </label>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Submit Request</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('mode').addEventListener('change', function() {
+    const mode = this.value;
+    const rseField = document.getElementById('rse_field');
+    const globalInvalidateField = document.getElementById('global_invalidate_field');
+    if (mode === 'local') {
+        rseField.style.display = 'block';
+        globalInvalidateField.style.display = 'block';
+    } else {
+        rseField.style.display = 'none';
+        globalInvalidateField.style.display = 'none';
+    }
+});
+</script>
+{% endblock %}

@@ -24,10 +24,7 @@ def fetch_and_process():
 
     for job in jobs.items:
         job_name = job.metadata.name
-        if not job.status.conditions:
-            continue
-
-        if job.kind == "CronJob" or ('jobs-log-processor' in job_name) or ('approval-message' in job_name):
+        if not job.status.conditions or not 'file-invalidation-job' in job_name:
             continue
 
         condition_types = {cond.type: cond.status for cond in job.status.conditions}

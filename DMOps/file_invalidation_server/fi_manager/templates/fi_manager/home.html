@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body d-flex flex-column">
+                <h5 class="card-title">Upload File Invalidation Request</h5>
+                <p class="card-text">Submit a new file invalidation request by uploading a list of DIDs.</p>
+                <a href="{% url 'file-upload' %}" class="btn btn-primary mt-auto">Go to Upload</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body d-flex flex-column">
+                <h5 class="card-title">Query Requests</h5>
+                <p class="card-text">View and filter file invalidation requests. See details and status of submitted requests.</p>
+                <a href="{% url 'file-query-filters' %}" class="btn btn-primary mt-auto">Go to Query</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body d-flex flex-column">
+                <h5 class="card-title">Approve Request</h5>
+                <p class="card-text">Approve pending file invalidation requests. Only for authorized DMOps personnel.</p>
+                <a href="{% url 'file-query-filters' %}?status=waiting_approval" class="btn btn-primary mt-auto">View Requests to Approve</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

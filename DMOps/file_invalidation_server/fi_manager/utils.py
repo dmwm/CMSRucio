@@ -86,9 +86,9 @@ def update_ticket(request_id: str,new_status: JiraStatus, **kwargs):
             issue = jira_client.search_issues(f'summary ~ "{request_id}"')[0]
             logging.info(f"Transitioning issue {issue} to Jira Status {new_status}. kwargs: {kwargs}")
             jira_client.transition_issue(issue.key,new_status)
-            if new_status==JiraStatus.APPROVED.value and 'approval_user' in kwargs:
-                approval_user = kwargs['approval_user']
-                jira_client.add_comment(issue.key, f"Approved by: [~{approval_user}] ")
+            if new_status==JiraStatus.APPROVED.value and 'approve_user' in kwargs:
+                approve_user = kwargs['approve_user']
+                jira_client.add_comment(issue.key, f"Approved by: [~{approve_user}] ")
             return True
         else:
             return False
@@ -200,8 +200,8 @@ def process_invalidation(request_id, reason, dry_run=True,mode='global',rse=None
         sent_requests.update(status=status)
         sent_requests.update(job_id=job_unique_uuid)
 
-        approval_user = sent_requests.first().approve_user
-        update_ticket(request_id=request_id,new_status=JiraStatus.APPROVED.value,approval_user=approval_user)
+        approve_user = sent_requests.first().approve_user
+        update_ticket(request_id=request_id,new_status=JiraStatus.APPROVED.value,approve_user=approve_user)
 
 
     if status=='in_progress':

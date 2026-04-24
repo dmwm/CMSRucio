@@ -6,11 +6,12 @@
 #   * Remove `managed = False` lines if you wish to allow Django to create, modify, and delete the table
 # Feel free to rename the models, but don't rename db_table values or field names.
 from django.db import models
+from django.conf import settings
 import uuid
 
 class FileInvalidationRequests(models.Model):
     id = models.AutoField(primary_key=True)
-    request_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    request_id = models.UUIDField(default=uuid.uuid4, editable=False)
     file_name = models.CharField(max_length=255)
     status = models.CharField(max_length=20)
     mode = models.CharField(max_length=10)
@@ -18,13 +19,13 @@ class FileInvalidationRequests(models.Model):
     reason = models.TextField(blank=True, null=True)
     job_id = models.CharField(max_length=8,null=True,blank=True)
     logs = models.TextField()
-    rse = models.TextField()
+    rse = models.TextField(null=True, blank=True)
     global_invalidate_last_replicas = models.BooleanField(default=False)
-    request_user = models.TextField()
-    approve_user = models.TextField()
+    request_user = models.TextField(null=settings.LOCAL_TESTING,blank=settings.LOCAL_TESTING)
+    approve_user = models.TextField(null=True, blank=True)
 
     class Meta:
-        managed = False
+        managed = True if settings.LOCAL_TESTING else False
         db_table = 'file_invalidation_requests'
         unique_together = (('request_id', 'file_name'),)
 
