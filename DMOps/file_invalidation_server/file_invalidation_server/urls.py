@@ -22,4 +22,5 @@ urlpatterns = [
     path('', HomeView.as_view(), name='home'),
     path('admin/', admin.site.urls),
     path("api/", include("fi_manager.urls")),
+    path("api/", include("file_integrity_checker.urls")),
 ]

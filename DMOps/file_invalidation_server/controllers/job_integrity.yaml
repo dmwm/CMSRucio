@@ -1,0 +1,96 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: integrity-job-PLACEHOLDER
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      restartPolicy: Never
+      serviceAccountName: job-runner
+
+      initContainers:
+        - name: init-voms
+          image: registry.cern.ch/cmsrucio/file_invalidation_tool:base
+          command: ["/bin/sh", "-c", "
+            cp /tmp/usercert.pem /certs/usercert.pem;
+            cp /tmp/userkey.pem /certs/userkey.pem;
+            chmod 400 /certs/usercert.pem;
+            chmod 600 /certs/userkey.pem;
+            voms-proxy-init -voms cms -rfc -valid 192:00
+              --cert '/certs/usercert.pem'
+              --key '/certs/userkey.pem';"]
+          volumeMounts:
+            - name: user-cert
+              mountPath: "/tmp/usercert.pem"
+              subPath: "usercert.pem"
+            - name: user-key
+              mountPath: "/tmp/userkey.pem"
+              subPath: "userkey.pem"
+            - name: vomses-volume
+              mountPath: "/etc/vomses/"
+              readOnly: true
+            - name: certs
+              mountPath: /certs
+
+        - name: init-cvmfs
+          image: registry.cern.ch/cmsrucio/file_invalidation_tool:base
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e;
+              echo 'Waiting for CVMFS...';
+              sleep 30;
+              ls -l /cvmfs/cms.cern.ch/ | grep 'rucio';
+              ls -l /cvmfs/cms.cern.ch/rucio/ | grep 'rucio.cfg';
+          volumeMounts:
+            - name: cvmfs-volume
+              mountPath: "/cvmfs/"
+              readOnly: true
+
+      containers:
+        - name: integrity-checker
+          image: registry.cern.ch/cmsrucio/file-integrity-check-generic-decompression-check:latest
+          imagePullPolicy: Always
+          args: []
+          volumeMounts:
+            # PVC where the LFN input file is written by the Django pod
+            # PVC_MOUNT_PATH_CONTAINER in tasks.py must match this mountPath
+            - name: integrity-input-file
+              mountPath: "/input/"
+            - name: cvmfs-volume
+              mountPath: "/cvmfs/"
+              readOnly: true
+            - name: vomses-volume
+              mountPath: "/etc/vomses/"
+              readOnly: true
+            - name: certs
+              mountPath: "/certs"
+
+      volumes:
+        # Dedicated PVC for this tool — isolated from the invalidation tool PVC
+        # This PVC must exist in OpenShift before deploying the tool.
+        - name: integrity-input-file
+          persistentVolumeClaim:
+            claimName: integrity-input-file-pvc
+        - name: user-cert
+          configMap:
+            name: user-certificates
+            items:
+              - key: usercert.pem
+                path: usercert.pem
+        - name: user-key
+          configMap:
+            name: user-certificates
+            items:
+              - key: userkey.pem
+                path: userkey.pem
+        - name: vomses-volume
+          configMap:
+            name: vomses-config
+        - name: cvmfs-volume
+          persistentVolumeClaim:
+            claimName: cvmfs-volume
+        - name: certs
+          emptyDir: {}

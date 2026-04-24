@@ -47,7 +47,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'fi_manager'
+    'fi_manager',
+    'file_integrity_checker',
 ]
 
 REST_FRAMEWORK = {
