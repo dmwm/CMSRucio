@@ -83,7 +83,7 @@
                 {% if file.status == 'waiting_approval' %}
                 <a href="{% url 'invalidation-approval' file.request_id %}" class="btn btn-sm btn-outline-primary">Approve</a>
                 {% elif file.status == 'in_progress' %}
-                <a href="{% url 'invalidation-approval' file.request_id %}" class="btn btn-sm btn-outline-primary">Re-submit job</a>
+                <a href="{% url 'invalidation-approval' file.request_id %}" class="btn btn-sm btn-outline-primary">Re-submit</a>
                 {% endif %}
             </td>
         </tr>

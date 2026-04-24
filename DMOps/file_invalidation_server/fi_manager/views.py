@@ -218,7 +218,7 @@ class FileQueryView(APIView):
         page_obj = paginator.get_page(page_number)
         custom_range = page_obj.paginator.get_elided_page_range(page_number, on_each_side=4, on_ends=3)
 
-        context = {'grouped': grouped, 'data': page_obj.object_list, "page_obj":page_obj, "is_paginated": page_obj.has_other_pages(),'page_range': custom_range, 'total_objects':files.count()}    
+        context = {'grouped': grouped, 'data': page_obj.object_list, "page_obj":page_obj, "is_paginated": page_obj.has_other_pages(),'page_range': custom_range, 'total_objects':len(data)}    
         if self.request.accepted_renderer.format == 'html':
             return render(self.request, self.grouped_template_name if context["grouped"] else self.template_name, context)
         else:
