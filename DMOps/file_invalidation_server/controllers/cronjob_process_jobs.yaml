@@ -4,6 +4,8 @@ metadata:
   name: jobs-log-processor
 spec:
   schedule: "*/5 * * * *"  # every 5 minutes
+  successfulJobsHistoryLimit: 2 
+  failedJobsHistoryLimit: 3
   jobTemplate:
     spec:
       template:

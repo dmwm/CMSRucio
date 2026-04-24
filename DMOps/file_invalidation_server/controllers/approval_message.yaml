@@ -4,6 +4,8 @@ metadata:
   name: approval-message
 spec:
   schedule: "0 8 * * 1"  # Every Monday at 08:00 UTC
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2
   jobTemplate:
     spec:
       template:
