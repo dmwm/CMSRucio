@@ -4,17 +4,22 @@ from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework import status, serializers
 from rest_framework.renderers import JSONRenderer, TemplateHTMLRenderer
 from django.core.paginator import Paginator
-from .renderers import ApprovalBrowsableAPIRenderer
 from .models import FileInvalidationRequests
-import base64
-from django.http import HttpResponse
 from django.shortcuts import render
 from django.views.generic import TemplateView
 from .utils import process_invalidation, get_cern_username, send_approval_alert, create_ticket_for_invalidation
 from django.db.models import Count, CharField, Value, F, Case, When, IntegerField
 from django.db.models.functions import StrIndex, Substr
+from django.utils.safestring import mark_safe
 import logging
 import uuid
+import re
+
+
+def include_link(reason: str):
+    pattern=r'([A-Z]{4,}\-\d{1,})'
+    replacement = r'<a href="https://its.cern.ch/jira/browse/\1" target="_blank">\1</a>'
+    return re.sub(pattern,replacement,reason)
 
 class FileInvalidationRequestSerializer(serializers.Serializer):
     reason = serializers.CharField(required=True,help_text="Enter the reason for the file invalidation request.")
@@ -149,6 +154,8 @@ class FileQueryView(APIView):
     template_name = 'fi_manager/query.html'
     grouped_template_name = 'fi_manager/groupedquery.html'
 
+    
+
     def get(self, request, request_id=None, *args, **kwargs):
         file_status = request.query_params.get("status")
         file_request_id = request_id or request.query_params.get("request_id")
@@ -208,9 +215,11 @@ class FileQueryView(APIView):
                     'status_priority','-total_objects','request_id')
             
             data = list(group)
+            for obj in data:
+                obj['truncated_reason'] = mark_safe(include_link(obj['truncated_reason']))
 
         else:
-            data = [{"request_id": f.request_id, "file_name": f.file_name, "status": f.status,"mode":f.mode,"dry_run":f.dry_run,"reason":f.reason,"job_id":f.job_id,"logs":f.logs,"rse":f.rse,"global_invalidate_last_replicas":f.global_invalidate_last_replicas,"request_user":f.request_user,"approve_user":f.approve_user} for f in files]
+            data = [{"request_id": f.request_id, "file_name": f.file_name, "status": f.status,"mode":f.mode,"dry_run":f.dry_run,"reason": mark_safe(include_link(f.reason)),"job_id":f.job_id,"logs":f.logs,"rse":f.rse,"global_invalidate_last_replicas":f.global_invalidate_last_replicas,"request_user":f.request_user,"approve_user":f.approve_user} for f in files]
 
         items_per_page = 10 if grouped else 50
         paginator = Paginator(data, items_per_page) 
@@ -232,7 +241,7 @@ class InvalidationApproval(APIView):
     def get(self, request, request_id):
         files = FileInvalidationRequests.objects.filter(request_id=request_id)
 
-        data = [{"request_id": f.request_id, "file_name": f.file_name, "status": f.status, "mode": f.mode, "dry_run": f.dry_run, "reason": f.reason, "job_id": f.job_id, "logs": f.logs, "request_user": f.request_user} for f in files]
+        data = [{"request_id": f.request_id, "file_name": f.file_name, "status": f.status, "mode": f.mode, "dry_run": f.dry_run, "reason": mark_safe(include_link(f.reason)), "job_id": f.job_id, "logs": f.logs, "request_user": f.request_user} for f in files]
 
         items_per_page = 50
         paginator = Paginator(data, items_per_page) 
