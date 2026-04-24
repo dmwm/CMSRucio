@@ -182,7 +182,7 @@ class FileQueryView(APIView):
 
         grouped = files.values('request_id').distinct().count()>1
 
-        status_order = ["aborted","failed","in_progress","queued","waiting_approval","dbs_only","rucio_only","success"]
+        status_order = ["success","waiting_approval","queued","in_progress","failed","aborted"]
         ordering = Case(
                 *[When(status=status, then=Value(i)) for i, status in enumerate(status_order)],
                 default=Value(len(status_order)), # Put any unknown statuses at the end
@@ -205,7 +205,7 @@ class FileQueryView(APIView):
                     total_objects=Count('id'),
                     status_priority=ordering
                 ).order_by(
-                    'status_priority','total_objects','request_id')
+                    'status_priority','total_objects','request_id').desc()
             
             data = list(group)
 
