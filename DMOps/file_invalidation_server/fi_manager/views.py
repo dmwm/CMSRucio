@@ -30,7 +30,7 @@ class FileInvalidationRequestSerializer(serializers.Serializer):
                                             "cols":100,
                                             "resize": "none"},
                                         help_text="Please enter the list of DIDs to be invalidated. The file content should be a list of DIDs of the same type without the scope prefix, one per line.")
-    dry_run = serializers.BooleanField(initial=True, required=False,default=True)
+    dry_run = serializers.BooleanField(required=False, default=False)
     mode = serializers.ChoiceField(choices=['global','local','dbs-only','rucio-only'],allow_blank=False)
     rse = serializers.CharField(required=False,help_text="ONLY FOR LOCAL MODE. The RSE at which the list of files should be invalidated.")
     global_invalidate_last_replicas = serializers.BooleanField(
