@@ -172,6 +172,15 @@ def process_invalidation(request_id, reason, dry_run=True,mode='global',rse=None
 
     if not txt_content.strip():
         raise ValueError(f'The text file is empty.')
+    
+    if settings.LOCAL_TESTING:
+        logging.info(f"Local testing, only creating objects in database")
+        sent_requests = FileInvalidationRequests.objects.filter(request_id=request_id)
+        sent_requests.update(status="in_progress")
+        sent_requests.update(job_id=job_unique_uuid)
+
+        approve_user = sent_requests.first().approve_user
+        return
 
     pvc_mount_path = "/shared-data"
     if len(os.listdir(pvc_mount_path))>0:
