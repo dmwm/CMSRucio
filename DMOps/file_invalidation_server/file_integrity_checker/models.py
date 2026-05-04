@@ -20,6 +20,7 @@ class FileIntegrityRequest(models.Model):
     updated_at     = models.DateTimeField(auto_now=True)
 
     class Meta:
+        managed  = False
         db_table = 'file_integrity_checker_requests'
         ordering = ['-created_at']
 
@@ -41,6 +42,7 @@ class FileReplica(models.Model):
     status = models.CharField(max_length=20)
 
     class Meta:
+        managed  = False
         db_table = 'file_integrity_checker_replicas'
 
     def __str__(self):
