@@ -308,15 +308,9 @@ class FileIntegrityQueryRequestView(APIView):
         request_id       = request.query_params.get('request_id')
         query_status     = request.query_params.get('status')
         requested_by     = request.query_params.get('requested_by')
-        is_updated = 'update' in request.query_params
-        if is_updated:
-            include_replicas = 'include_replicas' in request.query_params
-        else:
-            include_replicas = True
-        include_logs = 'include_logs' in request.query_params
-        include_summary = 'include_summary' in request.query_params
-
-        print(f"JPS is updated {is_updated}, include_replicas {include_replicas}")
+        include_replicas = request.query_params.get('include_replicas',True)
+        include_logs = request.query_params.get('include_logs',False)
+        include_summary = request.query_params.get('include_summary',True)
 
         # --- Detail view ---
         if request_id:
@@ -425,9 +419,6 @@ class FileIntegrityQueryFilesView(APIView):
         /store/data/file2.root
     """
 
-    renderer_classes = [TemplateHTMLRenderer, JSONRenderer]
-    template_name = 'integrity/files.html'
-
     def get(self, request):
         request_id  = request.query_params.get('request_id')
         file_status = request.query_params.get('file_status')
@@ -467,10 +458,7 @@ class FileIntegrityQueryFilesView(APIView):
             for f in files
         ]
 
-        if self.request.accepted_renderer.format == 'html':
-            return render(self.request, self.template_name, {'data':files})
-        else:
-            return Response(files, status=status.HTTP_200_OK)
+        return Response(files, status=status.HTTP_200_OK)
 
 
 # ---------------------------------------------------------------------------
