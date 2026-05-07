@@ -1,9 +1,11 @@
 import logging
 from collections import defaultdict
 from django.http import HttpResponse
+from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, JSONParser
+from rest_framework.renderers import JSONRenderer, TemplateHTMLRenderer
 from rest_framework import status
 
 from .models import FileIntegrityRequest, FileReplica
@@ -182,15 +184,20 @@ class FileIntegritySubmitRequestView(APIView):
     """
     serializer_class = FileIntegrityRequestSerializer
     parser_classes   = [MultiPartParser, JSONParser]
+    renderer_classes = [TemplateHTMLRenderer, JSONRenderer]
+    template_name = 'integrity/submit.html'
 
     def get_serializer_class(self, *args, **kwargs):
         return self.serializer_class(*args, **kwargs)
 
     def get(self, request):
-        return Response(
-            [{'POST': 'Submit a file integrity check request'}],
-            status=status.HTTP_200_OK
-        )
+        if self.request.accepted_renderer.format == 'html':
+            return render(self.request, self.template_name)
+        else:
+            return Response(
+                [{'POST': 'Submit a file integrity check request'}],
+                status=status.HTTP_200_OK
+            )
 
     def post(self, request):
         serializer = FileIntegrityRequestSerializer(data=request.data)
@@ -294,19 +301,22 @@ class FileIntegrityQueryRequestView(APIView):
                                  Default: false
     """
 
+    renderer_classes = [TemplateHTMLRenderer, JSONRenderer]
+    template_name = 'integrity/requests-list.html'
+    detail_template = 'integrity/requests-detail.html'
     def get(self, request):
         request_id       = request.query_params.get('request_id')
         query_status     = request.query_params.get('status')
         requested_by     = request.query_params.get('requested_by')
-        include_replicas = request.query_params.get(
-            'include_replicas', 'true'
-        ).lower() != 'false'
-        include_logs     = request.query_params.get(
-            'include_logs', 'false'
-        ).lower() == 'true'
-        include_summary  = request.query_params.get(
-            'include_summary', 'true' if request_id else 'false'
-        ).lower() != 'false'
+        is_updated = 'update' in request.query_params
+        if is_updated:
+            include_replicas = 'include_replicas' in request.query_params
+        else:
+            include_replicas = True
+        include_logs = 'include_logs' in request.query_params
+        include_summary = 'include_summary' in request.query_params
+
+        print(f"JPS is updated {is_updated}, include_replicas {include_replicas}")
 
         # --- Detail view ---
         if request_id:
@@ -336,7 +346,10 @@ class FileIntegrityQueryRequestView(APIView):
             if include_replicas:
                 response_data['files'] = build_files_view(integrity_request)
 
-            return Response(response_data, status=status.HTTP_200_OK)
+            if self.request.accepted_renderer.format == 'html':
+                return render(self.request, self.detail_template, {'data':response_data})
+            else:
+                return Response(result, status=status.HTTP_200_OK)
 
         # --- List view ---
         requests_qs = FileIntegrityRequest.objects.all()
@@ -367,7 +380,10 @@ class FileIntegrityQueryRequestView(APIView):
                 entry['summary'] = build_request_summary(r)
             result.append(entry)
 
-        return Response(result, status=status.HTTP_200_OK)
+        if self.request.accepted_renderer.format == 'html':
+            return render(self.request, self.template_name, {'data':result})
+        else:
+            return Response(result, status=status.HTTP_200_OK)
 
 
 # ---------------------------------------------------------------------------
@@ -409,6 +425,9 @@ class FileIntegrityQueryFilesView(APIView):
         /store/data/file2.root
     """
 
+    renderer_classes = [TemplateHTMLRenderer, JSONRenderer]
+    template_name = 'integrity/files.html'
+
     def get(self, request):
         request_id  = request.query_params.get('request_id')
         file_status = request.query_params.get('file_status')
@@ -447,7 +466,11 @@ class FileIntegrityQueryFilesView(APIView):
             }
             for f in files
         ]
-        return Response(files, status=status.HTTP_200_OK)
+
+        if self.request.accepted_renderer.format == 'html':
+            return render(self.request, self.template_name, {'data':files})
+        else:
+            return Response(files, status=status.HTTP_200_OK)
 
 
 # ---------------------------------------------------------------------------

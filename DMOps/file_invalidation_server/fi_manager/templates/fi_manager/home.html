@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<h2 class="mb-3">File Invalidation</h1>
 <div class="row">
     <div class="col-md-4 mb-4">
         <div class="card h-100">
@@ -26,6 +27,36 @@
                 <h5 class="card-title">Approve Request</h5>
                 <p class="card-text">Approve pending file invalidation requests. Only for authorized DMOps personnel.</p>
                 <a href="{% url 'file-query-filters' %}?status=waiting_approval" class="btn btn-primary mt-auto">View Requests to Approve</a>
+            </div>
+        </div>
+    </div>
+</div>
+<h2 class="mb-3">File Integrity checker</h1>
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body d-flex flex-column">
+                <h5 class="card-title">Submit integrity check</h5>
+                <p class="card-text">Submit a new file integrity check request.</p>
+                <a href="{% url 'integrity-submit' %}" class="btn btn-primary mt-auto">Go to Submit</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body d-flex flex-column">
+                <h5 class="card-title">Query requests</h5>
+                <p class="card-text">View and filter integrity check requests. See details and status of submitted requests.</p>
+                <a href="{% url 'integrity-query-requests' %}" class="btn btn-primary mt-auto">Go to Query</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body d-flex flex-column">
+                <h5 class="card-title">Query replicas</h5>
+                <p class="card-text">Query individual replicas within a request.</p>
+                <a href="{% url 'integrity-query-replicas' %}" class="btn btn-primary mt-auto">Go to Query</a>
             </div>
         </div>
     </div>

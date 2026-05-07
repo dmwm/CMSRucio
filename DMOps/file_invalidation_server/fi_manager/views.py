@@ -72,7 +72,7 @@ class FileInvalidationRequestsView(APIView):
 
     def get(self, request):
         if self.request.accepted_renderer.format == 'html':
-            return render(self.request, 'fi_manager/upload.html')
+            return render(self.request, self.template_name)
         else:
             return Response(
                 [{"POST": "Upload file invalidation requests"}],
