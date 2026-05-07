@@ -33,6 +33,10 @@
                         </div>
                         <div class="mb-3">
                             <label for="mode" class="form-label">Mode <span class="text-danger">*</span></label>
+                            <div class="form-text">Global invalidates all replicas in rucio and declares the file invalid in DBS.
+                            Local invalidation declares files as bad at a specific RSE.
+                            DBS only declares the files invalid in DBS.
+                            Rucio only declares all replicas as bad in rucio.</div>
                             <select name="mode" class="form-select" id="mode" required>
                                 <option value="global">Global</option>
                                 <option value="local">Local</option>
