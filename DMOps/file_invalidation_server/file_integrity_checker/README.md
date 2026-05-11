@@ -10,16 +10,19 @@ A Django application integrated into the CMS file invalidation server that allow
 User submits LFNs via API
         │
         ▼
-Django creates a FileIntegrityRequest + placeholder FileReplica rows
+Django creates FileIntegrityRequest (status=SUBMITTED)
++ placeholder FileReplica rows
+Returns request_id immediately — user does not wait
         │
         ▼
-LFN list written to a PVC file
+queue_processor.py CronJob (every 1 min)
+Checks: how many jobs IN_PROGRESS?
+If below FIC_MAX_CONCURRENT_JOBS: triggers next SUBMITTED request
+If at limit: skips — tries again next minute
         │
         ▼
 Kubernetes job created — runs the integrity check tool container
-        │
-        ▼
-Tool copies each file from WLCG, validates checksum + decompression
+Tool copies files from WLCG, validates checksum + decompression
 Prints JSON results to stdout
         │
         ▼
@@ -60,6 +63,7 @@ file_invalidation_server/
 │   ├── serializers.py           — API input validation
 │   ├── views.py                 — all API views
 │   ├── tasks.py                 — job trigger logic + constants
+│   ├── process_queue.py         — CronJob: picks up SUBMITTED requests, triggers jobs
 │   ├── process_jobs.py          — CronJob: polls K8s, parses results, updates DB
 │   ├── cleanup_jobs.py          — CronJob: removes orphaned PVC files and K8s jobs
 │   ├── urls.py                  — URL routing
@@ -68,6 +72,7 @@ file_invalidation_server/
 │
 └── controllers/
     ├── job_integrity.yaml                      — Kubernetes Job template for the checker
+    ├── cronjob_queue_processor_integrity.yaml  — CronJob for process_queue.py
     ├── cronjob_integrity_process_jobs.yaml     — CronJob for process_jobs.py
     └── cronjob_integrity_cleanup_jobs.yaml     — CronJob for cleanup_jobs.py
 ```
@@ -289,7 +294,8 @@ All variables use the `FIC_` prefix (File Integrity Checker). All have sensible 
 
 | Variable | Default | Description |
 |---|---|---|
-| `FIC_MAX_LFNS_PER_REQUEST` | `20` | Maximum number of LFNs allowed per request |
+| `FIC_MAX_LFNS_PER_REQUEST` | `20` | Maximum number of LFNs allowed per request. |
+| `FIC_MAX_CONCURRENT_JOBS` | `3` | Maximum number of integrity check jobs running simultaneously. |
 | `FIC_PVC_MOUNT_PATH_HOST` | `/shared-data-integrity` | Where the Django pod mounts the integrity PVC. Must match the Django deployment yaml volumeMount. |
 | `FIC_PVC_MOUNT_PATH_CONTAINER` | `/input` | Where the job container mounts the same PVC. Must match `mountPath` in `job_integrity.yaml`. |
 | `FIC_JOB_WORKDIR` | `/tmp` | Writable directory inside the job container for temporary file copies. |

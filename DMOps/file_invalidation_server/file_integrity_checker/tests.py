@@ -7,6 +7,7 @@ from .models import FileIntegrityRequest, FileReplica
 from .tasks import process_integrity_check, split_scope, FileIntegrityRequest
 from .views import derive_file_status, build_request_summary, _format_lfns_per_rse
 from file_integrity_checker.process_jobs import parse_tool_output, update_replicas
+from file_integrity_checker.process_queue import process_queue, MAX_CONCURRENT_JOBS
 
 
 class SplitScopeTest(TestCase):
@@ -59,24 +60,22 @@ class ProcessIntegrityCheckTest(TestCase):
         replica = self.request.replicas.first()
         self.assertEqual(replica.status, 'pending')
 
-    def test_request_status_updated_after_trigger(self):
-        # Locally K8s is not available so trigger_job returns FAILED.
-        # What we test here is that the status is always updated to
-        # whatever trigger_job returns — never left as SUBMITTED.
+    def test_request_status_updated_to_submitted(self):
+        # process_integrity_check queues the request — job is triggered
+        # by process_queue.py. Status must be SUBMITTED.
         process_integrity_check(self.request, ['cms:/store/data/file.root'])
         self.request.refresh_from_db()
-        self.assertNotEqual(
+        self.assertEqual(
             self.request.status,
             FileIntegrityRequest.Status.SUBMITTED
         )
 
-    def test_job_id_always_set(self):
-        # job_id is generated before K8s submission so it is always
-        # set regardless of whether the job creation succeeds or fails
+    def test_job_id_not_set_at_submission(self):
+        # job_id is set by process_queue.py when trigger_job runs,
+        # not at submission time. Must be None after process_integrity_check.
         process_integrity_check(self.request, ['cms:/store/data/file.root'])
         self.request.refresh_from_db()
-        self.assertIsNotNone(self.request.job_id)
-        self.assertEqual(len(self.request.job_id), 8)
+        self.assertIsNone(self.request.job_id)
 
     def test_too_many_lfns_raises(self):
         lfns = [f'/store/data/file{i}.root' for i in range(21)]
@@ -88,47 +87,100 @@ class ProcessIntegrityCheckTest(TestCase):
             process_integrity_check(self.request, [])
             
 
-class TriggerJobArgsTest(TestCase):
+class QueueProcessorTest(TestCase):
 
     def setUp(self):
-        self.request_with_rse = FileIntegrityRequest.objects.create(
+        # A submitted request with placeholder replicas
+        # (as process_integrity_check would leave it)
+        self.request = FileIntegrityRequest.objects.create(
             requested_by='testuser',
             rse_expression='T2_CH_CERN',
             full_scan=False,
             status=FileIntegrityRequest.Status.SUBMITTED
         )
-        self.request_full_scan = FileIntegrityRequest.objects.create(
-            requested_by='testuser',
-            rse_expression=None,
-            full_scan=True,
+        FileReplica.objects.create(
+            request=self.request,
+            scope='cms',
+            lfn='/store/data/file.root',
+            status='pending'
+        )
+
+    @patch('file_integrity_checker.process_queue.trigger_job')
+    def test_submitted_request_is_triggered(self, mock_trigger):
+        mock_trigger.return_value = ('abc12345', FileIntegrityRequest.Status.IN_PROGRESS)
+        process_queue()
+        self.request.refresh_from_db()
+        self.assertEqual(self.request.status, FileIntegrityRequest.Status.IN_PROGRESS)
+        self.assertEqual(self.request.job_id, 'abc12345')
+
+    @patch('file_integrity_checker.process_queue.trigger_job')
+    def test_job_id_set_after_queue_processing(self, mock_trigger):
+        mock_trigger.return_value = ('abc12345', FileIntegrityRequest.Status.IN_PROGRESS)
+        process_queue()
+        self.request.refresh_from_db()
+        self.assertIsNotNone(self.request.job_id)
+        self.assertEqual(len(self.request.job_id), 8)
+
+    @patch('file_integrity_checker.process_queue.trigger_job')
+    def test_rse_expression_preserved_through_queue(self, mock_trigger):
+        mock_trigger.return_value = ('abc12345', FileIntegrityRequest.Status.IN_PROGRESS)
+        process_queue()
+        self.request.refresh_from_db()
+        self.assertEqual(self.request.rse_expression, 'T2_CH_CERN')
+
+    @patch('file_integrity_checker.process_queue.trigger_job')
+    def test_respects_max_concurrent_jobs_limit(self, mock_trigger):
+        mock_trigger.return_value = ('abc12345', FileIntegrityRequest.Status.IN_PROGRESS)
+
+        # Fill up all slots with IN_PROGRESS requests
+        for i in range(MAX_CONCURRENT_JOBS):
+            FileIntegrityRequest.objects.create(
+                requested_by='testuser',
+                status=FileIntegrityRequest.Status.IN_PROGRESS,
+                job_id=f'job{i:04d}ab'
+            )
+
+        process_queue()
+
+        # Our SUBMITTED request should not have been triggered
+        self.request.refresh_from_db()
+        self.assertEqual(self.request.status, FileIntegrityRequest.Status.SUBMITTED)
+        mock_trigger.assert_not_called()
+
+    @patch('file_integrity_checker.process_queue.trigger_job')
+    def test_fifo_order_respected(self, mock_trigger):
+        mock_trigger.return_value = ('abc12345', FileIntegrityRequest.Status.IN_PROGRESS)
+
+        # Create a newer request — self.request is older
+        newer = FileIntegrityRequest.objects.create(
+            requested_by='testuser2',
             status=FileIntegrityRequest.Status.SUBMITTED
         )
-
-    @patch('file_integrity_checker.tasks.trigger_job')
-    def test_rse_expression_stored_on_request(self, mock_trigger):
-        mock_trigger.return_value = ('abc12345', FileIntegrityRequest.Status.IN_PROGRESS)
-        process_integrity_check(self.request_with_rse, ['cms:/store/data/file.root'])
-        self.request_with_rse.refresh_from_db()
-        self.assertEqual(self.request_with_rse.rse_expression, 'T2_CH_CERN')
-
-    @patch('file_integrity_checker.tasks.trigger_job')
-    def test_status_is_in_progress_when_job_succeeds(self, mock_trigger):
-        # By mocking trigger_job we can test the IN_PROGRESS path
-        # that is unreachable locally without K8s
-        mock_trigger.return_value = ('abc12345', FileIntegrityRequest.Status.IN_PROGRESS)
-        process_integrity_check(self.request_with_rse, ['cms:/store/data/file.root'])
-        self.request_with_rse.refresh_from_db()
-        self.assertEqual(
-            self.request_with_rse.status,
-            FileIntegrityRequest.Status.IN_PROGRESS
+        FileReplica.objects.create(
+            request=newer, scope='cms',
+            lfn='/store/data/newer.root', status='pending'
         )
 
-    @patch('file_integrity_checker.tasks.trigger_job')
-    def test_full_scan_stored_on_request(self, mock_trigger):
-        mock_trigger.return_value = ('abc12345', FileIntegrityRequest.Status.IN_PROGRESS)
-        process_integrity_check(self.request_full_scan, ['cms:/store/data/file.root'])
-        self.request_full_scan.refresh_from_db()
-        self.assertTrue(self.request_full_scan.full_scan)
+        # With MAX_CONCURRENT_JOBS=3 and 0 running, both should be triggered
+        # but self.request (older) should be triggered first
+        triggered_ids = []
+        def capture_trigger(req):
+            triggered_ids.append(req.request_id)
+            return ('abc12345', FileIntegrityRequest.Status.IN_PROGRESS)
+        mock_trigger.side_effect = capture_trigger
+
+        process_queue()
+
+        self.assertEqual(triggered_ids[0], self.request.request_id)
+
+    @patch('file_integrity_checker.process_queue.trigger_job')
+    def test_no_submitted_requests_does_nothing(self, mock_trigger):
+        # Mark our request as already completed
+        self.request.status = FileIntegrityRequest.Status.COMPLETED
+        self.request.save()
+
+        process_queue()
+        mock_trigger.assert_not_called()
 
 
 class ParseToolOutputTest(TestCase):
