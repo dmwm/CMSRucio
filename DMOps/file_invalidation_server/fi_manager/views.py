@@ -270,22 +270,39 @@ class InvalidationApproval(APIView):
             return Response({"message":f"Approval user cannot be the same as request user"},
                             status=status.HTTP_403_FORBIDDEN)
         
-        updated = files.update(status="approved",approve_user=approve_user)
-        reason = files.first().reason
-        dry_run = files.first().dry_run
-        mode = files.first().mode
-        rse = files.first().rse
-        global_invalidate_last_replicas = files.first().global_invalidate_last_replicas
+        #TODO: Automate this list via CERN GMS API
+        if approve_user not in ['haozturk','cemmanou','ppaparri','jsalasga']:
+            return Response({"message":f"Approval user must be part of cms-dm-ops-core-team"},
+                            status=status.HTTP_403_FORBIDDEN)
 
-        try:
-            response_message = process_invalidation(request_id, reason, dry_run=dry_run, mode=mode, rse=rse,to_process="approved",global_invalidate_last_replicas=global_invalidate_last_replicas)
-            return Response({"message": response_message,
-                             "actions": [
-                                {
-                                    "url": f"https://file-invalidation.app.cern.ch/api/query/{request_id}",
-                                    "description": "View invalidation job details."
-                                }
-                            ]}, status=status.HTTP_200_OK)
+        action = request.data.get('action', 'approve').lower()
 
-        except Exception as e:
-            return Response({"message":f"None of the files could be invalidated - {str(e)}"})
+        if action == 'decline':
+            files.delete()  # Removes all objects with this request_id
+            return Response({
+                "message": f"Request {request_id} has been declined and removed from the database."
+            }, status=status.HTTP_200_OK)
+        elif action == 'approve':
+            updated = files.update(status="approved",approve_user=approve_user)
+            reason = files.first().reason
+            dry_run = files.first().dry_run
+            mode = files.first().mode
+            rse = files.first().rse
+            global_invalidate_last_replicas = files.first().global_invalidate_last_replicas
+
+            try:
+                response_message = process_invalidation(request_id, reason, dry_run=dry_run, mode=mode, rse=rse,to_process="approved",global_invalidate_last_replicas=global_invalidate_last_replicas)
+                return Response({"message": response_message,
+                                "actions": [
+                                    {
+                                        "url": f"https://file-invalidation.app.cern.ch/api/query/{request_id}",
+                                        "description": "View invalidation job details."
+                                    }
+                                ]}, status=status.HTTP_200_OK)
+
+            except Exception as e:
+                return Response({"message": f"Error processing invalidation: {str(e)}"}, 
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            return Response({"message": "Invalid action. Use 'approve' or 'decline'."}, 
+                        status=status.HTTP_400_BAD_REQUEST)
