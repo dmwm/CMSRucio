@@ -152,10 +152,16 @@ try:
         logger.debug(f"Updating static usage for {rse}")
         disk_experiment_use_bytes = site['disk_experiment_use'] * 1e12 #total space used by CMS experiment data
         disk_local_use_bytes = site['disk_local_use'] * 1e12 #additional quota for local rse_local_users account
-        rse_available_bytes = disk_experiment_use_bytes + disk_local_use_bytes
+        
+        # For _User suffix RSEs, the entire capacity comes from disk_local_use
+        if rse.endswith('_User'):
+            rse_available_bytes = disk_local_use_bytes
+        else:
+            rse_available_bytes = disk_experiment_use_bytes + disk_local_use_bytes
 
-        # Set Quota for local users account for the rse
-        setLocalUsersQuota(rclient, group_accounts, rse, disk_local_use_bytes, logger, dry_run)
+        # Set Quota for local users account for the rse (skip for _User suffix RSEs)
+        if not rse.endswith('_User'):
+            setLocalUsersQuota(rclient, group_accounts, rse, disk_local_use_bytes, logger, dry_run)
 
         min_free_space_percentage = default_min_free_space_percentage
         rse_attributes = rclient.list_rse_attributes(rse=rse)
@@ -166,7 +172,13 @@ try:
 
         try:
             # Static usage is 0 for many T3s - These are managed as quasi-static
-            if disk_experiment_use_bytes == 0:
+            # For _User suffix RSEs, check disk_local_use instead of disk_experiment_use
+            if rse.endswith('_User'):
+                skip_check = disk_local_use_bytes == 0
+            else:
+                skip_check = disk_experiment_use_bytes == 0
+            
+            if skip_check:
                 logger.debug(f"Static usage for {rse} is 0, skipping")
                 continue
 

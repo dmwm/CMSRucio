@@ -30,6 +30,10 @@ DOMAINS_BY_TYPE = {
         'wan': {'read': 1, 'write': 1, 'third_party_copy_write': 1, 'third_party_copy_read': 1,
                 'delete': 1},
         'lan': {'read': None, 'write': None, 'delete': None}},
+    'user': {
+        'wan': {'read': 1, 'write': 1, 'third_party_copy_write': 1, 'third_party_copy_read': 1,
+                'delete': 1},
+        'lan': {'read': None, 'write': None, 'delete': None}},
 }
 RUCIO_PROTOS = ['SRMv2', 'XRootD', 'WebDAV']
 PROTO_WEIGHT_TPC = {'WebDAV': 1, 'XRootD': 3, 'SRMv2': 2}
@@ -64,11 +68,13 @@ class CMSRSE:
 
         xattrs = {}
 
-        # If we are building a _Test or _Temp instance add the special prefix
+        # If we are building a _Test, _Temp, or _User instance add the special suffix
         if cms_type == "test":
             self.rse_name = json['rse']+"_Test"
         elif cms_type == "temp":
             self.rse_name = json['rse']+"_Temp"
+        elif cms_type == "user":
+            self.rse_name = json['rse']+"_User"
         else:
             self.rse_name = json['rse']
             if json.get('loadtest', None) is not None:

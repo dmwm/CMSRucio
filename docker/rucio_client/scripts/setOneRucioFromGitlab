@@ -15,7 +15,7 @@ import logging
 import sys
 
 parser = ArgumentParser(description="Update a site definition from GitLab")
-parser.add_argument('--type', dest='cms_type', help='type of RSE (prod-real, int-real, test, temp).',default=None, required=True)
+parser.add_argument('--type', dest='cms_type', help='type of RSE (prod-real, int-real, test, temp, user).',default=None, required=True)
 parser.add_argument('--dryrun', dest='dry_run', action='store_true')
 parser.add_argument('--debug', action='store_true', help='be more verbose')
 parser.add_argument('--just_print', dest='print_scheme', help='just prints the given scheme: gsiftp, srm, davs, xroot, all', \
