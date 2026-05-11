@@ -85,7 +85,25 @@
                     <hr>
                     <form method="post">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-success">Approve Request</button>
+                        
+                        <!-- Approve Button -->
+                        <button type="submit" 
+                                name="action" 
+                                value="approve" 
+                                class="btn btn-success me-2"
+                                onclick="return confirm('Are you sure you want to APPROVE this invalidation?')">
+                            Approve Request
+                        </button>
+
+                        <!-- Decline Button -->
+                        <button type="submit" 
+                                name="action" 
+                                value="decline" 
+                                class="btn btn-danger"
+                                onclick="return confirm('Are you sure you want to DECLINE and DELETE this request?')">
+                            Decline Request
+                        </button>
+
                         <a href="{% url 'file-query-filters' %}" class="btn btn-secondary">Back to Query</a>
                     </form>
                 </div>

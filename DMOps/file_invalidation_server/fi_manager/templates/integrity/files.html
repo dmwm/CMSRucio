@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h3><a href="{% url 'integrity-query-requests' %}">File Integrity Query Request</a></h3>
+
+<form method="get" class="mb-4">
+    <div class="row g-3">
+        <div class="col-md-3">
+            <label for="request_id" >Request ID</label>
+            <input type="hidden" name="request_id" value="{{ request.GET.request_id }}">
+            <p>{{ request.GET.request_id }}</p>
+        </div>
+        <div class="col-md-3">
+            <label for="file_status" class="form-label">Status:</label>
+            <select name="file_status" id="file_status">
+                <option value="FULLY_CORRUPTED">Fully corrupted</option>
+                <option value="PARTIALLY_CORRUPTED">Partially corrupted</option>
+                <option value="FULLY_OK">Fully ok</option>
+                <option value="OK">OK</option>
+                <option value="PENDING">Pending</option>
+                <option value="ERROR">Error</option>
+                <option value="UNKNOWN">Unknown</option>
+            </select>
+        </div>
+        <div class="col-md-3 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary">Filter</button>
+        </div>
+    </div>
+</form>
+
+<div class="row g-3 mt-2">
+    <div class="col-md-3">
+        <label for="link">More info</label>
+        <a href="{{ data.0.links.request }}"><p>Request</p></a>
+        <a href="{{ data.0.links.replicas }}"><p>Replicas</p></a>
+    </div>   
+</div>
+
+<table class="table table-striped table-hover">
+    <thead class="table-dark">
+        <tr>
+            <th>Scope</th>
+            <th>LFN</th>
+            <th>File status</th>
+            <th>Summary</th>
+            <th>Replicas</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for file in data %}
+        <tr>
+            <td>{{ file.scope }}</td>
+            <td>{{ file.lfn }}</td>
+            <td>
+                <span class="badge 
+                    {% if file.file_status == 'FULLY_OK' %}bg-success
+                    {% elif file.file_status == 'OK' %}bg-success
+                    {% elif file.file_status == 'PENDING' %}bg-warning
+                    {% elif file.file_status == 'ERROR' %}bg-danger
+                    {% elif file.file_status == 'FAILED' %}bg-danger
+                    {% else %}bg-secondary{% endif %}">
+                    {{ file.file_status }}
+                </span>
+            </td>
+            <td>{{ file.summary }}</td>
+            <td>{{ file.replicas }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

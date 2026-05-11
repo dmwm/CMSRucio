@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">File Integrity Submit Request</h3>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Submit a new file integrity check request.</p>
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="lfns" class="form-label">LFNs <span class="text-danger">*</span></label>
+                            <textarea name="lfns" class="form-control" id="lfns" rows="8" cols="100" required style="resize: none;"></textarea>
+                            <div class="form-text">List of LFNs to check, one per line. Maximum 20 LFNs per request. Scope is optional — 'cms' is used as default. Example: cms:/store/data/Run2024/file.root.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="rse_expression" class="form-label">RSE Expression </label>
+                            <input type="text" name="rse_expression" class="form-control" id="rse_expression">
+                            <div class="form-text">RSE expression to filter replicas (optional). If omitted all replicas are checked.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="full_scan" class="form-label">Full Scan</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="full_scan" id="full_scan">
+                                <label class="form-check-label" for="full_scan">
+                                    If True, performs a full scan by reading every basket. More time-consuming.
+                                </label>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Submit Request</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

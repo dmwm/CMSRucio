@@ -4,10 +4,11 @@ from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework import status, serializers
 from rest_framework.renderers import JSONRenderer, TemplateHTMLRenderer
 from django.core.paginator import Paginator
+from concurrent.futures import ThreadPoolExecutor
 from .models import FileInvalidationRequests
 from django.shortcuts import render
 from django.views.generic import TemplateView
-from .utils import process_invalidation, get_cern_username, send_approval_alert, create_ticket_for_invalidation
+from .utils import process_invalidation, get_cern_username, send_approval_alert, create_ticket_for_invalidation, update_ticket, JiraStatus
 from django.db.models import Count, CharField, Value, F, Case, When, IntegerField
 from django.db.models.functions import StrIndex, Substr
 from django.utils.safestring import mark_safe
@@ -15,6 +16,7 @@ import logging
 import uuid
 import re
 
+executor = ThreadPoolExecutor(max_workers=2)
 
 def include_link(reason: str):
     pattern=r'([A-Z]{4,}\-\d{1,})'
@@ -72,7 +74,7 @@ class FileInvalidationRequestsView(APIView):
 
     def get(self, request):
         if self.request.accepted_renderer.format == 'html':
-            return render(self.request, 'fi_manager/upload.html')
+            return render(self.request, self.template_name)
         else:
             return Response(
                 [{"POST": "Upload file invalidation requests"}],
@@ -104,15 +106,19 @@ class FileInvalidationRequestsView(APIView):
         raw_file_message = ""
         already_serviced_files = ""
         file_records = []
+        file_lines = [f.strip().replace('cms:/store','/store') for f in file_lines]
+        existing_files = FileInvalidationRequests.objects.filter(
+                            file_name__in=file_lines, 
+                            dry_run=False
+                        ).values('file_name', 'status')
+        existing_map = {obj['file_name']: obj['status'] for obj in existing_files}
+
         for fn in file_lines:
-            fn = fn.strip()
-            fn = fn.replace('cms:/store','/store')
-            obj = FileInvalidationRequests.objects.filter(file_name=fn).filter(dry_run=False).first()
-            if obj:
-                already_serviced_files = already_serviced_files + f'\nRequest was not created for file {fn} because it has already been submitted and it is currently in status: {obj.status}.'
-                if obj.status=="in_progress":
-                    already_serviced_files = already_serviced_files + ' Please wait 30min for the CronJob to update it on the database'
-                elif obj.status=="waiting_approval":
+            existing_status = existing_map.get(fn)
+            if existing_status:
+                if existing_status=="in_progress":
+                    already_serviced_files = already_serviced_files + ' Please wait 5min for the CronJob to update it on the database'
+                elif existing_status=="waiting_approval":
                     already_serviced_files = already_serviced_files + ' Please ask DMOps to approve the invalidation.'
             else:
                 input_vals = {'request_id':request_id,'file_name':fn,'status':'queued' if dry_run else 'waiting_approval','mode':mode,'dry_run':dry_run,'reason':reason,'global_invalidate_last_replicas':global_invalidate_last_replicas,'request_user':user, 'rse': rse}
@@ -120,15 +126,15 @@ class FileInvalidationRequestsView(APIView):
                 cnt += 1
         
         if cnt>0:
-            FileInvalidationRequests.objects.bulk_create(file_records, batch_size=100)
+            FileInvalidationRequests.objects.bulk_create(file_records, batch_size=200)
             if dry_run:
                 logging.info(f'Processing dry_run request id {request_id}...')
                 response_message = process_invalidation(request_id, reason, dry_run=dry_run, mode=mode, rse=rse,to_process="queued",global_invalidate_last_replicas=global_invalidate_last_replicas)
             else:
                 logging.info(f'{cnt} of {len(file_lines)} files were created in the database with waiting_approval status.')
                 try:
-                    send_approval_alert(request_id)
-                    create_ticket_for_invalidation(request_id)
+                    executor.submit(send_approval_alert, request_id)
+                    executor.submit(create_ticket_for_invalidation, request_id)
                 except Exception as e:
                     logging.warning(f"The approval alert for {request_id} was not sent.",exc_info=e)
 
@@ -270,22 +276,40 @@ class InvalidationApproval(APIView):
             return Response({"message":f"Approval user cannot be the same as request user"},
                             status=status.HTTP_403_FORBIDDEN)
         
-        updated = files.update(status="approved",approve_user=approve_user)
-        reason = files.first().reason
-        dry_run = files.first().dry_run
-        mode = files.first().mode
-        rse = files.first().rse
-        global_invalidate_last_replicas = files.first().global_invalidate_last_replicas
+        #TODO: Automate this list via CERN GMS API
+        if approve_user not in ['haozturk','cemmanou','ppaparri','jsalasga']:
+            return Response({"message":f"Approval user must be part of cms-dm-ops-core-team"},
+                            status=status.HTTP_403_FORBIDDEN)
 
-        try:
-            response_message = process_invalidation(request_id, reason, dry_run=dry_run, mode=mode, rse=rse,to_process="approved",global_invalidate_last_replicas=global_invalidate_last_replicas)
-            return Response({"message": response_message,
-                             "actions": [
-                                {
-                                    "url": f"https://file-invalidation.app.cern.ch/api/query/{request_id}",
-                                    "description": "View invalidation job details."
-                                }
-                            ]}, status=status.HTTP_200_OK)
+        action = request.data.get('action', 'approve').lower()
 
-        except Exception as e:
-            return Response({"message":f"None of the files could be invalidated - {str(e)}"})
+        if action == 'decline':
+            files.delete()  # Removes all objects with this request_id
+            update_ticket(request_id=request_id,new_status=JiraStatus.REJECTED)
+            return Response({
+                "message": f"Request {request_id} has been declined and removed from the database."
+            }, status=status.HTTP_200_OK)
+        elif action == 'approve':
+            updated = files.update(status="approved",approve_user=approve_user)
+            reason = files.first().reason
+            dry_run = files.first().dry_run
+            mode = files.first().mode
+            rse = files.first().rse
+            global_invalidate_last_replicas = files.first().global_invalidate_last_replicas
+
+            try:
+                response_message = process_invalidation(request_id, reason, dry_run=dry_run, mode=mode, rse=rse,to_process="approved",global_invalidate_last_replicas=global_invalidate_last_replicas)
+                return Response({"message": response_message,
+                                "actions": [
+                                    {
+                                        "url": f"https://file-invalidation.app.cern.ch/api/query/{request_id}",
+                                        "description": "View invalidation job details."
+                                    }
+                                ]}, status=status.HTTP_200_OK)
+
+            except Exception as e:
+                return Response({"message": f"Error processing invalidation: {str(e)}"}, 
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            return Response({"message": "Invalid action. Use 'approve' or 'decline'."}, 
+                        status=status.HTTP_400_BAD_REQUEST)

@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h3><a href="{% url 'integrity-query-requests' %}">File Integrity Query Request</a></h3>
+
+<div class="row g-3 mt-2">
+    <div class="col-md-3">
+        <label for="request_id" >Request ID</label>
+        <input type="hidden" name="request_id" value="{{ request.GET.request_id }}">
+        <p>{{ data.request_id }}</p>
+    </div>
+    <div class="col-md-3">
+        <label for="count">Requested by </label>
+        <p>{{ data.requested_by }}</p>
+    </div>
+    <div class="col-md-3">
+        <label for="status">Status</label>
+        <p>{{ data.status }}</p>
+    </div>      
+    <div class="col-md-3">
+        <label for="rse_expression">RSE expression</label>
+        <p>{{ data.rse_expression }}</p>
+    </div> 
+    <div class="col-md-3">
+        <label for="full_scan">Full scan</label>
+        <p>{{ data.full_scan }}</p>
+    </div>      
+    <div class="col-md-3">
+        <label for="job_id">Job ID</label>
+        <p>{{ data.job_id }}</p>
+    </div>     
+    <div class="col-md-3">
+        <label for="created_at">Created at</label>
+        <p>{{ data.created_at }}</p>
+    </div>  
+    <div class="col-md-3">
+        <label for="updated_at">Updated at</label>
+        <p>{{ data.updated_at }}</p>
+    </div>  
+    <div class="col-md-3">
+        <label for="link">More info</label>
+        <a href="{{ data.links.files }}"><p>Files</p></a>
+        <a href="{{ data.links.replicas }}"><p>Replicas</p></a>
+    </div>     
+    <div class="col-md-3">
+        <label for="link">Logs</label>
+        {% if request.GET.include_logs == 'True' %}
+        <p style="cursor: pointer; user-select: none; text-decoration: underline;" data-bs-toggle="modal" data-bs-target="#modal-logs">Open logs</p>
+        <div class="modal fade" id="modal-logs" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Logs:</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; max-height: 400px; overflow-y: auto;"><code>{{ data.logs }}</code></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+        </div>
+        {% else %}
+        <a href="{{ request.path }}?request_id={{ request.GET.request_id }}&include_logs=True"><p>Load logs</p></a>
+        {% endif %}
+    </div>
+</div>
+
+<table class="table table-striped table-hover">
+    <thead class="table-dark">
+        <tr>
+            <th>Scope</th>
+            <th>LFN</th>
+            <th>File status</th>
+            <th>Replica count</th>
+            <th>OK</th>
+            <th>Corrupted</th>
+            <th>Error</th>
+            <th>Pending</th>
+            <th>Replicas</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for file in data.files %}
+        <tr>
+            <td>{{ file.scope }}</td>
+            <td>{{ file.lfn }}</td>
+            <td>
+                <span class="badge 
+                    {% if file.file_status == 'FULLY_OK' %}bg-success
+                    {% elif file.file_status == 'OK' %}bg-success
+                    {% elif file.file_status == 'PENDING' %}bg-warning
+                    {% elif file.file_status == 'ERROR' %}bg-danger
+                    {% elif file.file_status == 'FAILED' %}bg-danger
+                    {% else %}bg-secondary{% endif %}">
+                    {{ file.file_status }}
+                </span>
+            </td>
+            <td>{{ file.summary.replica_count }}</td>
+            <td>{{ file.summary.OK }}</td>
+            <td>{{ file.summary.CORRUPTED }}</td>
+            <td>{{ file.summary.ERROR }}</td>
+            <td>{{ file.summary.pending }}</td>
+            <td>
+                <span style="cursor: pointer; user-select: none; display: inline-block;" data-bs-toggle="modal" data-bs-target="#modal-replicas-{{ forloop.counter }}">
+                    Overview
+                </span>
+                <div class="modal fade" id="modal-replicas-{{ forloop.counter }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Replicas: {{ file.lfn }}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; max-height: 400px; overflow-y: auto;">
+                                    <table class="table table-striped table-hover">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>RSE</th>
+                                            <th>Status</th>
+                                            <th>PFN</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for replica in file.replicas %}
+                                        <tr>
+                                            <td>{{ replica.rse }}</td>
+                                            <td>{{ replica.status }}</td>
+                                            <td>{{ replica.pfn }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
