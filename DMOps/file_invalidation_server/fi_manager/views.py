@@ -7,7 +7,7 @@ from django.core.paginator import Paginator
 from .models import FileInvalidationRequests
 from django.shortcuts import render
 from django.views.generic import TemplateView
-from .utils import process_invalidation, get_cern_username, send_approval_alert, create_ticket_for_invalidation
+from .utils import process_invalidation, get_cern_username, send_approval_alert, create_ticket_for_invalidation, update_ticket, JiraStatus
 from django.db.models import Count, CharField, Value, F, Case, When, IntegerField
 from django.db.models.functions import StrIndex, Substr
 from django.utils.safestring import mark_safe
@@ -279,6 +279,7 @@ class InvalidationApproval(APIView):
 
         if action == 'decline':
             files.delete()  # Removes all objects with this request_id
+            update_ticket(request_id=request_id,new_status=JiraStatus.REJECTED)
             return Response({
                 "message": f"Request {request_id} has been declined and removed from the database."
             }, status=status.HTTP_200_OK)
