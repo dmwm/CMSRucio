@@ -80,7 +80,9 @@ class CMSRSE:
             if json.get('loadtest', None) is not None:
                 xattrs['loadtest'] = json['loadtest']
 
-        xattrs['fts'] = ','.join(json['fts'])
+        # Provide default FTS list if not specified in JSON
+        fts_list = json.get('fts') or ["https://fts3-cms.cern.ch:8446"]
+        xattrs['fts'] = ','.join(fts_list)
         self._get_attributes(xattrs=xattrs)
 
     """

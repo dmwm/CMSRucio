@@ -90,7 +90,8 @@ for project in projects:
                 # For these, query the actual site and construct a JSON
                 rse_name = site['rse'] + '_User'
                 deterministic = True
-                if rse_name in SKIP_SITES or not DO_SITES or rse_name not in DO_SITES:
+                # Allow PoC _User RSEs to be created even if not yet in Rucio
+                if rse_name in SKIP_SITES:
                     print(' Skipping.')
                     continue
 
