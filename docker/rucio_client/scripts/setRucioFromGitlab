@@ -14,8 +14,11 @@ from CMSRSE import CMSRSE
 
 SKIP_SITES = []
 
+# PoC hardcoded list of RSE names for which _User variants should be created
+USER_TIER_POC_SITES = ['T2_IT_Rome']
+
 parser = ArgumentParser(description="Update a site definition from GitLab")
-parser.add_argument('--type', dest='cms_type', help='type of RSE (prod-real, int-real, test, temp).',
+parser.add_argument('--type', dest='cms_type', help='type of RSE (prod-real, int-real, test, temp, user).',
                     default=None, required=True)
 parser.add_argument('--dryrun', dest='dry_run', action='store_true',
                     help='do not change anything in rucio, checking only')
@@ -59,7 +62,7 @@ for project in projects:
                 continue
             print(f'Checking {site["rse"]} and type {options.cms_type}')
             if site['rse'] and options.cms_type in ['test', 'temp']:
-                # For these, query the actual site and construct a JSON
+                # For test and temp types, apply to all RSEs
                 if options.cms_type == 'test':
                     rse_name = site['rse'] + '_Test'
                     deterministic = True
@@ -70,8 +73,28 @@ for project in projects:
                     print(' Skipping.')
                     continue
 
-                if 'fts' not in site:
-                    site.update({'fts': ["https://fts3-cms.cern.ch:8446", "https://lcgfts3.gridpp.rl.ac.uk:8446"]})
+                rse = CMSRSE(site, dry=options.dry_run, cms_type=options.cms_type, deterministic=deterministic)
+                try:
+                    if rse.update():
+                        print(f'RSE {rse.rse_name} and type {rse.rucio_rse_type} changed')
+                    else:
+                        print(f'RSE {rse.rse_name} and type {rse.rucio_rse_type} unchanged')
+                except Exception:
+                    print(f'Could not update RSE {rse.rse_name}. Traceback:')
+                    print(traceback.format_exc())
+            elif site['rse'] and options.cms_type == 'user':
+                # For user type, only create _User variants for PoC sites
+                if site['rse'] not in USER_TIER_POC_SITES:
+                    print(f' Skipping (not in PoC list: {USER_TIER_POC_SITES})')
+                    continue
+                # For these, query the actual site and construct a JSON
+                rse_name = site['rse'] + '_User'
+                deterministic = True
+                # Allow PoC _User RSEs to be created even if not yet in Rucio
+                if rse_name in SKIP_SITES:
+                    print(' Skipping.')
+                    continue
+
                 rse = CMSRSE(site, dry=options.dry_run, cms_type=options.cms_type, deterministic=deterministic)
                 try:
                     if rse.update():
