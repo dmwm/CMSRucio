@@ -109,6 +109,8 @@ WSGI_APPLICATION = 'file_invalidation_server.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+DATA_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024 
+
 if LOCAL_TESTING:
 
     DATABASES = {
