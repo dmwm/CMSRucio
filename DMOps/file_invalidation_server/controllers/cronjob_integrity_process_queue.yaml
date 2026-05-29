@@ -13,7 +13,7 @@ metadata:
 spec:
   schedule: "* * * * *"
   concurrencyPolicy: Forbid  # never run two queue processors simultaneously
-  successfulJobsHistoryLimit: 3
+  successfulJobsHistoryLimit: 2
   failedJobsHistoryLimit: 1
   suspend: false
   jobTemplate:
