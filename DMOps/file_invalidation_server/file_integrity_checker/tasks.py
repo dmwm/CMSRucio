@@ -9,6 +9,7 @@ from .models import FileIntegrityRequest, FileReplica
 logger = logging.getLogger(__name__)
 
 MAX_LFNS_PER_REQUEST = decouple_config('FIC_MAX_LFNS_PER_REQUEST', default=20, cast=int)
+MAX_CONCURRENT_JOBS = decouple_config('FIC_MAX_CONCURRENT_JOBS', default=3, cast=int)
 
 # ---------------------------------------------------------------------------
 # Path constants — change these if mount paths or filenames change
@@ -45,8 +46,6 @@ def process_integrity_check(integrity_request, raw_lfns):
 
     1. Validates the LFN list
     2. Creates one FileReplica placeholder row per LFN (rse=None, status=pending)
-    3. Triggers the Kubernetes job
-    4. Updates the request with job_id and status
     """
     if not raw_lfns:
         raise ValueError("No LFNs provided.")
@@ -73,21 +72,15 @@ def process_integrity_check(integrity_request, raw_lfns):
         f"Created {len(raw_lfns)} FileReplica placeholder rows "
         f"for request {integrity_request.request_id}"
     )
-
-    job_id, job_status = trigger_job(integrity_request)
-
-    # update_fields must include updated_at explicitly because auto_now=True
-    # fields are only auto-updated when update_fields is not specified
-    integrity_request.job_id = job_id
-    integrity_request.status = job_status
-    integrity_request.save(update_fields=['job_id', 'status', 'updated_at'])
-
+    
+    # Leave status as SUBMITTED for now.
+    # The queue processor will pick it up.
     logger.info(
-        f"Request {integrity_request.request_id} → "
-        f"status={job_status}, job_id={job_id}"
+        f"Request {integrity_request.request_id} queued "
+        f"with {len(raw_lfns)} LFNs"
     )
 
-    return job_id, job_status
+    return None, FileIntegrityRequest.Status.SUBMITTED
 
 
 def trigger_job(integrity_request):

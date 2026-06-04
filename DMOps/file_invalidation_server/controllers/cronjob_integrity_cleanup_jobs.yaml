@@ -16,7 +16,7 @@ metadata:
 spec:
   schedule: "0 * * * *"
   concurrencyPolicy: Allow
-  successfulJobsHistoryLimit: 3
+  successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 1
   suspend: false
   jobTemplate:
