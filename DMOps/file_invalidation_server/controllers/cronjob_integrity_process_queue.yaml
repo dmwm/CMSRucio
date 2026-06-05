@@ -28,7 +28,7 @@ spec:
               imagePullPolicy: Always
               command:
                 - python3
-                - file_integrity_checker/queue_processor.py
+                - file_integrity_checker/process_queue.py
               env:
                 - name: FIC_MAX_CONCURRENT_JOBS
                   value: "3"
