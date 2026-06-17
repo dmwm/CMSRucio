@@ -137,13 +137,15 @@ try:
                     rclient.set_rse_usage(rse=tape_rse, source='static', used=tape_usable_bytes, free=None)
                     logger.info(f"Updating static usage, from {current_static_usage*1e-12:.2f}TB to {tape_usable_bytes*1e-12:.2f}TB, for {tape_rse}")
 
+        # logger.info(f"{rses}")
         # Update static usage for Disks
         if site['name'] in rses:
             rse = site['name']
-        if f"{site['name']}_User" in rses:
-            rse = f"{site['name']}_User"
         elif f"{site['name']}_Disk" in rses:
             rse = f"{site['name']}_Disk"
+        elif f"{site['name']}_User" in rses:
+            logger.info("User RSE")
+            rse = f"{site['name']}_User"
         else:
             logger.debug(f"RSE {site['name']} or {site['name']}_Disk not a valid RSE")
             continue
@@ -152,10 +154,10 @@ try:
         rses_to_update = [rse]
 
         # Also process _User variant if it exists
-        if not rse.startswith("T1") and not rse.endswith("_Tape"):
-          user_rse = f"{rse}_User"
-          if user_rse in rses:
-            rses_to_update.append(user_rse)
+        #if not rse.startswith("T1") and not rse.endswith("_Tape"):
+        #  user_rse = f"{rse}_User"
+        #  if user_rse in rses:
+        #    rses_to_update.append(user_rse)
 
         for rse in rses_to_update:
             logger.info(f"Updating {rse}")
