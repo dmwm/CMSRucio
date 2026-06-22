@@ -49,6 +49,11 @@ def check_files(
             lfn = lfn_with_scope
             logger.warning(f"No scope provided for '{lfn}'. Using default scope 'cms'.")
 
+        if not lfn.endswith('.root'):
+            logger.error(f"The LFN provided is not a .root file: '{lfn_with_scope}'")
+            results.append({"filename": lfn_with_scope, "error": "The LFN provided is not a .root file."})
+            continue
+
         file_result = {"filename": lfn_with_scope, "replicas": []}
 
         try:

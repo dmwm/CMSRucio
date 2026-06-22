@@ -343,7 +343,7 @@ class FileIntegrityQueryRequestView(APIView):
             if self.request.accepted_renderer.format == 'html':
                 return render(self.request, self.detail_template, {'data':response_data})
             else:
-                return Response(result, status=status.HTTP_200_OK)
+                return Response(response_data, status=status.HTTP_200_OK)
 
         # --- List view ---
         requests_qs = FileIntegrityRequest.objects.all()

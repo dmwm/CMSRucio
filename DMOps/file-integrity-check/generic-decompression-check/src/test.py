@@ -43,10 +43,18 @@ if __name__ == "__main__":
         "/store/mc/RunIISummer16NanoAODv5/CITo2Mu_M800_CUETP8M1_Lam16TeVDesLL_13TeV_Pythia8_Corrected-v3/NANOAODSIM/PUMoriond17_Nano1June2019_102X_mcRun2_asymptotic_v7-v1/30000/8BB32229-E898-B445-B871-4FC2840B46D5.root"
     ]
 
-    print("\nTesting check_files - no rse_expression.")
+    print("\n3. Testing check_files - non-.root LFN (should be rejected).")
+    non_root_lfns = ["cms:/store/data/Run2024/dataset", "/store/data/Run2024/block"]
+    results = check_files(non_root_lfns, workdir="./tmp")
+    print(json.dumps(results))
+    for r in results:
+        assert r.get('error') == "The LFN provided is not a .root file.", f"Unexpected result: {r}"
+    print("Test 3. completed. Non-.root LFNs correctly rejected.")
+
+    print("\n4. Testing check_files - no rse_expression.")
     results = check_files(test_lfns, workdir="./tmp")
     print(json.dumps(results))
 
-    print("\nTesting check_files - with rse_expression.")
+    print("\n5. Testing check_files - with rse_expression.")
     results = check_files(test_lfns, workdir="./tmp", rse_expression="rse_type=DISK")
     print(json.dumps(results))

@@ -6,6 +6,7 @@ from django.urls import reverse
 from .models import FileIntegrityRequest, FileReplica
 from .tasks import process_integrity_check, split_scope, FileIntegrityRequest
 from .views import derive_file_status, build_request_summary, _format_lfns_per_rse
+from .serializers import FileIntegrityRequestSerializer
 from file_integrity_checker.process_jobs import parse_tool_output, update_replicas
 from file_integrity_checker.process_queue import process_queue, MAX_CONCURRENT_JOBS
 
@@ -29,6 +30,36 @@ class SplitScopeTest(TestCase):
             split_scope('T2_CH_CERN:/store/file.root'),
             ('T2_CH_CERN', '/store/file.root')
         )
+
+
+class FileIntegrityRequestSerializerTest(TestCase):
+
+    def test_root_lfn_accepted(self):
+        serializer = FileIntegrityRequestSerializer(data={'lfns': 'cms:/store/data/Run2024/file.root'})
+        self.assertTrue(serializer.is_valid())
+
+    def test_non_root_lfn_rejected(self):
+        serializer = FileIntegrityRequestSerializer(data={'lfns': 'cms:/store/data/Run2024/dataset'})
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('lfns', serializer.errors)
+
+    def test_non_root_lfn_error_message(self):
+        serializer = FileIntegrityRequestSerializer(data={'lfns': 'cms:/store/data/Run2024/dataset'})
+        serializer.is_valid()
+        error_msg = ' '.join(str(e) for e in serializer.errors['lfns'])
+        self.assertIn('The LFN(s) provided are not .root files', error_msg)
+        self.assertIn('cms:/store/data/Run2024/dataset', error_msg)
+
+    def test_non_root_lfn_without_scope_rejected(self):
+        serializer = FileIntegrityRequestSerializer(data={'lfns': '/store/data/Run2024/dataset'})
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('lfns', serializer.errors)
+
+    def test_mixed_root_and_non_root_rejected(self):
+        lfns = 'cms:/store/data/Run2024/file.root\ncms:/store/data/Run2024/dataset'
+        serializer = FileIntegrityRequestSerializer(data={'lfns': lfns})
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('lfns', serializer.errors)
 
 
 class ProcessIntegrityCheckTest(TestCase):
@@ -447,6 +478,15 @@ class ViewEndpointTest(TestCase):
             lfn='/store/data/file2.root',
             rse='T1_US_FNAL_Disk', status='CORRUPTED'
         )
+
+    def test_submit_non_root_lfn_returns_400(self):
+        r = self.client.post(
+            '/api/integrity/submit/',
+            data={'lfns': 'cms:/store/data/Run2024/dataset'},
+        )
+        self.assertEqual(r.status_code, 400)
+        data = r.json()
+        self.assertIn('lfns', data)
 
     def test_query_list_returns_200(self):
         r = self.client.get('/api/integrity/query/requests/')
