@@ -35,11 +35,11 @@ class FileIntegrityRequestSerializer(serializers.Serializer):
 
     def validate_lfns(self, value):
         lines = [l.strip() for l in value.splitlines() if l.strip()]
-        
+
         # Check for duplicates
         if len(lines) != len(set(lines)):
             raise serializers.ValidationError("Duplicate LFNs provided.")
-        
+
         if not lines:
             raise serializers.ValidationError("No LFNs provided.")
 
@@ -47,6 +47,16 @@ class FileIntegrityRequestSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 f"Too many LFNs: {len(lines)} provided, "
                 f"maximum is {MAX_LFNS_PER_REQUEST}."
+            )
+
+        non_root = [
+            l for l in lines
+            if not (l.split(':', 1)[-1] if ':' in l else l).endswith('.root')
+        ]
+        if non_root:
+            raise serializers.ValidationError(
+                f"The LFN(s) provided are not .root files. "
+                f"Invalid entries: {non_root}"
             )
 
         return lines
