@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from .models import FileInvalidationRequests
 from django.shortcuts import render
 from django.views.generic import TemplateView
-from .utils import process_invalidation, get_cern_username, send_approval_alert, create_ticket_for_invalidation, update_ticket, JiraStatus
+from .utils import *
 from django.db.models import Count, CharField, Value, F, Case, When, IntegerField
 from django.db.models.functions import StrIndex, Substr
 from django.utils.safestring import mark_safe
@@ -276,8 +276,7 @@ class InvalidationApproval(APIView):
             return Response({"message":f"Approval user cannot be the same as request user"},
                             status=status.HTTP_403_FORBIDDEN)
         
-        #TODO: Automate this list via CERN GMS API
-        if approve_user not in ['haozturk','cemmanou','ppaparri','jsalasga']:
+        if not user_has_permissions(approve_user):
             return Response({"message":f"Approval user must be part of cms-dm-ops-core-team"},
                             status=status.HTTP_403_FORBIDDEN)
 
