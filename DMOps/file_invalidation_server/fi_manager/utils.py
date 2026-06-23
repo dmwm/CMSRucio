@@ -12,6 +12,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from jira import JIRA
 from enum import Enum
+import requests
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 src_dir = os.path.dirname(current_dir)
@@ -309,3 +310,45 @@ def get_pod_logs(job_id):
             logging.info(f"Logs from pod {pod_name}:\n{pod_logs}")
         except client.exceptions.ApiException as e:
             logging.error(f"Error fetching logs for pod {pod_name}: {e}")
+
+def user_has_permissions(username: str):
+    client_id = "fileinvalidation-group-authorization"
+    client_secret = settings.GROUP_AUTHORIZATION_CLIENT_SECRET
+    group_id = "cms-dm-ops-core-team"  
+    keycloak_api_token_endpoint = "https://auth.cern.ch/auth/realms/cern/api-access/token"
+    authzsvc_endpoint = "https://authorization-service-api.web.cern.ch/api/v1.0/"
+    print("Getting API token...")
+    try:
+        token_resp = requests.post(
+            keycloak_api_token_endpoint,
+            data={
+                "grant_type": "client_credentials",
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "audience": "authorization-service-api"
+            },
+            headers={"Content-Type": "application/x-www-form-urlencoded"}
+        )
+        token_resp.raise_for_status()
+        api_token = token_resp.json()['access_token']
+        print(f"Token received.\n")
+    except Exception as e:
+        print("Failed to get API token:", e)
+        return False
+        
+    print("Getting current group members...")
+
+    members_resp = requests.get(
+        f"{authzsvc_endpoint}Group/{group_id}/members/identities",
+        headers={"Authorization": f"Bearer {api_token}"}
+    )
+    try:
+        group_members_data = members_resp.json()['data']
+        allowed_users = [user['upn'] for user in group_members_data]
+        if username in allowed_users:
+            return True
+        else:
+            return False
+    except Exception as e:
+        print("Failed to get group members, falling back to denying permission", e)
+        return False
