@@ -9,7 +9,7 @@ from .models import FileInvalidationRequests
 from django.shortcuts import render
 from django.views.generic import TemplateView
 from .utils import *
-from django.db.models import Count, CharField, Value, F, Case, When, IntegerField
+from django.db.models import Count, CharField, Value, F, Case, When, IntegerField, Min
 from django.db.models.functions import StrIndex, Substr
 from django.utils.safestring import mark_safe
 import logging
@@ -211,21 +211,22 @@ class FileQueryView(APIView):
                     # If delimiter not found (delimiter_position is 0), use the original reason
                     default=F('reason'),
                     output_field=CharField() # Ensure the resulting field is a character field
-                )
+                ),
+                submitted_at_date=Min('submitted_date'),
             ).values(
-                'request_id','status','mode','rse','dry_run','global_invalidate_last_replicas','truncated_reason','request_user','approve_user','job_id'
+                'request_id','status','mode','rse','dry_run','global_invalidate_last_replicas','truncated_reason','request_user','approve_user','job_id','submitted_at_date'
                 ).annotate(
                     total_objects=Count('id'),
                     status_priority=ordering
                 ).order_by(
-                    'status_priority','-total_objects','request_id')
+                    'status_priority','submitted_at_date','-total_objects','request_id')
             
             data = list(group)
             for obj in data:
                 obj['truncated_reason'] = mark_safe(include_link(obj['truncated_reason']))
 
         else:
-            data = [{"request_id": f.request_id, "file_name": f.file_name, "status": f.status,"mode":f.mode,"dry_run":f.dry_run,"reason": mark_safe(include_link(f.reason)),"job_id":f.job_id,"logs":f.logs,"rse":f.rse,"global_invalidate_last_replicas":f.global_invalidate_last_replicas,"request_user":f.request_user,"approve_user":f.approve_user} for f in files]
+            data = [{"request_id": f.request_id, "file_name": f.file_name, "status": f.status,"mode":f.mode,"dry_run":f.dry_run,"reason": mark_safe(include_link(f.reason)),"job_id":f.job_id,"logs":f.logs,"rse":f.rse,"global_invalidate_last_replicas":f.global_invalidate_last_replicas,"request_user":f.request_user,"approve_user":f.approve_user,'submitted_date':f.submitted_date} for f in files]
 
         items_per_page = 10 if grouped else 50
         paginator = Paginator(data, items_per_page) 

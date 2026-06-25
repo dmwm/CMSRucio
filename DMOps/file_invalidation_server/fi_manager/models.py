@@ -23,6 +23,7 @@ class FileInvalidationRequests(models.Model):
     global_invalidate_last_replicas = models.BooleanField(default=False)
     request_user = models.TextField(null=settings.LOCAL_TESTING,blank=settings.LOCAL_TESTING)
     approve_user = models.TextField(null=True, blank=True)
+    submitted_date = models.DateTimeField(auto_now_add=True,null=True,blank=True)
 
     class Meta:
         managed = True if settings.LOCAL_TESTING else False
