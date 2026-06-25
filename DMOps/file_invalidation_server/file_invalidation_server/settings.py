@@ -21,14 +21,26 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY')
-JIRA_PAT = config('JIRA_PAT')
-GROUP_AUTHORIZATION_CLIENT_SECRET = config('GROUP_AUTHORIZATION_CLIENT_SECRET')
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-LOCAL_TESTING = False
+
+# LOCAL_TESTING enables a self-contained local setup (SQLite + dummy secrets)
+# so the test suite and dev server run with no source edits or .env file.
+# Defaults to False — production behaviour is unchanged. Enable it per command
+# with the LOCAL_TESTING=true environment variable.
+LOCAL_TESTING = config('LOCAL_TESTING', default=False, cast=bool)
+
+# SECURITY WARNING: keep the secret key used in production secret!
+# In production these are required. Under LOCAL_TESTING they fall back to
+# harmless dev defaults so no secrets are needed to run the tests.
+if LOCAL_TESTING:
+    SECRET_KEY = config('SECRET_KEY', default='dev-insecure-secret-key')
+    JIRA_PAT = config('JIRA_PAT', default='')
+    GROUP_AUTHORIZATION_CLIENT_SECRET = config('GROUP_AUTHORIZATION_CLIENT_SECRET', default='')
+else:
+    SECRET_KEY = config('SECRET_KEY')
+    JIRA_PAT = config('JIRA_PAT')
+    GROUP_AUTHORIZATION_CLIENT_SECRET = config('GROUP_AUTHORIZATION_CLIENT_SECRET')
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1','0.0.0.0','file-invalidation.app.cern.ch','file-invalidation-test.app.cern.ch']
 

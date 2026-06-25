@@ -72,8 +72,10 @@ file_invalidation_server/
 │
 └── controllers/
     ├── job_integrity.yaml                      — Kubernetes Job template for the checker
-    ├── cronjob_queue_processor_integrity.yaml  — CronJob for process_queue.py
-    ├── cronjob_integrity_process_jobs.yaml     — CronJob for process_jobs.py
+    ├── cronjob_integrity_process_queue.yaml    — CronJob for process_queue.py
+    ├── cronjob_process_jobs.yaml               — CronJob (jobs-log-processor): runs both
+    │                                             fi_manager/process_jobs.py and
+    │                                             file_integrity_checker/process_jobs.py
     └── cronjob_integrity_cleanup_jobs.yaml     — CronJob for cleanup_jobs.py
 ```
 
@@ -133,12 +135,17 @@ Submit a new file integrity check request.
 | `full_scan` | No | If true, reads every basket. More thorough but slower. Default: false. |
 
 **Example response (201 Created):**
+
+The request is only *queued* at submit time — `process_queue.py` assigns the
+`job_id` and moves it to `IN_PROGRESS` on its next run. So the response reports
+`status: SUBMITTED` and a `job_id` of `null`. Poll the `links` for progress.
+
 ```json
 {
-    "message": "2 LFN(s) submitted for integrity check. Job ID: abc12345.",
+    "message": "2 LFN(s) submitted for integrity check. The request is queued; a job will be assigned shortly. Track progress via the links below.",
     "request_id": "...",
-    "job_id": "abc12345",
-    "status": "IN_PROGRESS",
+    "job_id": null,
+    "status": "SUBMITTED",
     "links": {
         "detail":   "https://file-invalidation.app.cern.ch/api/integrity/query/requests/?request_id=...",
         "files":    "https://file-invalidation.app.cern.ch/api/integrity/query/files/?request_id=...",
@@ -308,96 +315,64 @@ All variables use the `FIC_` prefix (File Integrity Checker). All have sensible 
 
 ### Prerequisites
 
-- Python 3.9 on lxplus
-- CERN environment with Rucio available via CVMFS
+- Python 3.9+ (lxplus has 3.9; 3.11–3.13 also work in a venv)
+- CERN environment with Rucio available via CVMFS (only needed to exercise the
+  real tool — not needed to run the test suite)
 
-### Setup
+### Self-contained local mode (`LOCAL_TESTING`)
 
-The server uses MySQL in production but SQLite locally. Add `USE_SQLITE=true` to your `.env` and patch the `DATABASES` block in `../file_invalidation_server/settings.py`:
-
-```python
-# Replace 'JIRA_PAT = config('JIRA_PAT')' with:
-JIRA_PAT = config('JIRA_PAT', default='')
-
-# Replace the DATABASES block with:
-if config('USE_SQLITE', default='false') == 'true':
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'NAME': config('DB_NAME'),
-            'USER': config('DB_USER'),
-            'PASSWORD': config('DB_PASSWORD'),
-            'HOST': config('DB_HOST', default='localhost'),
-            'PORT': config('DB_PORT', default='3306', cast=int),
-            'OPTIONS': {'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"}
-        }
-    }
-```
-
-Update the following elements `../fi_manager/models.py`:
-
-```python
-    rse = models.TextField(blank=True, null=True)
-    request_user = models.TextField(blank=True, null=True)
-    approve_user = models.TextField(blank=True, null=True)
-
-    class Meta:
-        managed = True
-        db_table = 'file_invalidation_requests'
-        unique_together = (('request_id', 'file_name'),)
-```
-
-Create a `../.env` file in the project root:
+The server uses MySQL and CERN secrets in production. For local work, set the
+`LOCAL_TESTING=true` environment variable. This is read in `settings.py` and
+switches the database to a local SQLite file and fills the required secrets
+(`SECRET_KEY`, `JIRA_PAT`, `GROUP_AUTHORIZATION_CLIENT_SECRET`) with harmless dev
+defaults — **no `.env` file and no source edits are required.** With
+`LOCAL_TESTING` unset (the default) production behaviour is unchanged.
 
 ```bash
-SECRET_KEY=any-local-dev-string
-USE_SQLITE=true
-DB_NAME=db.sqlite3
-DB_USER=admin
-DB_PASSWORD=password
-DB_HOST=localhost
-DB_PORT=3306
-FIC_MAX_LFNS_PER_REQUEST=20
-FIC_PVC_MOUNT_PATH_HOST=/shared-data-integrity
-FIC_PVC_MOUNT_PATH_CONTAINER=/input
-FIC_JOB_WORKDIR=/tmp
-FIC_NAMESPACE=file-invalidation-tool
-FIC_JOB_LOG_VERBOSITY=2
+# From file_invalidation_server/ — install deps once into a venv
+python3 -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
 ```
 
-### Running locally
+### Running the tests
 
 ```bash
 # From file_invalidation_server/
-
-# Apply migrations
-python3 manage.py makemigrations file_integrity_checker
-python3 manage.py migrate file_integrity_checker
-
-# Run tests
-python3 manage.py test file_integrity_checker
-
-# Seed the DB with test data for this app
-python3 manage.py shell < populate_db_integrity.py
-
-# Start the dev server
-python3 manage.py runserver 0.0.0.0:8080
+LOCAL_TESTING=true python3 manage.py test file_integrity_checker
 ```
 
-Open an SSH tunnel from your laptop:
+The test DB is built from the migrations (the `managed = False` models still get
+their tables created during test setup). 62 tests covering: scope parsing,
+request creation, replica creation, queue processing (mocked K8s), tool output
+parsing, replica update logic (including idempotency), file-status derivation,
+boolean query-param coercion, plain-text formatting, HTML template rendering,
+and all API endpoints.
+
+### Running the dev server + accessing the UI
+
+```bash
+# From file_invalidation_server/
+LOCAL_TESTING=true python3 manage.py migrate
+LOCAL_TESTING=true python3 manage.py shell < populate_db_integrity.py   # optional seed data
+LOCAL_TESTING=true python3 manage.py runserver 0.0.0.0:8080
+```
+
+If you are on lxplus, open an SSH tunnel from your laptop:
 
 ```bash
 ssh -L 8080:localhost:8080 yourusername@lxplus.cern.ch
 ```
 
-Then visit `http://localhost:8080/api/integrity/submit/`
+The browsable UI pages (rendered HTML) are:
+
+| Page | URL |
+|---|---|
+| Submit a request (form) | `http://localhost:8080/api/integrity/submit/` |
+| Requests list | `http://localhost:8080/api/integrity/query/requests/` |
+| Request detail (files + replicas) | `…/api/integrity/query/requests/?request_id=<uuid>` |
+| Files / replicas (linked from detail) | `…/api/integrity/query/files/` and `…/query/replicas/` |
+
+In production the same pages live under `https://file-invalidation.app.cern.ch`.
 
 ### Expected local behaviour
 
@@ -415,11 +390,29 @@ curl -X POST http://localhost:8080/api/integrity/submit/ \
   -d '{"lfns": "cms:/store/data/Run2024/file.root"}'
 ```
 
-### Running tests
+---
 
-```bash
-# From file_invalidation_server/
-python3 manage.py test file_integrity_checker
-```
+## Deployment
 
-43 tests covering: scope parsing, request creation, replica creation, job triggering (mocked), tool output parsing, replica update logic (including idempotency), file status derivation, plain text formatting, and all API endpoints.
+The app runs on CERN's OKD (OpenShift) cluster in the `file-invalidation-tool`
+namespace, alongside the file invalidation server (they share the Django project
+and image `registry.paas.cern.ch/file-invalidation-tool/...`).
+
+**Managed in OKD (not in this repo):** the Django `Deployment`, its `Route`
+(`https://file-invalidation.app.cern.ch`), the oauth2-proxy sidecar that injects
+the CERN SSO username header, the `integrity-input-file-pvc`, and the DB/secret
+objects referenced by the manifests below.
+
+**Versioned in this repo** — apply with `oc apply -f <file> -n file-invalidation-tool`:
+
+| Manifest | Kind | Role |
+|---|---|---|
+| `controllers/job_integrity.yaml` | Job | Template the queue processor patches and submits per request |
+| `controllers/cronjob_integrity_process_queue.yaml` | CronJob (1 min) | Runs `process_queue.py` — picks up SUBMITTED requests |
+| `controllers/cronjob_process_jobs.yaml` | CronJob (5 min) | `jobs-log-processor`: runs **both** `fi_manager/process_jobs.py` and `file_integrity_checker/process_jobs.py` |
+| `controllers/cronjob_integrity_cleanup_jobs.yaml` | CronJob | Runs `cleanup_jobs.py` — removes orphaned PVC files and old K8s jobs |
+
+> Note: any management script that calls `django.setup()` (the three CronJobs
+> above) needs the same env/secrets as the web pod — `SECRET_KEY`, `JIRA_PAT`,
+> `GROUP_AUTHORIZATION_CLIENT_SECRET`, and `DB_*` — because `settings.py` reads
+> them at import time.
