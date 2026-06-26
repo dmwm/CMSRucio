@@ -178,6 +178,7 @@ def process_invalidation(request_id, reason, dry_run=True,mode='global',rse=None
         logging.info(f"Local testing, only creating objects in database")
         sent_requests = FileInvalidationRequests.objects.filter(request_id=request_id)
         sent_requests.update(status="in_progress")
+        job_unique_uuid = uuid.uuid4().hex[:8]
         sent_requests.update(job_id=job_unique_uuid)
 
         approve_user = sent_requests.first().approve_user
