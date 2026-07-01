@@ -15,6 +15,59 @@ from utils import ValidationStatus, setup_logging
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
+def check_rse(
+    rse,
+    pfns,
+    adler,
+    workdir,
+    full_scan=False,
+    timeout_seconds=900,
+    copy_fn=copy_file_locally,
+    checksum_fn=checksum_check,
+    content_fn=content_check,
+):
+    """
+    Validate a file at a single RSE and return exactly one result dict.
+
+    PFNs of an RSE point at the same physical bytes via different access paths,
+    so we try them in order and validate the first one that copies — there is no
+    value in re-checking the same file through another path. Every PFN attempt
+    is logged. Only if *all* PFNs fail to copy do we report a single ERROR, so a
+    transient access failure on one PFN can never mask a healthy copy on another.
+
+    The copy/checksum/content callables are injectable to allow unit testing
+    without the grid stack.
+
+    Returns: {"rse": str, "pfn": str|None, "status": "OK"|"CORRUPTED"|"ERROR"}
+    """
+    last_pfn = None
+    for pfn in pfns:
+        last_pfn = pfn
+        local_path = None
+        try:
+            local_path = copy_fn(pfn, workdir)
+            if not local_path:
+                logger.error(f"PFN '{pfn}' on RSE '{rse}' -> copy failed; trying next PFN if available.")
+                continue
+
+            _, status = checksum_fn(local_path, adler)
+            if status != ValidationStatus.CORRUPTED:
+                _, status = content_fn(local_path, full_scan=full_scan, timeout_seconds=timeout_seconds)
+
+            logger.info(f"PFN '{pfn}' on RSE '{rse}' -> {status.value}")
+            return {"rse": rse, "pfn": pfn, "status": status.value}
+
+        finally:
+            if local_path and os.path.exists(local_path):
+                try:
+                    os.remove(local_path)
+                except OSError:
+                    logger.warning(f"Could not delete local file '{local_path}'. Please check manually.")
+
+    logger.warning(f"All PFNs failed to copy for RSE '{rse}' -> ERROR")
+    return {"rse": rse, "pfn": last_pfn, "status": ValidationStatus.ERROR.value}
+
+
 def check_files(
     lfns: List[str],
     workdir: str,
@@ -71,37 +124,17 @@ def check_files(
                         logger.info(f"LFN '{lfn}' skipped on RSE '{rse}' (state: {replica_state})")
                         continue
 
-                    for pfn in replica['rses'][rse]:
-                        local_path = None
-                        replica_result = {"rse": rse,  "pfn": pfn, "status": None}
-                        
-                        try:
-                            local_path = copy_file_locally(pfn, workdir)
-                            if not local_path:
-                                replica_result["status"] = ValidationStatus.ERROR.value
-                                file_result["replicas"].append(replica_result)
-                                logger.error(f"Failed to copy '{pfn}' locally from RSE '{rse}'. Skipping integrity checks.")
-                                continue
-                            
-                            _, replica_result["status"] = checksum_check(local_path, adler)
-                            if replica_result["status"] != ValidationStatus.CORRUPTED:
-                                _, replica_result["status"] = content_check(local_path, full_scan=full_scan, timeout_seconds=timeout_seconds)
-                            replica_result["status"] = replica_result["status"].value
-                            
-                        finally:
-                            
-                            if local_path and os.path.exists(local_path):
-                                try:
-                                    os.remove(local_path)
-                                except OSError:
-                                    logger.warning(f"Could not delete local file '{local_path}'. Please check manually.")
-
-                        file_result["replicas"].append(replica_result)
-
-                        break  # only one PFN per RSE is necessary for the check
-                    
-                    else:
-                        logger.warning(f"All PFNs failed for LFN '{lfn}' on RSE '{rse}'")
+                    # One result per RSE — see check_rse for the PFN handling.
+                    file_result["replicas"].append(
+                        check_rse(
+                            rse,
+                            replica['rses'][rse],
+                            adler,
+                            workdir,
+                            full_scan=full_scan,
+                            timeout_seconds=timeout_seconds,
+                        )
+                    )
 
         except Exception as e:
             file_result["error"] = str(e)

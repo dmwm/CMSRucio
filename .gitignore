@@ -3,3 +3,7 @@
 venv/
 dist
 DMOps/file_invalidation_server/fi_manager/migrations/
+
+# Local secrets and dev databases
+.env
+*.sqlite3
