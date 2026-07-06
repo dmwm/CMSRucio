@@ -24,13 +24,13 @@ import rucio.core.scope
 from rucio.common.config import config_get, config_get_int
 from rucio.common.exception import InvalidRSEExpression
 from rucio.common.types import InternalScope
-from rucio.core.account import has_account_attribute
+from rucio.core.account import has_account_attribute, get_account 
 from rucio.core.did import list_files
 from rucio.core.identity import exist_identity_account
 from rucio.core.rse import list_rse_attributes, get_rse
 from rucio.core.rse_expression_parser import parse_expression
 from rucio.core.rule import get_rule, list_rules
-from rucio.db.sqla.constants import IdentityType
+from rucio.db.sqla.constants import IdentityType, AccountType
 from rucio.db.sqla.models import ReplicaLock, ReplicationRule
 
 if TYPE_CHECKING:
@@ -335,6 +335,12 @@ def perm_add_rule(issuer, kwargs, *, session: "Optional[Session]" = None):
 
     if kwargs["activity"] == "User AutoApprove":
         return _check_for_auto_approve_eligibility(issuer, rses, kwargs, session=session)
+
+    # User/local accounts cannot create rules without lifetime
+    account = dict(get_account(kwargs['account'],session=session))
+    if account and (account['account_type']==AccountType.USER or '_local' in kwargs['account']) and kwargs['lifetime'] is None:
+        from rucio.core.permission import PermissionResult
+        return PermissionResult(False, "User and local accounts cannot create rules without lifetime.")
 
     if kwargs["activity"] == "Analysis TapeRecall" and issuer.external == "crab_tape_recall":
         return True
