@@ -24,13 +24,13 @@ import rucio.core.scope
 from rucio.common.config import config_get, config_get_int
 from rucio.common.exception import InvalidRSEExpression
 from rucio.common.types import InternalScope
-from rucio.core.account import has_account_attribute
+from rucio.core.account import has_account_attribute, get_account
 from rucio.core.did import list_files
 from rucio.core.identity import exist_identity_account
-from rucio.core.rse import list_rse_attributes, get_rse
+from rucio.core.rse import list_rse_attributes, get_rse_usage
 from rucio.core.rse_expression_parser import parse_expression
 from rucio.core.rule import get_rule, list_rules
-from rucio.db.sqla.constants import IdentityType
+from rucio.db.sqla.constants import IdentityType, AccountType
 from rucio.db.sqla.models import ReplicaLock, ReplicationRule
 
 if TYPE_CHECKING:
@@ -306,6 +306,25 @@ def _check_for_auto_approve_eligibility(issuer, rses, kwargs, session: "Optional
 
     return True
 
+def _is_user_local_usage_at_rse_above_threshold(rse_id, session):
+    """
+    Total bytes currently locked at the given RSE by accounts of type
+    USER, or whose name contains '_local'.
+    """
+    rucio_quota = list(get_rse_usage(rse_id=rse_id, filters={'source':'static'},session=session))[0].get('used',None)
+    account_usages = list(get_rse_usage(rse_id=rse_id, filters={'per_account':True,'source':'rucio'},session=session))[0].get('account_usages',[])
+    user_local_usage = 0
+    for account_usage in account_usages:
+        account = dict(get_account(account_usage['account'],session=session))
+        usage = account_usage['used']
+        if account and account['account_type']==AccountType.USER or '_local' in account['account']:
+            user_local_usage += usage
+
+    if user_local_usage>=threshold:
+        return True
+
+    return False
+
 
 def perm_add_rule(issuer, kwargs, *, session: "Optional[Session]" = None):
     """
@@ -318,6 +337,15 @@ def perm_add_rule(issuer, kwargs, *, session: "Optional[Session]" = None):
     """
 
     rses = parse_expression(kwargs['rse_expression'], filter_={'vo': issuer.vo}, session=session)
+
+    if kwargs["activity"] not in ["User AutoApprove", "Analysis TapeRecall"]:
+        #TODO: should check if account creating is user or local account, right?
+        for rse in rses:
+            above_threshold = _is_user_local_usage_at_rse_above_threshold(rse['id'],session=session)
+            if above_threshold:
+                from rucio.core.permission import PermissionResult
+                return PermissionResult(False, ("The user and local used space for one or more of "
+                                                    "the specified RSEs is above the threshold."))
 
     # If any of RSEs matching the expression needs approval, the rule cannot be created
     if not kwargs['ask_approval']:
