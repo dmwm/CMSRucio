@@ -8,7 +8,7 @@ from rucio.client.client import Client
 from rucio.common.exception import RSEAttributeNotFound, Duplicate, AccountNotFound, InvalidObject, DatabaseException
 from legacydn_converter import rfc2253dn
 
-TO_STRIP = ['_Disk', '_Tape', '_Temp', '_Disk_Temp', '_Test', '_Disk_Test', '_Tape_Test', '_Ceph']
+TO_STRIP = ['_Disk', '_Tape', '_Temp', '_Disk_Temp', '_Test', '_Disk_Test', '_Tape_Test', '_Ceph', '_User']
 
 CRIC_USERS_API = 'https://cms-cric.cern.ch/api/accounts/user/query/list/?json&preset=roles'
 CRIC_SITE_API = 'https://cms-cric.cern.ch/api/cms/site/query/?json'
