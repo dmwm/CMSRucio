@@ -21,6 +21,7 @@ import random
 import re
 import threading
 import time
+import traceback
 
 from rucio.client import Client
 from rucio.client.uploadclient import UploadClient
@@ -321,11 +322,15 @@ def run(source_rse_expression, dest_rse_expression, account, activity, filesize)
                 next_filenumber = next_available_filenumber(
                     client, source_rse, filesize
                 )
-                success = upload_source_data(
-                    client, uploader, source_rse, filesize, next_filenumber
-                )
-                if not success:
+                try:
+                    success = upload_source_data(
+                        client, uploader, source_rse, filesize, next_filenumber
+                    )
+                    if not success:
+                        raise ValueError("Files could not be uploaded.")
+                except Exception:
                     logger.error(f"RSE {source_rse} has no source files and could not upload, skipping")
+                    traceback.print_exc() 
                     continue
                 source_files = list(client.list_files("cms", dataset))
 
