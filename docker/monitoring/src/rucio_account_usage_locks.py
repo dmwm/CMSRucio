@@ -28,45 +28,51 @@ def main(creds, amq_batch_size):
     df_locks = get_df_locks(spark)
     df_accounts = get_df_accounts(spark)
     df_account_limits = get_df_account_limits(spark).join(df_rses, ['rse_id']).select('RSE', 'account_name', 'account_limit').cache()
-    locks = df_locks.join(df_rses, ['rse_id'], how='left') \
-            .filter(col('rse_kind') == 'prod') \
-            .select(['f_name', 'f_size', 'RSE', 'rse_type', 'account_name']) \
-            .cache()
+    locks = (
+        df_locks.join(df_rses, ["rse_id"], how="left")
+        .filter(col("rse_kind") == "prod")
+        .select(["f_name", "f_size", "RSE", "rse_type", "account_name"])
+        .cache()
+        )
 
-    aggregated_locks = locks \
-        .groupby(['f_name', 'f_size', 'RSE', 'rse_type']) \
-        .agg(collect_set('account_name').alias('unique_accounts')) \
+    aggregated_locks = (
+        locks.groupby(['f_name', 'f_size', 'RSE', 'rse_type'])
+        .agg(collect_set('account_name').alias('unique_accounts'))
         .select(['f_name', 'f_size', 'RSE', 'rse_type', 'unique_accounts'])
+    )
 
     uniquely_locked = aggregated_locks.where(_size(col("unique_accounts")) == 1).cache()
-    unique_aggregated = uniquely_locked \
-            .groupby(['RSE', 'rse_type', 'unique_accounts']) \
-            .agg(_round(_sum(col('f_size')) / tb_denominator, 5).alias('uniquely_locked')) \
-            .withColumn('account_name', col('unique_accounts')[0]) \
-            .join(df_accounts, ['account_name'], how='left') \
-            .join(df_account_limits, ['account_name', 'RSE'], how='left') \
-            .select(['RSE', 'rse_type', 'account_name', 'account_type', 'account_limit', 'uniquely_locked']) \
+    unique_aggregated = (
+        uniquely_locked .groupby(['RSE', 'rse_type', 'unique_accounts']) 
+            .agg(_round(_sum(col('f_size')) / tb_denominator, 5).alias('uniquely_locked')) 
+            .withColumn('account_name', col('unique_accounts')[0]) 
+            .join(df_accounts, ['account_name'], how='left') 
+            .join(df_account_limits, ['account_name', 'RSE'], how='left') 
+            .select(['RSE', 'rse_type', 'account_name', 'account_type', 'account_limit', 'uniquely_locked']) 
             .cache()
+    )
 
-    total_aggregated = locks \
-            .select(['f_name', 'f_size', 'account_name', 'RSE', 'rse_type']) \
-            .distinct() \
-            .groupby(['account_name', 'RSE', 'rse_type']) \
-            .agg(_round(_sum(col('f_size')) / tb_denominator, 5).alias('total_locked')) \
-            .join(df_accounts, ['account_name'], how='left') \
-            .join(df_account_limits, ['account_name', 'RSE'], how='left') \
+    total_aggregated = (
+        locks .select(['f_name', 'f_size', 'account_name', 'RSE', 'rse_type']) 
+            .distinct() 
+            .groupby(['account_name', 'RSE', 'rse_type']) 
+            .agg(_round(_sum(col('f_size')) / tb_denominator, 5).alias('total_locked')) 
+            .join(df_accounts, ['account_name'], how='left') 
+            .join(df_account_limits, ['account_name', 'RSE'], how='left') 
             .cache()
+    )
 
     unique_aggregated = unique_aggregated.withColumn("account_limit", coalesce("account_limit", lit(0)))
     total_aggregated = total_aggregated.withColumn("account_limit", coalesce("account_limit", lit(0)))
 
     timestamp = int(time.time())
-    final = total_aggregated \
-            .join(unique_aggregated, ['RSE', 'rse_type', 'account_name', 'account_limit', 'account_type'], how='left') \
-            .withColumnRenamed('RSE', 'rse_name') \
-            .withColumn('timestamp', lit(timestamp)) \
-            .select(['rse_name', 'account_name', 'account_limit', 'account_type', 'total_locked', 'uniquely_locked', 'rse_type', 'timestamp']) \
+    final = (
+        total_aggregated.join(unique_aggregated, ['RSE', 'rse_type', 'account_name', 'account_limit', 'account_type'], how='left')
+            .withColumnRenamed('RSE', 'rse_name')
+            .withColumn('timestamp', lit(timestamp))
+            .select(['rse_name', 'account_name', 'account_limit', 'account_type', 'total_locked', 'uniquely_locked', 'rse_type', 'timestamp'])
             .cache()
+    )
 
     # Iterate over list of dicts returned from spark and push to AMQ
     total_size = 0

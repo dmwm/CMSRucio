@@ -28,44 +28,50 @@ def main(creds, amq_batch_size):
     df_locks = get_df_locks(spark)
     df_rules = get_df_rules(spark)
 
-    locks = df_locks.join(df_rses, ['rse_id'], how='left') \
-            .filter(col('rse_kind') == 'prod') \
-            .select(['f_name', 'f_size', 'RSE', 'rse_type', 'account_name', 'r_id']) \
+    locks = (
+        df_locks.join(df_rses, ['rse_id'], how='left') 
+            .filter(col('rse_kind') == 'prod') 
+            .select(['f_name', 'f_size', 'RSE', 'rse_type', 'account_name', 'r_id']) 
             .cache()
+    )
 
     locks_with_activity = locks.join(df_rules, ['r_id'], how='leftouter').select(['f_name', 'account_name', 'RSE', 'rse_type', 'f_size', 'activity'])
 
     # Total locked by an activity per RSE
     # A file locked for multiple activites is accounted to multiple Activities
-    total_aggregated = locks_with_activity \
-            .select(['f_name', 'f_size', 'activity', 'RSE', 'rse_type']) \
-            .distinct() \
-            .groupby(['activity', 'RSE', 'rse_type']) \
-            .agg(_round(_sum(col('f_size')) / tb_denominator, 5).alias('total_locked')) \
-            .withColumnRenamed('RSE', 'rse_name') \
-            .select(['total_locked', 'rse_name', 'rse_type', 'activity']) \
+    total_aggregated =(
+        locks_with_activity.select(['f_name', 'f_size', 'activity', 'RSE', 'rse_type']) 
+            .distinct() 
+            .groupby(['activity', 'RSE', 'rse_type']) 
+            .agg(_round(_sum(col('f_size')) / tb_denominator, 5).alias('total_locked')) 
+            .withColumnRenamed('RSE', 'rse_name') 
+            .select(['total_locked', 'rse_name', 'rse_type', 'activity']) 
             .cache()
+    )
     
     # Unique activity usage calculation
-    unique_aggregated = locks_with_activity \
-            .withColumnRenamed('RSE', 'rse_name') \
-            .groupby(['rse_name', 'rse_type', 'f_name', 'f_size']) \
-            .agg(collect_set('activity').alias('unique_activities')) \
-            .select(['rse_name', 'f_name', 'f_size', 'rse_type', 'unique_activities']) \
-            .filter(_size(col("unique_activities")) == 1) \
-            .withColumn("activity", expr("unique_activities[0]")) \
-            .groupby(['rse_name', 'rse_type', 'activity']) \
-            .agg(_round(_sum(col('f_size')) / tb_denominator, 5).alias('uniquely_locked')) \
-            .select(['uniquely_locked', 'rse_name', 'rse_type', 'activity']) \
+    unique_aggregated = (
+        locks_with_activity.withColumnRenamed('RSE', 'rse_name')
+            .groupby(['rse_name', 'rse_type', 'f_name', 'f_size'])
+            .agg(collect_set('activity').alias('unique_activities'))
+            .select(['rse_name', 'f_name', 'f_size', 'rse_type', 'unique_activities'])
+            .filter(_size(col("unique_activities")) == 1)
+            .withColumn("activity", expr("unique_activities[0]"))
+            .groupby(['rse_name', 'rse_type', 'activity'])
+            .agg(_round(_sum(col('f_size')) / tb_denominator, 5).alias('uniquely_locked'))
+            .select(['uniquely_locked', 'rse_name', 'rse_type', 'activity'])
             .cache()
+    )
 
 
     timestamp = int(time.time())
-    final = total_aggregated \
-            .join(unique_aggregated, ['rse_name', 'rse_type', 'activity'], how='left') \
-            .withColumn('timestamp', lit(timestamp)) \
-            .select(['rse_name', 'rse_type', 'activity', 'total_locked', 'uniquely_locked', 'timestamp']) \
+    final = (
+        total_aggregated
+            .join(unique_aggregated, ['rse_name', 'rse_type', 'activity'], how='left')
+            .withColumn('timestamp', lit(timestamp))
+            .select(['rse_name', 'rse_type', 'activity', 'total_locked', 'uniquely_locked', 'timestamp'])
             .cache()
+    )
 
     
     # Iterate over list of dicts returned from spark and push to AMQ

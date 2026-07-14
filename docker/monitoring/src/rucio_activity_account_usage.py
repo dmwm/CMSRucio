@@ -29,10 +29,12 @@ def main(creds, amq_batch_size):
     df_accounts = get_df_accounts(spark)
     df_rules = get_df_rules(spark)
 
-    locks = df_locks.join(df_rses, ['rse_id'], how='left') \
-            .filter(col('rse_kind') == 'prod') \
-            .select(['f_name', 'f_size', 'RSE', 'rse_type', 'account_name', 'r_id']) \
+    locks = (
+        df_locks.join(df_rses, ['rse_id'], how='left') 
+            .filter(col('rse_kind') == 'prod') 
+            .select(['f_name', 'f_size', 'RSE', 'rse_type', 'account_name', 'r_id']) 
             .cache()
+    )
 
     locks_with_activity = locks.join(df_rules, ['r_id'], how='leftouter').select(['f_name', 'account_name', 'RSE', 'rse_type', 'f_size', 'activity'])
 
@@ -40,16 +42,17 @@ def main(creds, amq_batch_size):
 
     # A File locked by the user for two activities is accounted to both activities
     # A File locked by two users for the same activity is accounted to both Users
-    user_aggreagated = locks_with_activity \
-            .select(['f_name', 'f_size', 'RSE', 'rse_type', 'account_name', 'activity']) \
-            .distinct() \
-            .groupby(['RSE', 'rse_type', 'account_name', 'activity']) \
-            .agg(_round(_sum(col('f_size')) / tb_denominator, 5).alias('total_locked')) \
-            .join(df_accounts, ['account_name'], how='left') \
-            .withColumnRenamed('RSE', 'rse_name') \
-            .withColumn('timestamp', lit(timestamp)) \
-            .select(['total_locked', 'rse_name', 'rse_type', 'account_name', 'account_type', 'activity', 'timestamp']) \
+    user_aggreagated = (
+        locks_with_activity.select(['f_name', 'f_size', 'RSE', 'rse_type', 'account_name', 'activity']) 
+            .distinct() 
+            .groupby(['RSE', 'rse_type', 'account_name', 'activity']) 
+            .agg(_round(_sum(col('f_size')) / tb_denominator, 5).alias('total_locked')) 
+            .join(df_accounts, ['account_name'], how='left') 
+            .withColumnRenamed('RSE', 'rse_name') 
+            .withColumn('timestamp', lit(timestamp)) 
+            .select(['total_locked', 'rse_name', 'rse_type', 'account_name', 'account_type', 'activity', 'timestamp']) 
             .cache()
+    )
 
     # Iterate over list of dicts returned from spark and push to AMQ
     total_size = 0

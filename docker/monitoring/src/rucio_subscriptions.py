@@ -36,25 +36,28 @@ def main(creds, amq_batch_size):
     df_subs = get_df_subscriptions(spark)
     df_rules_subs = df_rules.join(df_subs, ['s_id'], how='inner')
     df_locks = get_df_locks(spark)
-    locks = df_locks.join(df_rses, ['rse_id'], how='left') \
-            .filter(col('rse_kind') == 'prod') \
-            .join(df_rules_subs, ['r_id'], how='inner') \
-            .select(['f_name', 'f_size', 'RSE', 's_name', 's_comment']) \
-            .distinct() \
+    locks = (
+        df_locks.join(df_rses, ['rse_id'], how='left') 
+            .filter(col('rse_kind') == 'prod') 
+            .join(df_rules_subs, ['r_id'], how='inner') 
+            .select(['f_name', 'f_size', 'RSE', 's_name', 's_comment']) 
+            .distinct() 
             .cache()
+    )
 
     timestamp = int(time.time())
-    df = locks \
-        .groupby(['RSE', 's_name', 's_comment']) \
-        .agg(_round(_sum(col('f_size')) / tb_denominator, 5).alias('size_in_tb')) \
-        .withColumnRenamed('RSE', 'rse_name') \
-        .withColumn('timestamp', lit(timestamp)) \
+    df = (
+        locks .groupby(['RSE', 's_name', 's_comment']) 
+        .agg(_round(_sum(col('f_size')) / tb_denominator, 5).alias('size_in_tb')) 
+        .withColumnRenamed('RSE', 'rse_name') 
+        .withColumn('timestamp', lit(timestamp)) 
         .select(['rse_name',
                 'size_in_tb',
                 's_name',
                 'timestamp',
-                's_comment']) \
+                's_comment']) 
         .cache()
+    )
 
     # Iterate over list of dicts returned from spark and push to AMQ
     total_size = 0
