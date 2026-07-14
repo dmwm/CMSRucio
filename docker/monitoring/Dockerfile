@@ -3,8 +3,6 @@ FROM registry.cern.ch/cmsmonitoring/cmsmon-spark
 
 # Update hadoop version
 RUN mkdir -p /var/log/hbase /var/run/hbase && chmod 777 /var/log/hbase /var/run/hbase
-RUN dnf install -y cern-hadoop-config spark-bin-3.5 hadoop-bin-3.3
-RUN dnf install -y hbase-bin-2.5
 
 # Set environment variables
 ENV PYCURL_SSL_LIBRARY=nss \
@@ -13,9 +11,11 @@ ENV PYCURL_SSL_LIBRARY=nss \
     USER=dmtops \
     RUCIO_ACCOUNT=transfer_ops
 
+ADD http://repository.egi.eu/sw/production/cas/1/current/repo-files/egi-trustanchors.repo /etc/yum.repos.d/egi.repo
+
 # Install dependencies for Rucio and DBS
-RUN dnf install -y python-pycurl \
-    && dnf install -y libcurl-devel openssl-devel libffi-devel \
+RUN dnf --disablerepo=hdp9al-stable install -y python-pycurl \
+    && dnf --disablerepo=hdp9al-stable install -y libcurl-devel openssl-devel libffi-devel \
     && dnf -y groupinstall "Development Tools" || true \
     && pip3 install --compile --global-option="--with-nss" --no-cache-dir pycurl \
     && pip3 install oracledb SQLAlchemy dbs3-client rucio-clients
@@ -24,9 +24,12 @@ RUN dnf install -y python-pycurl \
 COPY ./src /src/
 
 # Give execution permissions
-RUN chmod +x /src/sync_systems.sh
 RUN chmod +x /src/submit_rucio_account_usage.sh
+RUN chmod +x /src/submit_rucio_activity_usage.sh
 RUN chmod +x /src/submit_rucio_account_usage_locks.sh
+RUN chmod +x /src/submit_rucio_activity_account_usage.sh
 RUN chmod +x /src/submit_rucio_locks_count_volume.sh
 RUN chmod +x /src/submit_rucio_rules_count_volume.sh
 RUN chmod +x /src/submit_rucio_errors_volume.sh
+RUN chmod +x /src/submit_rucio_subscriptions.sh
+RUN chmod +x /src/run_rucio_summary.sh
