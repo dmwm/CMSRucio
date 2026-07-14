@@ -1,0 +1,42 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: rucio-errors-volume
+  namespace: dmtops-crons
+spec:
+  schedule: "10 7 * * *" 
+  jobTemplate:   
+    spec:
+      template:
+        metadata:
+          labels:
+            app: dmtops-spark-svc-4
+        spec:
+          containers:
+          - name: rucio-errors-volume
+            image: registry.cern.ch/cmsrucio/dmops-spark-crons:latest
+            imagePullPolicy: Always
+            env:
+            - name: DRIVERPORT
+              value: "31213"
+            - name: BMPORT
+              value: "31214"
+            - name: K8SHOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            command: ["/src/submit_rucio_errors_volume.sh"]
+            ports:
+            - containerPort: 31213 # spark.driver.port
+              name: port-0
+            - containerPort: 31214 # spark.driver.blockManager.port
+              name: port-1
+            volumeMounts:
+              - name: dmtops-cron-secrets
+                mountPath: /etc/secrets
+                readOnly: true
+          volumes:
+          - name: dmtops-cron-secrets
+            secret:
+              secretName: dmtops-cron-secrets
+          restartPolicy: OnFailure
