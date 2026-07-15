@@ -8,11 +8,15 @@ Inspect results:
 """
 
 import time
+
 import click as click
-from pyspark.sql.functions import lit, col, round as _round, sum as _sum, collect_set, size as _size, expr
-from CMSMonitoring.amq_sender import credentials, send_to_amq, drop_nulls_in_dict
+from CMSMonitoring.amq_sender import credentials, drop_nulls_in_dict, send_to_amq
 from CMSSpark.spark_utils import get_spark_session
-from hadoop_queries import get_df_rses, get_df_locks, get_df_rules
+from hadoop_queries import get_df_locks, get_df_rses, get_df_rules
+from pyspark.sql.functions import col, collect_set, expr, lit
+from pyspark.sql.functions import round as _round
+from pyspark.sql.functions import size as _size
+from pyspark.sql.functions import sum as _sum
 
 @click.command()
 @click.option("--creds", required=True, help="etc/secrets/amq.json")

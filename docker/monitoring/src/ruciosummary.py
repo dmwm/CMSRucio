@@ -1,10 +1,12 @@
 import datetime
-from rucio.client.client import Client
 import os
-os.environ['MPLCONFIGDIR'] = '/tmp/'
-from matplotlib.ticker import EngFormatter
+
+from rucio.client.client import Client
+
+os.environ["MPLCONFIGDIR"] = "/tmp/"
 import matplotlib.pyplot as plt
 import pandas as pd
+from matplotlib.ticker import EngFormatter
 
 def get_rse_usage(client, rse):
     usage = list(client.get_rse_usage(rse))

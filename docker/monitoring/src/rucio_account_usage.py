@@ -13,15 +13,27 @@ Description : Sends aggregated Rucio data to monit-opensearch.
                 'timestamp': The time that data were generated
 """
 import sys
+
 import oracledb
+
 oracledb.version = "8.3.0"
 sys.modules["cx_Oracle"] = oracledb
-import cx_Oracle
-
-from sqlalchemy import create_engine, MetaData, Table, Column, String, Integer, select, join, and_
-import click
 import time
+
+import click
+import cx_Oracle
 from CMSMonitoring.amq_sender import credentials, send_to_amq
+from sqlalchemy import (
+    Column,
+    Integer,
+    MetaData,
+    String,
+    Table,
+    and_,
+    create_engine,
+    join,
+    select,
+)
 
 
 @click.command()

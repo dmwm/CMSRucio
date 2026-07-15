@@ -1,14 +1,16 @@
 from datetime import datetime
-from pyspark.sql.window import Window
+
 from CMSSpark import schemas as cms_schemas
+from pyspark.sql.functions import col
+from pyspark.sql.functions import collect_set as _collect_set
+from pyspark.sql.functions import count as _count
+from pyspark.sql.functions import from_unixtime
+from pyspark.sql.functions import hex as _hex
+from pyspark.sql.functions import lower, size
+from pyspark.sql.functions import split as _split
+from pyspark.sql.functions import when
 from pyspark.sql.types import LongType
-from pyspark.sql.functions import (
-    col, lower, when, from_unixtime, size,
-    count as _count,
-    collect_set as _collect_set,
-    hex as _hex,
-    split as _split
-)
+from pyspark.sql.window import Window
 
 def get_df_rses(spark):
     """Get Spark dataframe of RSES

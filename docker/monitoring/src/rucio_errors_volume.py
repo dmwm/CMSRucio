@@ -8,12 +8,13 @@ import re
 import time
 from datetime import datetime
 from itertools import chain
+
 import click as click
 from CMSSpark.osearch import osearch
 from CMSSpark.spark_utils import get_spark_session
-from pyspark.sql.window import Window
-from pyspark.sql.types import StringType
 from pyspark.sql import functions as F
+from pyspark.sql.types import StringType
+from pyspark.sql.window import Window
 
 
 def get_index_schema(index):

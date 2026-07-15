@@ -8,16 +8,16 @@ Author      : Jhonatan Amado
 Description : 
 """
 import sys
+from datetime import datetime
+import json
+import requests
+
 import oracledb
 oracledb.version = "8.3.0"
 sys.modules["cx_Oracle"] = oracledb
 import cx_Oracle
 
-from sqlalchemy import create_engine, MetaData, Table, Column, select, join, and_, text, func, case
-
-import json
-import requests
-from datetime import datetime
+from sqlalchemy import create_engine, MetaData, Table, Column, select, join, and_, func, case
 
 
 
