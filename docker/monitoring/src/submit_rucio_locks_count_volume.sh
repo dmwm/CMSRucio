@@ -17,7 +17,6 @@ spark_submit_args=(
     --conf spark.shuffle.service.enabled=true --conf "spark.driver.bindAddress=0.0.0.0" --conf "spark.driver.host=${K8SHOST}"
     --conf "spark.driver.port=${DRIVERPORT}" --conf "spark.driver.blockManager.port=${BMPORT}"
     --driver-memory=32g --num-executors 30 --executor-memory=32g --packages org.apache.spark:spark-avro_2.12:3.4.0
-    --py-files "/src/cmsmonitoring.zip,/src/stomp.zip"
 )
 
 py_input_args=(--es_host os-cms.cern.ch/os --es_secret_file /etc/secrets/es-secret --es_index test-new-rucio-locks-count-volume)
