@@ -28,6 +28,7 @@ jobs:
           cd docker/monitoring && docker build . \
           --file Dockerfile \
           --tag registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/dmops-spark-crons:${{ env.tag }}
+          --tag registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/dmops-spark-crons:latest
       
       - name: Push Image to CERN Harbour
         run: docker push registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/dmops-spark-crons:${{ env.tag }}
