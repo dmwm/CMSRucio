@@ -31,6 +31,21 @@ data:
           - path: /store/hidata
           - path: /store/himc
           - path: /store/relval
+        davs_scanner:
+          nworkers:       32
+          timeout:        3600
+          server_root: {{.Values.consistency.defaultRoot }}
+          remove_prefix: /
+          add_prefix: /
+          roots:
+          - path: /store/express
+          - path: /store/mc
+          - path: /store/data
+          - path: /store/generator
+          - path: /store/results
+          - path: /store/hidata
+          - path: /store/himc
+          - path: /store/relval
         dbdump:
 {{- if  (.Values.consistency.filter) }}
           filter: {{ .Values.consistency.filter }}
