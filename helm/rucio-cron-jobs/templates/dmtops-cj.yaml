@@ -420,3 +420,43 @@ spec:
                       fieldPath: spec.nodeName
               command: ["python3", "/src/RSE_USAGE.py"]
           restartPolicy: OnFailure
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: wm-dashboard
+  namespace: {{ .Values.dmops_namespace }}
+spec:
+  schedule: "0 6 * * *" 
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      template:
+        spec:
+          volumes:
+          - name: dmtops-cron-secrets
+            secret:
+              secretName: dmtops-cron-secrets
+              defaultMode: 0600
+          - name: cvmfs-pvc
+            persistentVolumeClaim:
+              claimName: csi-cvmfs-cms-pvc
+              readOnly: true
+          containers:
+            - name: wm-dashboard
+              image: "{{ .Values.dmops_image.repository }}:{{ .Values.dmops_image.tag | default .Chart.AppVersion }}"
+              imagePullPolicy: {{ .Values.dmops_image.pullPolicy }}
+              volumeMounts:
+                - name: dmtops-cron-secrets
+                  mountPath: /etc/secrets
+                  readOnly: true
+                - name: cvmfs-pvc
+                  mountPath: /cvmfs/cms.cern.ch/
+                  mountPropagation: HostToContainer
+              env:
+                - name: K8SHOST
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
+              command: ["/src/run_wf_dashboard.sh"]
+          restartPolicy: OnFailure

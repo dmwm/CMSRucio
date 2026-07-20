@@ -98,6 +98,3 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
-
-wfDashboard: 
-  enabled: false
