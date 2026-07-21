@@ -35,6 +35,7 @@ fi
 
 ./setRucioFromGitlab --type test
 ./setRucioFromGitlab --type temp
+./setRucioFromGitlab --type user
 
 echo "Set site capacity"
 ./setSiteCapacity

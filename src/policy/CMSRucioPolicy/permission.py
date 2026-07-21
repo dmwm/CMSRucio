@@ -394,6 +394,12 @@ def perm_add_rule(issuer, kwargs, *, session: "Optional[Session]" = None):
     if kwargs["activity"] == "User AutoApprove":
         return _check_for_auto_approve_eligibility(issuer, rses, kwargs, session=session)
 
+    # User/local accounts cannot create rules without lifetime
+    account = dict(get_account(kwargs['account'],session=session))
+    if account and (account['account_type']==AccountType.USER or '_local' in kwargs['account']) and kwargs['lifetime'] is None:
+        from rucio.core.permission import PermissionResult
+        return PermissionResult(False, "User and local accounts cannot create rules without lifetime.")
+
     if kwargs["activity"] == "Analysis TapeRecall" and issuer.external == "crab_tape_recall":
         return True
 

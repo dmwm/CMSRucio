@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 
-# This script updates the rucio static usage for a given site reading values from 
+# This script updates the rucio static usage for a given site reading values from
 # scap15min index in CMSMONIT Opensearch
 # It is meant to be run as a cronjob
 # Site admins can modify the values from https://cmssst.web.cern.ch/cgi-bin/set/SiteCapacity
@@ -142,19 +142,18 @@ try:
             rse = site['name']
         elif f"{site['name']}_Disk" in rses:
             rse = f"{site['name']}_Disk"
+        elif f"{site['name']}_User" in rses:
+            logger.info("User RSE")
+            rse = f"{site['name']}_User"
         else:
             logger.debug(f"RSE {site['name']} or {site['name']}_Disk not a valid RSE")
             continue
 
         # Process main RSE
         rses_to_update = [rse]
-        
-        # Also process _User variant if it exists
-        user_rse = f"{rse.replace('_Disk', '')}_User"
-        if user_rse in rses:
-            rses_to_update.append(user_rse)
 
         for rse in rses_to_update:
+            logger.info(f"Updating {rse}")
             if rse in skip_rses:
                 logger.debug(f"Skipping static usage update for {rse}")
                 continue
@@ -162,9 +161,10 @@ try:
             logger.debug(f"Updating static usage for {rse}")
             disk_experiment_use_bytes = site['disk_experiment_use'] * 1e12 #total space used by CMS experiment data
             disk_local_use_bytes = site['disk_local_use'] * 1e12 #additional quota for local rse_local_users account
-            
+
             # For _User suffix RSEs, the entire capacity comes from disk_local_use
             if rse.endswith('_User'):
+                logger.info(f"_User ending. quota {disk_local_use_bytes}")
                 rse_available_bytes = disk_local_use_bytes
             else:
                 rse_available_bytes = disk_experiment_use_bytes + disk_local_use_bytes
@@ -187,7 +187,7 @@ try:
                     skip_check = disk_local_use_bytes == 0
                 else:
                     skip_check = disk_experiment_use_bytes == 0
-                
+
                 if skip_check:
                     logger.debug(f"Static usage for {rse} is 0, skipping")
                     continue
@@ -228,5 +228,3 @@ try:
 except Exception as e:
     logger.error(f'Failed to connect to rucio: {e}')
     traceback.print_exc()
-
-

@@ -46,6 +46,7 @@
     <thead class="table-dark">
         <tr>
             <th>Request ID</th>
+            <th>Submitted Date</th>
             <th>Status</th>
             <th>Files</th>
             <th>Reason</th>
@@ -62,6 +63,7 @@
         {% for file in data %}
         <tr>
             <td><a href="{% url 'file-query-request' file.request_id %}">{{ file.request_id }}</a></td>
+            <td>{{ file.submitted_at_date }}</td>
             <td>
                 <span class="badge 
                     {% if file.status == 'success' %}bg-success
