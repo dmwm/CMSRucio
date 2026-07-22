@@ -31,6 +31,73 @@ cronjobSettings:
     - name: USERKEY_NAME
       value: "rootkey.pem"
 
+cronjobs:
+  - name: rucio-subscriptions
+    app: dmtops-spark-svc
+    schedule: "10 6 * * *"
+    command: /src/submit_rucio_subscriptions.sh
+    ports:
+      driver: 31203
+      blockManager: 31204
+  - name: rucio-account-usage-locks
+    app: dmtops-spark-svc-1
+    schedule: "30 6 * * *" 
+    command: /src/submit_rucio_account_usage_locks.sh
+    ports:
+      driver: 31205
+      blockManager: 31206
+  - name: rucio-account-usage
+    app: dmtops-spark-svc-2
+    schedule: "*/5 * * * *" 
+    command: /src/submit_rucio_account_usage.sh
+    ports:
+      driver: 31207
+      blockManager: 31208
+  - name: rucio-activity-usage
+    app: dmtops-spark-svc-3
+    schedule: "13 3 * * *"
+    command: /src/submit_rucio_activity_usage.sh
+    ports:
+      driver: 31209
+      blockManager: 31210
+  - name: rucio-rules-count-volume
+    app: dmtops-spark-svc-4
+    schedule: "10 7 * * *"
+    command: /src/submit_rucio_rules_count_volume.sh
+    ports:
+      driver: 31213
+      blockManager: 31214
+  - name: rucio-activity-account-usage
+    app: dmtops-spark-svc-5
+    schedule: "13 3 * * *"
+    command: /src/submit_rucio_activity_account_usage.sh
+    ports:
+      driver: 31215
+      blockManager: 31216
+  - name: rucio-locks-count-volume
+    app: dmtops-spark-svc-6
+    schedule: "10 7 * * *"
+    command: /src/submit_rucio_locks_count_volume.sh
+    ports:
+      driver: 31217
+      blockManager: 31218
+  - name: rucio-account-usage
+    app: dmtops-spark-svc-7
+    schedule: "*/5 * * * *"
+    command: /src/submit_rucio_account_usage.sh
+    ports:
+      driver: 31219
+      blockManager: 31220
+  - name: rucio-summary
+    schedule: "*/5 * * * *" 
+    command: /src/run_rucio_summary.sh
+  - name: rse-usage
+    schedule: "*/5 * * * *" 
+    command: /src/RSE_USAGE.py
+  - name: wm-dashboard
+    schedule: "0 6 * * *" 
+    command: /src/run_wf_dashboard.sh
+
 oidc:
   iamServer: https://cms-auth.web.cern.ch/ 
   iamClientId: da4251a5-70c2-418d-a061-b861e779ed1e

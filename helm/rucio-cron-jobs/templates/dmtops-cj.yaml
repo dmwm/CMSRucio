@@ -1,379 +1,37 @@
+{{- range .Values.cronjobs }}
+---
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: rucio-subscriptions
-  namespace: {{ .Values.dmops_namespace }}
+  name: {{ .name }}
+  namespace: {{ $.Values.dmops_namespace }}
 spec:
-  schedule: "10 6 * * *"
+  schedule: {{ .schedule | quote }}
   jobTemplate:
     spec:
       backoffLimit: 3
       template:
         metadata:
           labels:
-            app: dmtops-spark-svc
+            app: {{ .app }}
         spec:
-          volumes:
-          - name: dmtops-cron-secrets
-            secret:
-              secretName: dmtops-cron-secrets
-          containers:
-            - name: rucio-subscriptions
-              image: "{{ .Values.dmops_image.repository }}:{{ .Values.dmops_image.tag | default .Chart.AppVersion }}"
-              imagePullPolicy: {{ .Values.dmops_image.pullPolicy }}
-              volumeMounts:
-                - name: dmtops-cron-secrets
-                  mountPath: /etc/secrets
-                  readOnly: true
-              env:
-                - name: DRIVERPORT
-                  value: "31203"
-                - name: BMPORT
-                  value: "31204"
-                - name: K8SHOST
-                  valueFrom:
-                    fieldRef:
-                      fieldPath: spec.nodeName
-              ports:
-                - containerPort: 31203 # spark.driver.port
-                  name: port-0
-                - containerPort: 31204 # spark.driver.blockManager.port
-                  name: port-1
-              command: ['/src/submit_rucio_subscriptions.sh']
           restartPolicy: OnFailure
----
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: rucio-rules-count-volume
-  namespace: {{ .Values.dmops_namespace }}
-spec:
-  schedule: "10 7 * * *"
-  jobTemplate:
-    spec:
-      backoffLimit: 3
-      template:
-        metadata:
-          labels:
-            app: dmtops-spark-svc-4 
-        spec:
+
           volumes:
-          - name: dmtops-cron-secrets
-            secret:
-              secretName: dmtops-cron-secrets
+            - name: dmtops-cron-secrets
+              secret:
+                secretName: dmtops-cron-secrets
+            - name: cvmfs-pvc
+              persistentVolumeClaim:
+                claimName: csi-cvmfs-cms-pvc
+                readOnly: true
+
           containers:
-            - name: rucio-rules-count-volume
-              image: "{{ .Values.dmops_image.repository }}:{{ .Values.dmops_image.tag | default .Chart.AppVersion }}"
-              imagePullPolicy: {{ .Values.dmops_image.pullPolicy }}
-              volumeMounts:
-                - name: dmtops-cron-secrets
-                  mountPath: /etc/secrets
-                  readOnly: true
-              env:
-                - name: DRIVERPORT
-                  value: "31213"
-                - name: BMPORT
-                  value: "31214"
-                - name: K8SHOST
-                  valueFrom:
-                    fieldRef:
-                      fieldPath: spec.nodeName
-              ports:
-                - containerPort: 31213 # spark.driver.port
-                  name: port-0
-                - containerPort: 31214 # spark.driver.blockManager.port
-                  name: port-1
-              command: ["/src/submit_rucio_rules_count_volume.sh"]
-          restartPolicy: OnFailure
----
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: rucio-locks-count-volume
-  namespace: {{ .Values.dmops_namespace }}
-spec:
-  schedule: "10 7 * * *"
-  jobTemplate:
-    spec:
-      backoffLimit: 3
-      template:
-        metadata:
-          labels:
-            app: dmtops-spark-svc-6
-        spec:
-          volumes:
-          - name: dmtops-cron-secrets
-            secret:
-              secretName: dmtops-cron-secrets
-          containers:
-            - name: rucio-locks-count-volume
-              image: "{{ .Values.dmops_image.repository }}:{{ .Values.dmops_image.tag | default .Chart.AppVersion }}"
-              imagePullPolicy: {{ .Values.dmops_image.pullPolicy }}
-              volumeMounts:
-                - name: dmtops-cron-secrets
-                  mountPath: /etc/secrets
-                  readOnly: true
-              env:
-                - name: DRIVERPORT
-                  value: "31217"
-                - name: BMPORT
-                  value: "31218"
-                - name: K8SHOST
-                  valueFrom:
-                    fieldRef:
-                      fieldPath: spec.nodeName
-              ports:
-                - containerPort: 31217 # spark.driver.port #TODO: change
-                  name: port-0
-                - containerPort: 31218 # spark.driver.blockManager.port
-                  name: port-1
-              command: ["/src/submit_rucio_locks_count_volume.sh"]
-          restartPolicy: OnFailure
----
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: rucio-errors-volume
-  namespace: {{ .Values.dmops_namespace }}
-spec:
-  schedule: "10 7 * * *"
-  jobTemplate:
-    spec:
-      backoffLimit: 3
-      template:
-        metadata:
-          labels:
-            app: dmtops-spark-svc-7
-        spec:
-          volumes:
-          - name: dmtops-cron-secrets
-            secret:
-              secretName: dmtops-cron-secrets
-          containers:
-            - name: rucio-errors-volume
-              image: "{{ .Values.dmops_image.repository }}:{{ .Values.dmops_image.tag | default .Chart.AppVersion }}"
-              imagePullPolicy: {{ .Values.dmops_image.pullPolicy }}
-              volumeMounts:
-                - name: dmtops-cron-secrets
-                  mountPath: /etc/secrets
-                  readOnly: true
-              env:
-                - name: DRIVERPORT
-                  value: "31219"
-                - name: BMPORT
-                  value: "31220"
-                - name: K8SHOST
-                  valueFrom:
-                    fieldRef:
-                      fieldPath: spec.nodeName
-              ports:
-                - containerPort: 31219 # spark.driver.port
-                  name: port-0
-                - containerPort: 31220 # spark.driver.blockManager.port
-                  name: port-1
-              command: ["/src/submit_rucio_errors_volume.sh"]
-          restartPolicy: OnFailure
----
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: rucio-activity-usage
-  namespace: {{ .Values.dmops_namespace }}
-spec:
-  schedule: "13 3 * * *"
-  jobTemplate:
-    spec:
-      backoffLimit: 3
-      template:
-        metadata:
-          labels:
-            app: dmtops-spark-svc-3
-        spec:
-          volumes:
-          - name: dmtops-cron-secrets
-            secret:
-              secretName: dmtops-cron-secrets
-          containers:
-            - name: rucio-activity-usage
-              image: "{{ .Values.dmops_image.repository }}:{{ .Values.dmops_image.tag | default .Chart.AppVersion }}"
-              imagePullPolicy: {{ .Values.dmops_image.pullPolicy }}
-              volumeMounts:
-                - name: dmtops-cron-secrets
-                  mountPath: /etc/secrets
-                  readOnly: true
-              env:
-                - name: DRIVERPORT
-                  value: "31209"
-                - name: BMPORT
-                  value: "31210"
-                - name: K8SHOST
-                  valueFrom:
-                    fieldRef:
-                      fieldPath: spec.nodeName
-              ports:
-                - containerPort: 31209 # spark.driver.port
-                  name: port-0
-                - containerPort: 31210 # spark.driver.blockManager.port
-                  name: port-1
-              command: ["/src/submit_rucio_activity_usage.sh"]
-          restartPolicy: OnFailure
----
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: rucio-activity-account-usage
-  namespace: {{ .Values.dmops_namespace }}
-spec:
-  schedule: "13 3 * * *"
-  jobTemplate:
-    spec:
-      backoffLimit: 3
-      template:
-        metadata:
-          labels:
-            app: dmtops-spark-svc-5
-        spec:
-          volumes:
-          - name: dmtops-cron-secrets
-            secret:
-              secretName: dmtops-cron-secrets
-          containers:
-            - name: rucio-activity-usage
-              image: "{{ .Values.dmops_image.repository }}:{{ .Values.dmops_image.tag | default .Chart.AppVersion }}"
-              imagePullPolicy: {{ .Values.dmops_image.pullPolicy }}
-              volumeMounts:
-                - name: dmtops-cron-secrets
-                  mountPath: /etc/secrets
-                  readOnly: true
-              env:
-                - name: DRIVERPORT
-                  value: "31215"
-                - name: BMPORT
-                  value: "31216"
-                - name: K8SHOST
-                  valueFrom:
-                    fieldRef:
-                      fieldPath: spec.nodeName
-              ports:
-                - containerPort: 31215 # spark.driver.port
-                  name: port-0
-                - containerPort: 31216 # spark.driver.blockManager.port
-                  name: port-1
-              command: ["/src/submit_rucio_activity_account_usage.sh"]
-          restartPolicy: OnFailure
----
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: rucio-account-usage
-  namespace: {{ .Values.dmops_namespace }}
-spec:
-  schedule: "*/5 * * * *" 
-  jobTemplate:
-    spec:
-      backoffLimit: 3
-      template:
-        metadata:
-          labels:
-            app: dmtops-spark-svc-2
-        spec:
-          volumes:
-          - name: dmtops-cron-secrets
-            secret:
-              secretName: dmtops-cron-secrets
-          containers:
-            - name: rucio-account-usage
-              image: "{{ .Values.dmops_image.repository }}:{{ .Values.dmops_image.tag | default .Chart.AppVersion }}"
-              imagePullPolicy: {{ .Values.dmops_image.pullPolicy }}
-              volumeMounts:
-                - name: dmtops-cron-secrets
-                  mountPath: /etc/secrets
-                  readOnly: true
-              env:
-                - name: DRIVERPORT
-                  value: "31207"
-                - name: BMPORT
-                  value: "31208"
-                - name: K8SHOST
-                  valueFrom:
-                    fieldRef:
-                      fieldPath: spec.nodeName
-              ports:
-                - containerPort: 31207 # spark.driver.port
-                  name: port-0
-                - containerPort: 31208 # spark.driver.blockManager.port
-                  name: port-1
-              command: ["/src/submit_rucio_account_usage.sh"]
-          restartPolicy: OnFailure
----
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: rucio-account-usage-locks
-  namespace: {{ .Values.dmops_namespace }}
-spec:
-  schedule: "30 6 * * *" 
-  jobTemplate:
-    spec:
-      backoffLimit: 3
-      template:
-        metadata:
-          labels:
-            app: dmtops-spark-svc-1
-        spec:
-          volumes:
-          - name: dmtops-cron-secrets
-            secret:
-              secretName: dmtops-cron-secrets
-          containers:
-            - name: rucio-account-usage-locks
-              image: "{{ .Values.dmops_image.repository }}:{{ .Values.dmops_image.tag | default .Chart.AppVersion }}"
-              imagePullPolicy: {{ .Values.dmops_image.pullPolicy }}
-              volumeMounts:
-                - name: dmtops-cron-secrets
-                  mountPath: /etc/secrets
-                  readOnly: true
-              env:
-                - name: DRIVERPORT
-                  value: "31205"
-                - name: BMPORT
-                  value: "31206"
-                - name: K8SHOST
-                  valueFrom:
-                    fieldRef:
-                      fieldPath: spec.nodeName
-              ports:
-                - containerPort: 31205 # spark.driver.port
-                  name: port-0
-                - containerPort: 31206 # spark.driver.blockManager.port
-                  name: port-1
-              command: ["/src/submit_rucio_account_usage_locks.sh"]
-          restartPolicy: OnFailure
----
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: rucio-summary
-  namespace: {{ .Values.dmops_namespace }}
-spec:
-  schedule: "*/5 * * * *" 
-  jobTemplate:
-    spec:
-      backoffLimit: 3
-      template:
-        spec:
-          volumes:
-          - name: dmtops-cron-secrets
-            secret:
-              secretName: dmtops-cron-secrets
-          - name: cvmfs-pvc
-            persistentVolumeClaim:
-              claimName: csi-cvmfs-cms-pvc
-              readOnly: true
-          containers:
-            - name: rucio-summary
-              image: "{{ .Values.dmops_image.repository }}:{{ .Values.dmops_image.tag | default .Chart.AppVersion }}"
-              imagePullPolicy: {{ .Values.dmops_image.pullPolicy }}
+            - name: {{ .name }}
+
+              image: "{{ $.Values.dmops_image.repository }}:{{ $.Values.dmops_image.tag | default $.Chart.AppVersion }}"
+              imagePullPolicy: {{ $.Values.dmops_image.pullPolicy }}
+
               volumeMounts:
                 - name: dmtops-cron-secrets
                   mountPath: /etc/secrets
@@ -381,82 +39,28 @@ spec:
                 - name: cvmfs-pvc
                   mountPath: /cvmfs/cms.cern.ch/
                   mountPropagation: HostToContainer
+
               env:
+              {{- with .ports }}
+                - name: DRIVERPORT
+                  value: {{ .driver | quote }}
+                - name: BMPORT
+                  value: {{ .blockManager | quote }}
+              {{- end }}
                 - name: K8SHOST
                   valueFrom:
                     fieldRef:
                       fieldPath: spec.nodeName
-              command: ["/src/run_rucio_summary.sh"]
-          restartPolicy: OnFailure
----
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: rse-usage
-  namespace: {{ .Values.dmops_namespace }}
-spec:
-  schedule: "*/5 * * * *" 
-  jobTemplate:
-    spec:
-      backoffLimit: 3
-      template:
-        spec:
-          volumes:
-          - name: dmtops-cron-secrets
-            secret:
-              secretName: dmtops-cron-secrets
-          containers:
-            - name: rse-usage
-              image: "{{ .Values.dmops_image.repository }}:{{ .Values.dmops_image.tag | default .Chart.AppVersion }}"
-              imagePullPolicy: {{ .Values.dmops_image.pullPolicy }}
-              volumeMounts:
-                - name: dmtops-cron-secrets
-                  mountPath: /etc/secrets
-                  readOnly: true
-              env:
-                - name: K8SHOST
-                  valueFrom:
-                    fieldRef:
-                      fieldPath: spec.nodeName
-              command: ["python3", "/src/RSE_USAGE.py"]
-          restartPolicy: OnFailure
----
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: wm-dashboard
-  namespace: {{ .Values.dmops_namespace }}
-spec:
-  schedule: "0 6 * * *" 
-  jobTemplate:
-    spec:
-      backoffLimit: 3
-      template:
-        spec:
-          volumes:
-          - name: dmtops-cron-secrets
-            secret:
-              secretName: dmtops-cron-secrets
-              defaultMode: 0600
-          - name: cvmfs-pvc
-            persistentVolumeClaim:
-              claimName: csi-cvmfs-cms-pvc
-              readOnly: true
-          containers:
-            - name: wm-dashboard
-              image: "{{ .Values.dmops_image.repository }}:{{ .Values.dmops_image.tag | default .Chart.AppVersion }}"
-              imagePullPolicy: {{ .Values.dmops_image.pullPolicy }}
-              volumeMounts:
-                - name: dmtops-cron-secrets
-                  mountPath: /etc/secrets
-                  readOnly: true
-                - name: cvmfs-pvc
-                  mountPath: /cvmfs/cms.cern.ch/
-                  mountPropagation: HostToContainer
-              env:
-                - name: K8SHOST
-                  valueFrom:
-                    fieldRef:
-                      fieldPath: spec.nodeName
-              command: ["/src/run_wf_dashboard.sh"]
-          restartPolicy: OnFailure
+              
+              {{- with .ports }}
+              ports:
+                - name: port-0
+                  containerPort: {{ .driver }} # spark.driver.port
+
+                - name: port-1
+                  containerPort: {{ .blockManager }} # spark.driver.blockManager.port
+              {{- end }}
+              command:
+                - {{ .command }}
+
+{{- end }}
