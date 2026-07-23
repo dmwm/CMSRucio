@@ -1,43 +1,70 @@
+{{- range .Values.cronjobs }}
+---
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: rucio-subscriptions
-  namespace: {{ .Values.dmops_namespace }}
+  name: {{ .name }}
+  namespace: {{ $.Values.dmops_namespace }}
 spec:
-  schedule: "10 6 * * *"
+  schedule: {{ .schedule | quote }}
   jobTemplate:
     spec:
       backoffLimit: 3
       template:
         metadata:
           labels:
-            app: dmtops-spark-svc
+            app: {{ default .name .app }}
         spec:
+          restartPolicy: OnFailure
+
           volumes:
-          - name: dmtops-cron-secrets
-            secret:
-              secretName: dmtops-cron-secrets
+            - name: dmtops-cron-secrets
+              secret:
+                secretName: dmtops-cron-secrets
+              {{ if .cvmfs }}
+            - name: cvmfs-pvc
+              persistentVolumeClaim:
+                claimName: csi-cvmfs-cms-pvc
+                readOnly: true
+              {{ end }}
+
           containers:
-            - name: rucio-subscriptions
-              image: "{{ .Values.dmops_image.repository }}:{{ .Values.dmops_image.tag | default .Chart.AppVersion }}"
-              imagePullPolicy: {{ .Values.dmops_image.pullPolicy }}
+            - name: {{ .name }}
+
+              image: "{{ $.Values.dmops_image.repository }}:{{ $.Values.dmops_image.tag | default $.Chart.AppVersion }}"
+              imagePullPolicy: {{ $.Values.dmops_image.pullPolicy }}
+
               volumeMounts:
                 - name: dmtops-cron-secrets
                   mountPath: /etc/secrets
                   readOnly: true
+                  {{ if .cvmfs }}
+                - name: cvmfs-pvc
+                  mountPath: /cvmfs/cms.cern.ch/
+                  mountPropagation: HostToContainer
+                  {{ end }}
+
               env:
+              {{- with .ports }}
                 - name: DRIVERPORT
-                  value: "31203"
+                  value: {{ .driver | quote }}
                 - name: BMPORT
-                  value: "31204"
+                  value: {{ .blockManager | quote }}
+              {{- end }}
                 - name: K8SHOST
                   valueFrom:
                     fieldRef:
                       fieldPath: spec.nodeName
+              
+              {{- with .ports }}
               ports:
-                - containerPort: 31203 # spark.driver.port
-                  name: port-0
-                - containerPort: 31204 # spark.driver.blockManager.port
-                  name: port-1
-              command: ['/src/submit_rucio_subscriptions.sh']
-          restartPolicy: OnFailure
+                - name: port-0
+                  containerPort: {{ .driver }} # spark.driver.port
+
+                - name: port-1
+                  containerPort: {{ .blockManager }} # spark.driver.blockManager.port
+              {{- end }}
+              command:
+              {{- toYaml .command | nindent 16 }}
+
+{{- end }}

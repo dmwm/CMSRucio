@@ -1,0 +1,10 @@
+# StorageClass used to point to CMS cvmfs
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: csi-cvmfs-cms
+parameters:
+  repository: cms.cern.ch
+provisioner: cvmfs.csi.cern.ch
+reclaimPolicy: Delete
+volumeBindingMode: Immediate

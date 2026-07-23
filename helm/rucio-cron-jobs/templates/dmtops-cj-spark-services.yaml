@@ -1,0 +1,27 @@
+{{- range .Values.cronjobs }}
+{{- $job := . }}
+{{- with .ports }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $job.app }}
+  namespace: {{ $.Values.dmops_namespace }}
+spec:
+  selector:
+    app: {{ $job.app }}
+  type: NodePort
+  ports:
+    - name: port-0 # spark.driver.port
+      protocol: TCP
+      nodePort: {{ .driver }}
+      port: {{ .driver }}
+      targetPort: {{ .driver }}
+
+    - name: port-1 # spark.driver.blockManager.port
+      protocol: TCP
+      nodePort: {{ .blockManager }}
+      port: {{ .blockManager }}
+      targetPort: {{ .blockManager }}
+{{- end }}
+{{- end }}

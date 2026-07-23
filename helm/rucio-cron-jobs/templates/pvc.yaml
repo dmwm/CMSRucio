@@ -1,0 +1,13 @@
+# PersistentVolumeClaim used to mount CMS cvmfs area in pods
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: csi-cvmfs-cms-pvc
+  namespace: {{ $.Values.dmops_namespace }}
+spec:
+  accessModes:
+  - ReadOnlyMany
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: csi-cvmfs-cms
