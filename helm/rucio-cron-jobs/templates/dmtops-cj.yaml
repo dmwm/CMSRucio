@@ -13,7 +13,7 @@ spec:
       template:
         metadata:
           labels:
-            app: {{ .app }}
+            app: {{ default .name .app }}
         spec:
           restartPolicy: OnFailure
 
@@ -21,10 +21,12 @@ spec:
             - name: dmtops-cron-secrets
               secret:
                 secretName: dmtops-cron-secrets
+              {{ if .cvmfs }}
             - name: cvmfs-pvc
               persistentVolumeClaim:
                 claimName: csi-cvmfs-cms-pvc
                 readOnly: true
+              {{ end }}
 
           containers:
             - name: {{ .name }}
@@ -36,9 +38,11 @@ spec:
                 - name: dmtops-cron-secrets
                   mountPath: /etc/secrets
                   readOnly: true
+                  {{ if .cvmfs }}
                 - name: cvmfs-pvc
                   mountPath: /cvmfs/cms.cern.ch/
                   mountPropagation: HostToContainer
+                  {{ end }}
 
               env:
               {{- with .ports }}
@@ -61,6 +65,6 @@ spec:
                   containerPort: {{ .blockManager }} # spark.driver.blockManager.port
               {{- end }}
               command:
-                - {{ .command }}
+              {{- toYaml .command | nindent 16 }}
 
 {{- end }}

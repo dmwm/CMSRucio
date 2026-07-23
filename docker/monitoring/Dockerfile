@@ -25,13 +25,4 @@ RUN dnf --disablerepo=hdp9al-stable install -y python-pycurl \
 COPY ./src /src/
 
 # Give execution permissions
-RUN chmod +x /src/submit_rucio_account_usage.sh
-RUN chmod +x /src/submit_rucio_activity_usage.sh
-RUN chmod +x /src/submit_rucio_account_usage_locks.sh
-RUN chmod +x /src/submit_rucio_activity_account_usage.sh
-RUN chmod +x /src/submit_rucio_locks_count_volume.sh
-RUN chmod +x /src/submit_rucio_rules_count_volume.sh
-RUN chmod +x /src/submit_rucio_errors_volume.sh
-RUN chmod +x /src/submit_rucio_subscriptions.sh
-RUN chmod +x /src/run_rucio_summary.sh
-RUN chmod +x /src/run_wf_dashboard.sh
+RUN chmod +x /src/*.sh
