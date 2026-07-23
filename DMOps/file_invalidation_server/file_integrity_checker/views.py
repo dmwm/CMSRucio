@@ -24,6 +24,22 @@ def get_username(request):
     return get_cern_username(request) or 'unknown'
 
 
+def query_bool(request, param, default):
+    """
+    Parses a query-string parameter as a boolean.
+
+    Query params always arrive as strings, so a bare `if request.query_params.get(...)`
+    treats "false" as truthy. This coerces explicitly:
+        missing                              -> default
+        'false' / '0' / 'no' / 'off' / ''    -> False
+        anything else (e.g. 'true')          -> True
+    """
+    raw = request.query_params.get(param)
+    if raw is None:
+        return default
+    return str(raw).strip().lower() not in ('false', '0', 'no', 'off', '')
+
+
 def derive_file_status(replica_statuses):
     """
     Derives a single human-readable status for a file based on its replicas.
@@ -240,11 +256,15 @@ class FileIntegritySubmitRequestView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+        # Jobs are no longer triggered synchronously here — the queue processor
+        # picks the request up and assigns a job_id. So at submit time job_id is
+        # None and the status is SUBMITTED; report that honestly.
         return Response(
             {
                 'message':    (
                     f"{len(lfns)} LFN(s) submitted for integrity check. "
-                    f"Job ID: {job_id}."
+                    f"The request is queued; a job will be assigned shortly. "
+                    f"Track progress via the links below."
                 ),
                 'request_id': str(integrity_request.request_id),
                 'job_id':     job_id,
@@ -308,9 +328,12 @@ class FileIntegrityQueryRequestView(APIView):
         request_id       = request.query_params.get('request_id')
         query_status     = request.query_params.get('status')
         requested_by     = request.query_params.get('requested_by')
-        include_replicas = request.query_params.get('include_replicas',True)
-        include_logs = request.query_params.get('include_logs',False)
-        include_summary = request.query_params.get('include_summary',True)
+        # Booleans must be coerced from their string query-param form, otherwise
+        # "false" is truthy. include_summary defaults on for the detail view and
+        # off for the list view (where it would cost one query per request).
+        include_replicas = query_bool(request, 'include_replicas', True)
+        include_logs     = query_bool(request, 'include_logs', False)
+        include_summary  = query_bool(request, 'include_summary', bool(request_id))
 
         # --- Detail view ---
         if request_id:

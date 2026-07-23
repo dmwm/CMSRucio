@@ -568,3 +568,93 @@ class ViewEndpointTest(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertIn('text/plain', r['Content-Type'])
         self.assertIn('T1_US_FNAL_Disk', r.content.decode())
+
+
+class QueryBoolParamsTest(TestCase):
+    """
+    Regression tests for the include_* boolean query params on the requests
+    view. These were broken when a refactor dropped the string->bool coercion,
+    making "false" truthy so the toggles silently did nothing.
+    """
+
+    def setUp(self):
+        self.client = Client(HTTP_ACCEPT='application/json')
+        self.request = FileIntegrityRequest.objects.create(
+            requested_by='testuser',
+            status=FileIntegrityRequest.Status.COMPLETED,
+            job_id='aabb1122',
+            logs='some pod logs here',
+        )
+        FileReplica.objects.create(
+            request=self.request, scope='cms',
+            lfn='/store/data/file1.root',
+            rse='T1_US_FNAL_Disk', status='OK'
+        )
+
+    def _detail(self, extra=''):
+        return self.client.get(
+            f'/api/integrity/query/requests/?request_id={self.request.request_id}{extra}'
+        ).json()
+
+    # --- detail view defaults ---
+
+    def test_detail_includes_files_and_summary_by_default(self):
+        data = self._detail()
+        self.assertIn('files', data)
+        self.assertIn('summary', data)
+        self.assertNotIn('logs', data)
+
+    # --- the actual bug: =false must turn things off ---
+
+    def test_include_replicas_false_omits_files(self):
+        self.assertNotIn('files', self._detail('&include_replicas=false'))
+
+    def test_include_summary_false_omits_summary(self):
+        self.assertNotIn('summary', self._detail('&include_summary=false'))
+
+    def test_include_logs_true_includes_logs(self):
+        self.assertIn('logs', self._detail('&include_logs=true'))
+
+    def test_include_replicas_true_keeps_files(self):
+        self.assertIn('files', self._detail('&include_replicas=true'))
+
+    # --- list view: summary off by default, costs a query per request ---
+
+    def test_list_omits_summary_by_default(self):
+        rows = self.client.get('/api/integrity/query/requests/').json()
+        self.assertTrue(all('summary' not in row for row in rows))
+
+    def test_list_includes_summary_when_requested(self):
+        rows = self.client.get(
+            '/api/integrity/query/requests/?include_summary=true'
+        ).json()
+        self.assertTrue(all('summary' in row for row in rows))
+
+    # --- UI safety: the HTML templates must still render ---
+
+    def test_html_list_renders(self):
+        html_client = Client(HTTP_ACCEPT='text/html')
+        r = html_client.get('/api/integrity/query/requests/')
+        self.assertEqual(r.status_code, 200)
+
+    def test_html_detail_renders(self):
+        html_client = Client(HTTP_ACCEPT='text/html')
+        r = html_client.get(
+            f'/api/integrity/query/requests/?request_id={self.request.request_id}'
+        )
+        self.assertEqual(r.status_code, 200)
+
+
+class SubmitResponseTest(TestCase):
+    """The submit response must not advertise a bogus 'Job ID: None'."""
+
+    def test_queued_message_has_no_null_job_id(self):
+        client = Client(HTTP_ACCEPT='application/json')
+        r = client.post(
+            '/api/integrity/submit/',
+            data={'lfns': 'cms:/store/data/Run2024/file.root'},
+        )
+        self.assertEqual(r.status_code, 201)
+        data = r.json()
+        self.assertNotIn('Job ID: None', data['message'])
+        self.assertEqual(data['status'], FileIntegrityRequest.Status.SUBMITTED)

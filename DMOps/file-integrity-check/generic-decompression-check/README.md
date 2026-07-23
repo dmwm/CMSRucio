@@ -60,3 +60,13 @@ returns:
 The tool requires `uproot` python module, `rucio` python client and `gfal2`.
 
 It is recommended to use it on lxplus after activating your voms proxy and by using CERNBox (eos) as the working directory.
+
+### Tests
+
+`run_check.py` has grid-free unit tests that stub out `gfal2`/`uproot`/`rucio`,
+so they run anywhere with no extra dependencies:
+
+```
+$ cd src
+$ python3 -m unittest test_run_check -v
+```
