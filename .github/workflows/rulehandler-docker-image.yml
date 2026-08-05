@@ -1,0 +1,36 @@
+name: Rule Handler Tool Docker Image CI
+
+on:
+  push:
+    tags:
+      - 'rulehandler-*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Get tag name
+        id: tagname
+        run: echo "tag=${GITHUB_REF#refs/tags/rulehandler-}" >> "$GITHUB_ENV"
+        
+      - name: Login to CERN Harbour
+        uses: docker/login-action@v2
+        with:
+          registry: registry.cern.ch
+          username: ${{ secrets.HARBOR_USERNAME }}
+          password: ${{ secrets.HARBOR_TOKEN }}
+
+      - name: Build the Docker Image
+        run: |
+          cd docker/rule-handler && docker build . \
+          --file Dockerfile \
+          --tag registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/rule_handler:${{ env.tag }} \
+          --tag registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/rule_handler:latest
+      
+      - name: Push Image to CERN Harbour
+        run: |
+          docker push registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/rule_handler:${{ env.tag }}
+          docker push registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/rule_handler:latest

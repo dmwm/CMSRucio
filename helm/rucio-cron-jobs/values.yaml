@@ -16,6 +16,11 @@ dmops_image:
   # Overrides the image tag whose default is the chart appVersion.
   tag: "latest"
 
+rulehandler_image:
+  repository: registry.cern.ch/cmsrucio/rule_handler
+  pullPolicy: Always
+  tag: "1.0.0"
+
 dmops_namespace: "dmtops"
 
 imagePullSecrets: []
