@@ -48,6 +48,7 @@ spec:
             - name: cvmfs-volume
               mountPath: "/cvmfs/"
               readOnly: true
+              mountPropagation: HostToContainer
 
       containers:
         - name: integrity-checker
@@ -62,6 +63,7 @@ spec:
             - name: cvmfs-volume
               mountPath: "/cvmfs/"
               readOnly: true
+              mountPropagation: HostToContainer
             - name: vomses-volume
               mountPath: "/etc/vomses/"
               readOnly: true
