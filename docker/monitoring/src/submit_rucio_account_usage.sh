@@ -4,7 +4,7 @@
 # Load common utilities
 set -e
 script_dir="$(cd "$(dirname "$0")" && pwd)"
-. /data/CMSSpark/bin/utils/common_utils.sh
+. /data/utils/common_utils.sh
 
 # Initiate Kerberos Credentials
 kinit -kt /etc/secrets/dmtops.keytab dmtops

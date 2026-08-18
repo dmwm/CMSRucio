@@ -7,6 +7,9 @@ metadata:
   namespace: {{ $.Values.dmops_namespace }}
 spec:
   schedule: {{ .schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
   jobTemplate:
     spec:
       backoffLimit: 3
@@ -21,6 +24,7 @@ spec:
             - name: dmtops-cron-secrets
               secret:
                 secretName: dmtops-cron-secrets
+                defaultMode: 0400
               {{ if .cvmfs }}
             - name: cvmfs-pvc
               persistentVolumeClaim:
@@ -37,7 +41,6 @@ spec:
               volumeMounts:
                 - name: dmtops-cron-secrets
                   mountPath: /etc/secrets
-                  readOnly: true
                   {{ if .cvmfs }}
                 - name: cvmfs-pvc
                   mountPath: /cvmfs/cms.cern.ch/
