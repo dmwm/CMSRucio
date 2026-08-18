@@ -26,3 +26,5 @@ COPY ./src /src/
 
 # Give execution permissions
 RUN chmod +x /src/*.sh
+
+WORKDIR /src
