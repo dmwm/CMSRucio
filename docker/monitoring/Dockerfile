@@ -1,8 +1,5 @@
 # Base image with spark-submit capabilities, CMSMonitoring, CMSSpark and CERN central tools
-FROM registry.cern.ch/cmsmonitoring/cmsmon-spark
-
-# Update hadoop version
-RUN mkdir -p /var/log/hbase /var/run/hbase && chmod 777 /var/log/hbase /var/run/hbase
+FROM registry.cern.ch/cmsrucio/dmops-spark-crons:base
 
 # Set environment variables
 ENV PYCURL_SSL_LIBRARY=nss \
@@ -10,7 +7,7 @@ ENV PYCURL_SSL_LIBRARY=nss \
     X509_USER_KEY=/etc/secrets/dmtops.key.pem \
     USER=dmtops \
     RUCIO_ACCOUNT=transfer_ops \
-    PYTHONPATH="${PYTHONPATH}:CMSSpark/src/python/CMSSpark"
+    PYTHONPATH="${PYTHONPATH}:/data/helpers"
 
 ADD http://repository.egi.eu/sw/production/cas/1/current/repo-files/egi-trustanchors.repo /etc/yum.repos.d/egi.repo
 
