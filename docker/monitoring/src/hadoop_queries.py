@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from CMSSpark import schemas as cms_schemas
+import schemas as cms_schemas
 from pyspark.sql.functions import col
 from pyspark.sql.functions import collect_set as _collect_set
 from pyspark.sql.functions import count as _count

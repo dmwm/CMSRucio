@@ -1,0 +1,8 @@
+# Base image for dmops-spark-crons - must be built from within CERN's network due to cern-hadoop-config and other spark packages
+# Image with spark-submit capabilities, CMSMonitoring, CMSSpark and CERN central tools
+FROM registry.cern.ch/cmsmonitoring/cmsmon-spark
+
+# Update hadoop version
+RUN mkdir -p /var/log/hbase /var/run/hbase && chmod 777 /var/log/hbase /var/run/hbase
+RUN dnf install -y cern-hadoop-config spark-bin-3.5 hadoop-bin-3.3
+RUN dnf install -y hbase-bin-2.5

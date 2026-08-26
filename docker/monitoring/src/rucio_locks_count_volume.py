@@ -9,8 +9,8 @@ from datetime import datetime
 from itertools import chain
 
 import click as click
-from CMSSpark.osearch import osearch
-from CMSSpark.spark_utils import get_spark_session
+from osearch.osearch import osearch
+from spark_utils import get_spark_session
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 

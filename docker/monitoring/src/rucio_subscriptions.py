@@ -18,7 +18,7 @@ import time
 
 import click as click
 from CMSMonitoring.amq_sender import credentials, drop_nulls_in_dict, send_to_amq
-from CMSSpark.spark_utils import get_spark_session
+from spark_utils import get_spark_session
 from hadoop_queries import get_df_locks, get_df_rses, get_df_rules, get_df_subscriptions
 from pyspark.sql.functions import col, lit
 from pyspark.sql.functions import round as _round
