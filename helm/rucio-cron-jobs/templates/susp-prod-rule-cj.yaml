@@ -1,0 +1,55 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: suspended-prod-output-handler
+  namespace: {{ .Values.dmops_namespace }}
+spec:
+  schedule: "0 13 1,15 * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: job-spawner-sa  # needs Job create permissions
+          containers:
+          - name: prod-output-suspended-handler
+            image: "{{ .Values.rulehandler_image.repository }}:{{ .Values.rulehandler_image.tag | default .Chart.AppVersion }}"
+            command: ["/src/submit_prod_output_suspended_handler.sh"]
+            imagePullPolicy: {{ .Values.rulehandler_image.pullPolicy }}
+            env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name 
+            - name: JIRA_PROJECT_KEY
+              value: CMSDMAUTO
+            envFrom:
+              - secretRef:
+                  name: handler-tool-secrets
+            volumeMounts:
+              - name: dmtops-cron-secrets
+                mountPath: /etc/secrets/
+                readOnly: False
+              - name: shared-data
+                mountPath: /shared
+              - name: cvmfs-pvc
+                mountPath: /cvmfs/cms.cern.ch/
+                mountPropagation: HostToContainer
+          volumes:
+            - name: dmtops-cron-secrets
+              secret:
+                secretName: dmtops-cron-secrets
+                items:
+                  - key: dmtops.key.pem
+                    path: dmtops.key.pem
+                    mode: 0400
+                  - key: dmtops.crt.pem
+                    path: dmtops.crt.pem
+                    mode: 0600
+            - name: cvmfs-pvc
+              persistentVolumeClaim:
+                claimName: csi-cvmfs-cms-pvc
+                readOnly: true
+            - name: shared-data
+              persistentVolumeClaim:
+                claimName: suspended-rules-share
+          restartPolicy: OnFailure
