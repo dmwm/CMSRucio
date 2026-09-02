@@ -14,7 +14,7 @@ dmops_image:
   repository: registry.cern.ch/cmsrucio/dmops-spark-crons
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "1.0.2"
+  tag: "1.0.3"
 
 dmops_namespace: "dmtops"
 
