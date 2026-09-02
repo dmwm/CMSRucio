@@ -16,7 +16,7 @@ spark_submit_args=(
     --master yarn --conf spark.ui.showConsoleProgress=false --conf spark.shuffle.useOldFetchProtocol=true --conf "spark.driver.bindAddress=0.0.0.0"
     --conf spark.shuffle.service.enabled=true --conf "spark.driver.bindAddress=0.0.0.0" --conf "spark.driver.host=${K8SHOST}"
     --conf "spark.driver.port=${DRIVERPORT}" --conf "spark.driver.blockManager.port=${BMPORT}"
-    --driver-memory=32g --num-executors 30 --executor-memory=32g --packages org.apache.spark:spark-avro_2.12:3.5.1
+    --driver-memory=32g --num-executors 30 --executor-memory=32g --jars /opt/spark-jars/spark-avro_2.12-3.5.1.jar,/opt/spark-jars/xz-1.9.jar
     --py-files "/src/cmsmonitoring.zip,/src/stomp.zip"
 )
 
