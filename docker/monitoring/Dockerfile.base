@@ -6,3 +6,10 @@ FROM registry.cern.ch/cmsmonitoring/cmsmon-spark
 RUN mkdir -p /var/log/hbase /var/run/hbase && chmod 777 /var/log/hbase /var/run/hbase
 RUN dnf install -y cern-hadoop-config spark-bin-3.5 hadoop-bin-3.3
 RUN dnf install -y hbase-bin-2.5
+
+# Pre-fetch spark-avro and its runtime dependency at build time so spark-submit
+# doesn't need to resolve them from Maven Central on every cron run - that was
+# causing intermittent failures depending on whether the compute node the pod
+# landed on had working egress to repo1.maven.org
+ADD https://repo1.maven.org/maven2/org/apache/spark/spark-avro_2.12/3.5.1/spark-avro_2.12-3.5.1.jar /opt/spark-jars/spark-avro_2.12-3.5.1.jar
+ADD https://repo1.maven.org/maven2/org/tukaani/xz/1.9/xz-1.9.jar /opt/spark-jars/xz-1.9.jar

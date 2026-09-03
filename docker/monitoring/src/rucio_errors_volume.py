@@ -10,7 +10,7 @@ from datetime import datetime
 from itertools import chain
 
 import click as click
-from osearch.osearch import osearch
+from osearch import osearch
 from spark_utils import get_spark_session
 from pyspark.sql import functions as F
 from pyspark.sql.types import StringType
