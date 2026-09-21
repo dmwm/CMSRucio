@@ -14,7 +14,7 @@ dmops_image:
   repository: registry.cern.ch/cmsrucio/dmops-spark-crons
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "1.0.3"
+  tag: "1.1.0"
 
 dmops_namespace: "dmtops"
 
@@ -104,6 +104,45 @@ cronjobs:
     ports:
       driver: 31219
       blockManager: 31220
+  # Data-management monitoring: no-access data + local/user space usage.
+  # The two *-daily-rollup jobs maintain self-healing per-day tables under
+  # /user/dmtops on HDFS; rucio-no-access reads them, so it runs after both.
+  - name: access-daily-rollup
+    app: dmtops-spark-svc-8
+    schedule: "0 4 * * *"
+    cvmfs: false
+    command:
+      - /src/submit_access_daily_rollup.sh
+    ports:
+      driver: 31221
+      blockManager: 31222
+  - name: residency-daily-rollup
+    app: dmtops-spark-svc-9
+    schedule: "30 4 * * *"
+    cvmfs: false
+    command:
+      - /src/submit_residency_daily_rollup.sh
+    ports:
+      driver: 31223
+      blockManager: 31224
+  - name: rucio-local-usage
+    app: dmtops-spark-svc-10
+    schedule: "30 7 * * *"
+    cvmfs: false
+    command:
+      - /src/submit_rucio_local_usage.sh
+    ports:
+      driver: 31225
+      blockManager: 31226
+  - name: rucio-no-access
+    app: dmtops-spark-svc-11
+    schedule: "0 8 * * *"
+    cvmfs: false
+    command:
+      - /src/submit_rucio_no_access.sh
+    ports:
+      driver: 31227
+      blockManager: 31228
   - name: rucio-summary
     schedule: "*/5 * * * *" 
     cvmfs: true
