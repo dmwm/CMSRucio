@@ -292,7 +292,7 @@ if __name__ == "__main__":
         stuck_locks, state = _load_stuck_locks(input_file, file_list, rse, mode)
 
     if mode == Mode.OVERVIEW:
-        overview = get_stuck_locks_overview(stuck_locks,rse, output_json="./overview.json")
+        overview = get_stuck_locks_overview(stuck_locks,rse, suspended, output_json="./overview.json")
         logger.info(overview)
 
     elif mode == Mode.PNR_INVALIDATION:

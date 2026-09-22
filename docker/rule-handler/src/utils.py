@@ -41,7 +41,7 @@ def map_error_to_mode(error: str):
     mode = None if any([e.value.lower() in error.lower() for e in InvalidationExcludeErrors]) else mode
     return mode
 
-def get_stuck_locks_overview(stuck_locks: pd.DataFrame, rse: str = None, output_json: str = None) -> str:
+def get_stuck_locks_overview(stuck_locks: pd.DataFrame, rse: str = None, suspended: bool = True ,output_json: str = None) -> str:
     pd.set_option("display.max_colwidth", None)
     pd.set_option("display.max_columns", None)
 
@@ -84,7 +84,7 @@ def get_stuck_locks_overview(stuck_locks: pd.DataFrame, rse: str = None, output_
         overview = overview.head(10)
 
     return (
-        f"Total suspended rule size: {total_rule_size:.2f} PB\n"
+        f"Total {'suspended' if suspended else 'stuck'} rule size: {total_rule_size:.2f} PB\n"
         f"Overview of stuck locks at {label}:\n{overview}"
     )
 

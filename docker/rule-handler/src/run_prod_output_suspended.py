@@ -16,18 +16,42 @@ JOB_TIMEOUT   = int(os.environ.get('JOB_TIMEOUT', 3600)) # seconds before we giv
 def spawn_worker_jobs(overview_path: str):
     config.load_incluster_config()
     batch_v1 = client.BatchV1Api()
-    core_v1 = client.CoreV1Api()
 
-    # Namespace and pod name are injected automatically by k8s via downward API
+    # Namespace is injected automatically by k8s via downward API
     namespace = open("/var/run/secrets/kubernetes.io/serviceaccount/namespace").read()
-    pod_name = os.environ["POD_NAME"]
 
-    # Read own pod spec to reuse image and volumes
-    pod = core_v1.read_namespaced_pod(name=pod_name, namespace=namespace)
-    current_container = pod.spec.containers[0]
-    image = current_container.image
-    volumes = pod.spec.volumes
-    volume_mounts = current_container.volume_mounts
+    # Image and volumes mirror the CronJob template (susp-prod-rule-cj.yaml) that
+    # runs this script, rather than being discovered via a live self pod lookup.
+    image = os.environ["IMAGE"]
+    volumes = [
+        client.V1Volume(
+            name="dmtops-cron-secrets",
+            secret=client.V1SecretVolumeSource(
+                secret_name="dmtops-cron-secrets",
+                items=[
+                    client.V1KeyToPath(key="dmtops.key.pem", path="dmtops.key.pem", mode=0o400),
+                    client.V1KeyToPath(key="dmtops.crt.pem", path="dmtops.crt.pem", mode=0o600),
+                ],
+            ),
+        ),
+        client.V1Volume(
+            name="cvmfs-pvc",
+            persistent_volume_claim=client.V1PersistentVolumeClaimVolumeSource(
+                claim_name="csi-cvmfs-cms-pvc", read_only=True
+            ),
+        ),
+        client.V1Volume(
+            name="shared-data",
+            persistent_volume_claim=client.V1PersistentVolumeClaimVolumeSource(
+                claim_name="suspended-rules-share"
+            ),
+        ),
+    ]
+    volume_mounts = [
+        client.V1VolumeMount(name="dmtops-cron-secrets", mount_path="/etc/secrets/"),
+        client.V1VolumeMount(name="cvmfs-pvc", mount_path="/cvmfs/cms.cern.ch/", mount_propagation="HostToContainer"),
+        client.V1VolumeMount(name="shared-data", mount_path="/shared"),
+    ]
 
     with open(overview_path) as f:
         failures = json.load(f)["failures"]
@@ -78,10 +102,10 @@ def spawn_worker_jobs(overview_path: str):
         except Exception as e:
             print(f"Could not create job {job_name} for rse {rse} with error {error}, {str(e)}")
 
-    results = wait_for_jobs(batch_v1, core_v1, namespace, spawned)
-    #create_jira_ticket(complete_overview,results)
+    results = wait_for_jobs(batch_v1, namespace, spawned)
+    create_jira_ticket(complete_overview,results)
 
-def wait_for_jobs(batch_v1, core_v1, namespace: str, spawned: list) -> list:
+def wait_for_jobs(batch_v1, namespace: str, spawned: list) -> list:
     """
     Poll until every job in `spawned` reaches a terminal state.
     Returns a list of result dicts with status, duration, etc.
@@ -119,7 +143,7 @@ def wait_for_jobs(batch_v1, core_v1, namespace: str, spawned: list) -> list:
             if is_complete or is_failed:
                 elapsed = int(time.time() - start)
                 status  = "success" if is_complete else "failed"
-                description = get_job_last_log_line(core_v1, namespace, label_selector, job_name) if is_complete else ""
+                description = get_job_last_log_line(namespace, label_selector, job_name) if is_complete else ""
                 results.append({**pending[job_name], "status": status, "duration_s": elapsed, "description":description})
                 print(f"  {job_name}: {status} after {elapsed}s")
                 del pending[job_name]
@@ -182,7 +206,7 @@ def create_jira_ticket(complete_overview: pd.DataFrame, results: list):
                               description=description, issuetype={'name': 'Task'})
 
 
-def get_job_last_log_line(core_v1, namespace: str, label_selector: str, job_name: str):
+def get_job_last_log_line(namespace: str, label_selector: str, job_name: str):
     files = glob(f'/shared/*{job_name}*.log')
     log_file = files[0] if len(files)>0 else None
 

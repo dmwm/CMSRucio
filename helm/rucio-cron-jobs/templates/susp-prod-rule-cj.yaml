@@ -16,10 +16,8 @@ spec:
             command: ["/src/submit_prod_output_suspended_handler.sh"]
             imagePullPolicy: {{ .Values.rulehandler_image.pullPolicy }}
             env:
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name 
+            - name: IMAGE
+              value: "{{ .Values.rulehandler_image.repository }}:{{ .Values.rulehandler_image.tag | default .Chart.AppVersion }}"
             - name: JIRA_PROJECT_KEY
               value: CMSDMAUTO
             envFrom:
