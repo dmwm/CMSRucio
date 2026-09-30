@@ -1,6 +1,6 @@
 #!/bin/bash
 # shellcheck disable=SC1090
-set -euo pipefail
+set -eo pipefail
 cd /src
 echo "=== Setting up rucio ==="
 source /src/setup_rucio.sh
