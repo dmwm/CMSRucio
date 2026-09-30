@@ -24,4 +24,4 @@ RUN dnf install -y libcurl-devel openssl-devel libffi-devel ca-policy-egi-core\
 # Copy code
 COPY ./src/ /src/
 
-RUN chmod +x /src/submit_prod_output_suspended_handler.sh
+RUN chmod +x /src/*.sh

@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import time
+import pandas as pd
 from collections import Counter
 from datetime import datetime
 
@@ -33,6 +34,7 @@ def get_index_schema():
 
 es_host = 'os-cms.cern.ch/os'
 es_index = 'test-suspended-handler'
+es_overview_index = 'test-overview-stuck-rules'
 
 # Global OpenSearch connection client
 _opensearch_client = None
@@ -67,6 +69,17 @@ def post_logs(df,rse,action,mode,state,account):
         logging.error(f"Could not send to OS: {e}")
         logging.error(f"df columns: {df.columns}")
         logging.error(f"Data frame: {df.head()}, rse {rse}, action: {action}, mode: {mode}, state: {state}, account: {account}")
+
+def post_overview(state: str, account: str):
+    overview = pd.read_json('./overview_complete.json')
+    print(overview)
+    for _,row in overview.iterrows():
+        row_log = {'state': state, 'account':account,'rse': row['rse'],
+                   'error': row['error'],'total_rules':row['total_rules'],
+                   'total_files':row['total_files'],'file_size':row['file_size'],
+                   'rule_size':row['rule_size'],'error_desc':row['error_desc'],
+                   'timestamp':int(time.time())}
+        send_to_os(row_log, opensearch_host=es_host, es_index_template=es_overview_index)
 
 
 class OpenSearchInterface(object):
