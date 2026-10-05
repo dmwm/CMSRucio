@@ -669,3 +669,46 @@ class SubmitResponseTest(TestCase):
         data = r.json()
         self.assertNotIn('Job ID: None', data['message'])
         self.assertEqual(data['status'], FileIntegrityRequest.Status.SUBMITTED)
+
+    def test_html_submit_shows_confirmation_and_result_links(self):
+        client = Client(HTTP_ACCEPT='text/html')
+        r = client.post(
+            '/api/integrity/submit/',
+            data={'lfns': 'cms:/store/data/Run2024/file.root'},
+        )
+
+        self.assertEqual(r.status_code, 201)
+        self.assertContains(r, 'Request submitted', status_code=201)
+        self.assertContains(r, 'Request ID:', status_code=201)
+        self.assertContains(r, 'Status:</strong> SUBMITTED', status_code=201)
+        self.assertContains(r, 'Request details', status_code=201)
+        self.assertContains(r, 'Files</a>', status_code=201)
+        self.assertContains(r, 'Replicas</a>', status_code=201)
+        self.assertContains(r, '/api/integrity/query/requests/?request_id=', status_code=201)
+        self.assertContains(r, '/api/integrity/query/files/?request_id=', status_code=201)
+        self.assertContains(r, '/api/integrity/query/replicas/?request_id=', status_code=201)
+
+    def test_html_submit_shows_validation_errors(self):
+        client = Client(HTTP_ACCEPT='text/html')
+        r = client.post(
+            '/api/integrity/submit/',
+            data={'lfns': 'cms:/store/data/Run2024/dataset'},
+        )
+
+        self.assertEqual(r.status_code, 400)
+        self.assertContains(r, 'Request not submitted', status_code=400)
+        self.assertContains(r, 'not .root files', status_code=400)
+
+    def test_html_submit_shows_errors_for_other_fields(self):
+        client = Client(HTTP_ACCEPT='text/html')
+        r = client.post(
+            '/api/integrity/submit/',
+            data={
+                'lfns': 'cms:/store/data/Run2024/file.root',
+                'full_scan': 'not-a-boolean',
+            },
+        )
+
+        self.assertEqual(r.status_code, 400)
+        self.assertContains(r, 'Request not submitted', status_code=400)
+        self.assertContains(r, 'full_scan', status_code=400)

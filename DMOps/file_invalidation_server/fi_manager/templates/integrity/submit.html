@@ -2,6 +2,35 @@
 
 {% block content %}
 <div class="container">
+    {% if request_id %}
+    <div class="alert alert-success" role="status" aria-live="polite">
+        <h2 class="h5">Request submitted</h2>
+        <p>{{ message }}</p>
+        <p class="mb-2"><strong>Request ID:</strong> {{ request_id }}</p>
+        <p class="mb-2"><strong>Status:</strong> {{ status }}</p>
+        <nav aria-label="Request results">
+            <a href="{{ links.details }}">Request details</a> ·
+            <a href="{{ links.files }}">Files</a> ·
+            <a href="{{ links.replicas }}">Replicas</a>
+        </nav>
+    </div>
+    {% elif message or errors %}
+    <div class="alert alert-danger" role="alert" aria-live="assertive">
+        <h2 class="h5">Request not submitted</h2>
+        {% if message %}<p>{{ message }}</p>{% endif %}
+        {% if detail %}<p>{{ detail }}</p>{% endif %}
+        {% if errors %}
+        <ul class="mb-0">
+            {% for field, field_errors in errors.items %}
+            <li>{{ field|capfirst }}:
+                <ul>{% for error in field_errors %}<li>{{ error }}</li>{% endfor %}</ul>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+    {% endif %}
+
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="card">
@@ -14,13 +43,17 @@
                         {% csrf_token %}
                         <div class="mb-3">
                             <label for="lfns" class="form-label">LFNs <span class="text-danger">*</span></label>
-                            <textarea name="lfns" class="form-control" id="lfns" rows="8" cols="100" required style="resize: none;"></textarea>
-                            <div class="form-text">List of LFNs to check, one per line. Maximum 20 LFNs per request. Scope is optional — 'cms' is used as default. Example: cms:/store/data/Run2024/file.root.</div>
+                            <textarea name="lfns" class="form-control" id="lfns" rows="8" cols="100" required
+                                style="resize: none;"></textarea>
+                            <div class="form-text">List of LFNs to check, one per line. Maximum 20 LFNs per request.
+                                Scope is optional — 'cms' is used as default. Example:
+                                cms:/store/data/Run2024/file.root.</div>
                         </div>
                         <div class="mb-3">
                             <label for="rse_expression" class="form-label">RSE Expression </label>
                             <input type="text" name="rse_expression" class="form-control" id="rse_expression">
-                            <div class="form-text">RSE expression to filter replicas (optional). If omitted all replicas are checked.</div>
+                            <div class="form-text">RSE expression to filter replicas (optional). If omitted all replicas
+                                are checked.</div>
                         </div>
                         <div class="mb-3">
                             <label for="full_scan" class="form-label">Full Scan</label>
