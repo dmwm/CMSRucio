@@ -72,7 +72,7 @@ def process_integrity_check(integrity_request, raw_lfns):
         f"Created {len(raw_lfns)} FileReplica placeholder rows "
         f"for request {integrity_request.request_id}"
     )
-    
+
     # Leave status as SUBMITTED for now.
     # The queue processor will pick it up.
     logger.info(
@@ -112,16 +112,9 @@ def trigger_job(integrity_request):
     lfn_path_container = os.path.join(PVC_MOUNT_PATH_CONTAINER, lfn_filename)
 
     # Write the LFN file to the PVC from the Django pod
-    try:
-        with open(lfn_path_host, "w") as f:
-            f.write("\n".join(lfns))
-        logger.info(f"Wrote {len(lfns)} LFNs to {lfn_path_host}")
-    except OSError as e:
-        # PVC not mounted locally — expected in local dev, fatal in production
-        logger.warning(
-            f"Could not write LFN file to {lfn_path_host}: {e}. "
-            f"PVC not mounted — expected in local dev."
-        )
+    with open(lfn_path_host, "w") as f:
+        f.write("\n".join(lfns))
+    logger.info(f"Wrote {len(lfns)} LFNs to {lfn_path_host}")
 
     # Build args for run_check.py:
     # python3 run_check.py <lfn_file> <workdir> [--rse-expression X] [--full-scan]
@@ -132,7 +125,7 @@ def trigger_job(integrity_request):
 
     if integrity_request.full_scan:
         args.append("--full-scan")
-        
+
     if JOB_LOG_VERBOSITY > 0:
         args.append("-" + "v" * JOB_LOG_VERBOSITY)
 

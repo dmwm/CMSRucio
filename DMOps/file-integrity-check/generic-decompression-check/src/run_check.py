@@ -77,15 +77,15 @@ def check_files(
 ) -> List[Dict]:
     """
     Check integrity of files based on their LFNs by copying them locally, validating checksums and performing content checks by decompression.
-    
+
     Args:
-        lfns (List[str]): List of files in the format '<scope>:<lfn>'. Example: 'cms:/store/data/...'. 
+        lfns (List[str]): List of files in the format '<scope>:<lfn>'. Example: 'cms:/store/data/...'.
                           If no scope is provided, 'cms' is used as the default.
         workdir (str): Local directory to use for copying files.
         rse_expression (str, optional): RSE expression to filter replicas. (default: None - check all replicas).
         full_scan (bool, optional): Perform a full scan by reading every basket (more time-consuming). (default: False)
         timeout_seconds (int, optional): Timeout in seconds for the integrity check of each file. (default: 900s)
-    
+
     Returns:
         List[Dict]: A list of results for each LFN, including replica information and validation status.
     """
@@ -143,8 +143,21 @@ def check_files(
 
     return results
 
+
+def expand_lfn_args(lfn_args):
+    lfns = []
+    for arg in lfn_args:
+        if arg.endswith(".txt"):
+            if not os.path.isfile(arg):
+                raise FileNotFoundError(f"LFN input file not found: {arg}")
+            with open(arg, 'r') as f:
+                lfns.extend(line.strip() for line in f if line.strip())
+        else:
+            lfns.append(arg)
+    return lfns
+
 if __name__ == "__main__":
-        
+
     parser = argparse.ArgumentParser(
         description="Check integrity of files based on their LFNs by copying them locally, validating checksums and performing content checks by decompression.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -158,19 +171,16 @@ returns:
     parser.add_argument("--full-scan", action="store_true", help="Perform a full scan by reading every basket (more time-consuming). (default: False)")
     parser.add_argument("--timeout", type=int, default=900, help="Timeout in seconds for the integrity check of each file. (default: 900s)")
     parser.add_argument("-v", "--verbose", action="count", default=0, help="Increase verbosity: -v (Warning), -vv (Info), -vvv (Debug). Default is Error.")
-    
+
     args = parser.parse_args()
-    
+
     setup_logging(args.verbose)
-    
-    lfns_list = []
-    for arg in args.lfns:
-        if arg.endswith(".txt") and os.path.exists(arg):
-            with open(arg, 'r') as f:
-                lfns_list.extend([line.strip() for line in f if line.strip()])
-        else:
-            lfns_list.append(arg)
-    
+
+    try:
+        lfns_list = expand_lfn_args(args.lfns)
+    except OSError as e:
+        parser.error(str(e))
+
     results = check_files(
         lfns=lfns_list,
         workdir=args.workdir,

@@ -60,7 +60,20 @@ def process_queue():
             f"by {integrity_request.requested_by} "
             f"({integrity_request.replicas.count()} LFNs)"
         )
-        job_id, job_status = trigger_job(integrity_request)
+        try:
+            job_id, job_status = trigger_job(integrity_request)
+        except Exception as e:
+            integrity_request.job_id = None
+            integrity_request.status = FileIntegrityRequest.Status.FAILED
+            integrity_request.logs = f"Could not prepare integrity job: {e}"
+            integrity_request.save(
+                update_fields=['job_id', 'status', 'logs', 'updated_at']
+            )
+            logger.exception(
+                f"Could not prepare job for request {integrity_request.request_id}"
+            )
+            continue
+
         integrity_request.job_id = job_id
         integrity_request.status = job_status
         integrity_request.save(update_fields=['job_id', 'status', 'updated_at'])
