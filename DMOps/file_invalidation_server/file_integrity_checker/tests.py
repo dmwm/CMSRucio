@@ -116,7 +116,7 @@ class ProcessIntegrityCheckTest(TestCase):
     def test_empty_lfns_raises(self):
         with self.assertRaises(ValueError):
             process_integrity_check(self.request, [])
-            
+
 
 class QueueProcessorTest(TestCase):
 
@@ -203,6 +203,17 @@ class QueueProcessorTest(TestCase):
         process_queue()
 
         self.assertEqual(triggered_ids[0], self.request.request_id)
+
+    @patch('file_integrity_checker.process_queue.trigger_job')
+    def test_input_file_write_failure_marks_request_failed(self, mock_trigger):
+        mock_trigger.side_effect = OSError("PVC is not writable")
+
+        process_queue()
+
+        self.request.refresh_from_db()
+        self.assertEqual(self.request.status, FileIntegrityRequest.Status.FAILED)
+        self.assertIsNone(self.request.job_id)
+        self.assertIn("PVC is not writable", self.request.logs)
 
     @patch('file_integrity_checker.process_queue.trigger_job')
     def test_no_submitted_requests_does_nothing(self, mock_trigger):

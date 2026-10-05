@@ -12,7 +12,7 @@ metadata:
   namespace: file-invalidation-tool
 spec:
   schedule: "* * * * *"
-  concurrencyPolicy: Forbid  # never run two queue processors simultaneously
+  concurrencyPolicy: Forbid # never run two queue processors simultaneously
   successfulJobsHistoryLimit: 2
   failedJobsHistoryLimit: 1
   suspend: false
@@ -67,3 +67,10 @@ spec:
                     secretKeyRef:
                       name: jira-pat
                       key: JIRA_PAT
+              volumeMounts:
+                - name: integrity-input-file
+                  mountPath: "/shared-data-integrity"
+          volumes:
+            - name: integrity-input-file
+              persistentVolumeClaim:
+                claimName: integrity-input-file-pvc

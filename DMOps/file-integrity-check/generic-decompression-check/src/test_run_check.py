@@ -122,6 +122,19 @@ class CheckFilesTest(unittest.TestCase):
         results = run_check.check_files(["cms:/store/dataset"], "/tmp")
         self.assertEqual(results[0]["error"], "The LFN provided is not a .root file.")
 
+    def test_missing_txt_input_fails_instead_of_becoming_an_lfn(self):
+        with mock.patch.object(run_check.os.path, "isfile", return_value=False):
+            with self.assertRaisesRegex(FileNotFoundError, "LFN input file not found"):
+                run_check.expand_lfn_args(["/input/integrity_missing.txt"])
+
+    def test_txt_input_expands_to_lfns(self):
+        with mock.patch.object(run_check.os.path, "isfile", return_value=True), \
+             mock.patch("builtins.open", mock.mock_open(read_data="cms:/store/a.root\n/store/b.root\n")):
+            self.assertEqual(
+                run_check.expand_lfn_args(["/input/integrity.txt"]),
+                ["cms:/store/a.root", "/store/b.root"],
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
