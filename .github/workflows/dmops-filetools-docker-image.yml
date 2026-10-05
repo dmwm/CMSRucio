@@ -1,0 +1,97 @@
+name: DMOps Files Tools Docker Image CI
+
+on:
+  push:
+    tags:
+      - 'fileinvalidation-*'
+      - 'fileintegrity-*'
+  workflow_dispatch:
+    inputs:
+      tool:
+        description: 'Select the tool to build and push'
+        required: true
+        type: choice
+        default: 'both'
+        options:
+          - 'file-integrity'
+          - 'file-invalidation'
+          - 'both'
+      tag_version:
+        description: 'Image tag version (e.g., 1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  build-file-invalidation:
+    if: |
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/fileinvalidation-')) ||
+      (github.event_name == 'workflow_dispatch' && (inputs.tool == 'file-invalidation' || inputs.tool == 'both'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Get tag name
+        id: tagname
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.tag_version }}" >> "$GITHUB_ENV"
+          else
+            echo "tag=${GITHUB_REF#refs/tags/fileinvalidation-}" >> "$GITHUB_ENV"
+          fi
+        
+      - name: Login to CERN Harbour
+        uses: docker/login-action@v2
+        with:
+          registry: registry.cern.ch
+          username: ${{ secrets.HARBOR_USERNAME }}
+          password: ${{ secrets.HARBOR_TOKEN }}
+
+      - name: Build the Docker Image
+        run: |
+          cd DMOps/file_invalidation_tool && docker build . \
+          --file Dockerfile \
+          --tag registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/file_invalidation_tool:${{ env.tag }} \
+          --tag registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/file_invalidation_tool:latest
+      
+      - name: Push Image to CERN Harbour
+        run: |
+          docker push registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/file_invalidation_tool:${{ env.tag }}
+          docker push registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/file_invalidation_tool:latest
+
+  build-integrity-check:
+    if: |
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/fileintegrity-')) ||
+      (github.event_name == 'workflow_dispatch' && (inputs.tool == 'file-integrity' || inputs.tool == 'both'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Get tag name
+        id: tagname
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.tag_version }}" >> "$GITHUB_ENV"
+          else
+            echo "tag=${GITHUB_REF#refs/tags/fileintegrity-}" >> "$GITHUB_ENV"
+          fi
+        
+      - name: Login to CERN Harbour
+        uses: docker/login-action@v2
+        with:
+          registry: registry.cern.ch
+          username: ${{ secrets.HARBOR_USERNAME }}
+          password: ${{ secrets.HARBOR_TOKEN }}
+
+      - name: Build the Docker Image
+        run: |
+          cd DMOps/file-integrity-check/generic-decompression-check && docker build . \
+          --file Dockerfile \
+          --tag registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/file-integrity-check-generic-decompression-check:${{ env.tag }} \
+          --tag registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/file-integrity-check-generic-decompression-check:latest
+      
+      - name: Push Image to CERN Harbour
+        run: |
+          docker push registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/file-integrity-check-generic-decompression-check:${{ env.tag }}
+          docker push registry.cern.ch/${{ vars.HARBOR_REPOSITORY }}/file-integrity-check-generic-decompression-check:latest
