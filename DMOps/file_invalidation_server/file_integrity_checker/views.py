@@ -218,6 +218,11 @@ class FileIntegritySubmitRequestView(APIView):
     def post(self, request):
         serializer = FileIntegrityRequestSerializer(data=request.data)
         if not serializer.is_valid():
+            if request.accepted_renderer.format == 'html':
+                return Response(
+                    {'errors': serializer.errors},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             return Response(
                 serializer.errors,
                 status=status.HTTP_400_BAD_REQUEST
