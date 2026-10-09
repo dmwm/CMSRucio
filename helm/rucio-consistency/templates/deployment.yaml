@@ -108,6 +108,16 @@ spec:
             - name: {{ $key }}
               mountPath: {{ $val.mountPath }}
           {{- end }}
+          {{- range $collection := tuple (coalesce $component_values.secretMounts .Values.secretMounts) $component_values.extraSecretMounts }}
+          {{- range $key, $val := $collection }}
+            - name: {{ coalesce $val.volumeName $val.secretName $val.secretFullName }}
+              mountPath: {{ $val.mountPath }}
+              {{- if $val.subPath }}
+              subPath: "{{ $val.subPath }}"
+              {{- end }}
+          {{- end}}
+          {{- end}}
+
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
@@ -125,6 +135,16 @@ spec:
         secret:
           defaultMode: 420
           secretName: server-rucio-x509up
+{{- range $collection := tuple (coalesce $component_values.secretMounts .Values.secretMounts) $component_values.extraSecretMounts }}
+{{- range $key, $val := $collection }}
+      - name: {{ coalesce $val.volumeName $val.secretName $val.secretFullName }}
+        secret:
+          secretName: {{ coalesce $val.secretFullName (printf "%s-%s" $.Release.Name $val.secretName) }}
+          {{- if $val.defaultMode }}
+          defaultMode: {{ $val.defaultMode }}
+          {{- end }}
+{{- end}}
+{{- end}}
 {{- if .Values.consistency.useCron}}
       - name: crontab
         configMap:
