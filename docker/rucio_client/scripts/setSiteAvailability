@@ -55,6 +55,15 @@ for site in sites:
         rse_tape = site_name + '_Tape'
         site_rses.append(rse_tape)
 
+    if site_name == "T2_FR_GRIF":
+        if site_name + '_IRFU' in all_rses:
+            rse_irfu = site_name + '_IRFU'
+            site_rses.append(rse_irfu)
+
+        if site_name + '_LLR' in all_rses:
+            rse_llr = site_name + '_LLR'
+            site_rses.append(rse_llr)        
+
     for rse in site_rses:
         if rse in skip_rses:
             continue
