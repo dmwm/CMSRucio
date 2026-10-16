@@ -1,0 +1,20 @@
+# CODEOWNERS for dmwm/CMSRucio
+# Based on timezone availability and field of responsibility
+
+# Default owners for the whole repository
+* @ericvaandering @dciangot @haozturk @Panos512 @juanpablosalas @voetberg
+
+# DMOps area (file invalidation + ops scripts)
+DMOps/ @juanpablosalas @haozturk @Panos512 @dciangot
+
+# Kubernetes / Helm / deployment manifests (if present)
+helm/ @ericvaandering @juanpablosalas @dciangot
+k8s/ @ericvaandering @juanpablosalas @dciangot
+deploy/ @ericvaandering @juanpablosalas @dciangot
+
+# Rucio policy/plugins and Python logic
+lib/ @ericvaandering @haozturk @voetberg
+etc/ @ericvaandering @haozturk @voetberg
+
+# CI/CD and automation
+.github/ @ericvaandering @juanpablosalas  
