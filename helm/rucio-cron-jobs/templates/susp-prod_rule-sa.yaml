@@ -1,0 +1,58 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: job-spawner-sa
+  namespace: {{ .Values.dmops_namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: job-spawner
+  namespace: {{ .Values.dmops_namespace }}
+rules:
+- apiGroups: ["batch","core"]
+  resources: ["jobs"]
+  verbs: ["create", "get", "watch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: job-spawner-binding
+  namespace: {{ .Values.dmops_namespace }}
+subjects:
+- kind: ServiceAccount
+  name: job-spawner-sa
+  namespace: {{ .Values.dmops_namespace }}
+roleRef:
+  kind: Role
+  apiGroup: rbac.authorization.k8s.io
+  name: job-spawner
+--- 
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: suspended-rules-pv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  storageClassName: manual
+  hostPath:
+    path: /tmp/suspended-rules
+--- 
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: suspended-rules-share
+  namespace: {{ .Values.dmops_namespace }}
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: manual
+  resources:
+    requests:
+      storage: 1Gi
