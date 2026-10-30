@@ -22,8 +22,10 @@ from typing import TYPE_CHECKING
 
 import rucio.core.scope
 from rucio.common.config import config_get, config_get_int
-from rucio.common.exception import InvalidRSEExpression
-from rucio.core.account import has_account_attribute
+from rucio.common.exception import InvalidRSEExpression, AccountNotFound
+from rucio.common.types import InternalAccount, InternalScope
+from rucio.core.account import has_account_attribute, get_account
+from rucio.core.account_limit import get_local_account_limit
 from rucio.core.did import list_files
 from rucio.core.identity import exist_identity_account
 from rucio.core.rse import list_rse_attributes, get_rse
@@ -308,6 +310,57 @@ def _check_for_auto_approve_eligibility(issuer, rses, kwargs, session: "Optional
 
     return True
 
+def get_activity_usage(rse_id, activity, session: "Optional[Session]" = None):
+
+    stats = get_request_stats(  
+        state=[RequestState.QUEUED, RequestState.SUBMITTED, RequestState.SUBMITTING, RequestState.DONE],  
+        dest_rse_id=rse_id,  
+        activity=activity,  
+        session=session  
+    )  
+      
+    total_bytes = sum(row.bytes for row in stats if row.bytes)  
+    return total_bytes
+
+
+def _is_user_local_usage_at_rse_above_threshold(rse_id, rse_name, vo, session):
+    """
+    Total bytes currently locked at the given RSE by accounts of type
+    USER, or whose name contains '_local'.
+    """
+
+    account_usages = list(get_rse_usage(rse_id=rse_id, source='rucio', per_account=True, session=session))[0].get('account_usages',[])
+    user_local_usage = 0
+    for account_usage in account_usages:
+        account = dict(get_account(account_usage['account'],session=session))
+        usage = account_usage['used']
+        if (account and account['account_type'] == AccountType.USER) or '_local' in account['account'].external:
+            user_local_usage += usage
+        else:
+            logging.debug(f"Account {account_usage} excluded from local usage at RSE {rse_name}")
+
+    user_autoapprove_usage = get_activity_usage(rse_id=rse_id,activity='User AutoApprove',session=session)
+    user_local_usage -= user_autoapprove_usage
+    crab_usage = get_activity_usage(rse_id=rse_id,activity='Analysis TapeRecall',session=session)
+    user_local_usage -= crab_usage
+
+    try:
+        local_account_limit = get_local_account_limit(account=InternalAccount(f"{rse_name.lower()}_local", vo=vo),rse_ids=[rse_id],session=session)[rse_id]
+        disk_local_use_bytes = local_account_limit
+    except AccountNotFound:
+        disk_local_use_bytes = None
+
+    try:
+        local_users_account_limit = get_local_account_limit(account=InternalAccount(f"{rse_name.lower()}_local_users", vo=vo),rse_ids=[rse_id],session=session)[rse_id]
+        disk_local_use_bytes = min(disk_local_use_bytes,local_users_account_limit) if disk_local_use_bytes is not None else local_users_account_limit
+    except AccountNotFound:
+        disk_local_use_bytes = disk_local_use_bytes if disk_local_use_bytes is not None else 0
+
+    if user_local_usage>=disk_local_use_bytes:
+        return True, user_local_usage, disk_local_use_bytes
+
+    return False, user_local_usage, disk_local_use_bytes
+
 
 def perm_add_rule(issuer, kwargs, *, session: "Optional[Session]" = None):
     """
@@ -320,6 +373,13 @@ def perm_add_rule(issuer, kwargs, *, session: "Optional[Session]" = None):
     """
 
     rses = parse_expression(kwargs['rse_expression'], filter_={'vo': issuer.vo}, session=session)
+
+    for rse in rses:
+        above_threshold, user_local_usage, threshold = _is_user_local_usage_at_rse_above_threshold(rse_id=rse['id'],rse_name=rse['rse'], vo=issuer.vo, session=session)
+        if above_threshold:
+            from rucio.core.permission import PermissionResult
+            return PermissionResult(False, (f"The user and local used space for RSE {rse['rse']} "
+                                                f"is above the threshold ({user_local_usage/1e12:.2f} TB > {threshold/1e12: .2f} TB)."))
 
     # If any of RSEs matching the expression needs approval, the rule cannot be created
     if not kwargs['ask_approval']:
