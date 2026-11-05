@@ -61,7 +61,7 @@ cronjobs:
       blockManager: 31208
   - name: rucio-activity-usage
     app: dmtops-spark-svc-3
-    schedule: "13 3 * * *"
+    schedule: "13 5 * * *"
     cvmfs: false
     command: 
       - /src/submit_rucio_activity_usage.sh
@@ -79,7 +79,7 @@ cronjobs:
       blockManager: 31214
   - name: rucio-activity-account-usage
     app: dmtops-spark-svc-5
-    schedule: "13 3 * * *"
+    schedule: "13 5 * * *"
     cvmfs: false
     command: 
       - /src/submit_rucio_activity_account_usage.sh
