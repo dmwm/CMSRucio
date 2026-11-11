@@ -30,6 +30,11 @@ DEBUG = True
 # with the LOCAL_TESTING=true environment variable.
 LOCAL_TESTING = config('LOCAL_TESTING', default=False, cast=bool)
 
+# Requests from these users skip manual approval when they contain fewer than
+# AUTO_APPROVE_MAX_ENTRIES entries (datasets/files) in a single request.
+AUTO_APPROVE_USERS = ['cmsunified']
+AUTO_APPROVE_MAX_ENTRIES = config('AUTO_APPROVE_MAX_ENTRIES', default=1000, cast=int)
+
 # SECURITY WARNING: keep the secret key used in production secret!
 # In production these are required. Under LOCAL_TESTING they fall back to
 # harmless dev defaults so no secrets are needed to run the tests.
