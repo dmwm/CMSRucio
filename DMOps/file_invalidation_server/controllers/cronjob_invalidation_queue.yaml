@@ -1,0 +1,74 @@
+# CronJob: invalidation-queue-processor
+# Starts the oldest pending (approved / queued dry-run) invalidation request when
+# no file-invalidation job is running. Invalidation jobs share input-file-pvc and
+# fixed intermediate file names, so they must run one at a time.
+#
+# Apply: kubectl apply -f controllers/cronjob_invalidation_queue.yaml
+
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: invalidation-queue-processor
+  namespace: file-invalidation-tool
+spec:
+  schedule: "* * * * *"
+  concurrencyPolicy: Forbid # never run two queue processors simultaneously
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 1
+  suspend: false
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: Never
+          serviceAccountName: job-runner # needs list + create on jobs
+          containers:
+            - name: queue-processor
+              image: registry.paas.cern.ch/file-invalidation-tool/file-invalidation-tool:latest
+              imagePullPolicy: Always
+              command:
+                - python3
+                - fi_manager/process_queue.py
+              env:
+                - name: SECRET_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: django-secret-key
+                      key: SECRET_KEY
+                - name: DB_NAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: django-db-name
+                      key: DB_NAME
+                - name: DB_HOST
+                  valueFrom:
+                    secretKeyRef:
+                      name: django-db-host
+                      key: DB_HOST
+                - name: DB_PORT
+                  valueFrom:
+                    secretKeyRef:
+                      name: django-db-port
+                      key: DB_PORT
+                - name: DB_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: django-db-user
+                      key: DB_USER
+                - name: DB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: django-db-password
+                      key: DB_PASSWORD
+                - name: JIRA_PAT
+                  valueFrom:
+                    secretKeyRef:
+                      name: jira-pat
+                      key: JIRA_PAT
+              volumeMounts:
+                - name: input-file
+                  mountPath: "/shared-data"
+          volumes:
+            - name: input-file
+              persistentVolumeClaim:
+                claimName: input-file-pvc
