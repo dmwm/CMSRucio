@@ -35,6 +35,10 @@ LOCAL_TESTING = config('LOCAL_TESTING', default=False, cast=bool)
 AUTO_APPROVE_USERS = ['cmsunified']
 AUTO_APPROVE_MAX_ENTRIES = config('AUTO_APPROVE_MAX_ENTRIES', default=1000, cast=int)
 
+# Pending (approved/queued) invalidation requests older than this are ignored by
+# the queue processor (fi_manager/process_queue.py).
+INVALIDATION_QUEUE_MAX_AGE_DAYS = config('INVALIDATION_QUEUE_MAX_AGE_DAYS', default=7, cast=int)
+
 # SECURITY WARNING: keep the secret key used in production secret!
 # In production these are required. Under LOCAL_TESTING they fall back to
 # harmless dev defaults so no secrets are needed to run the tests.
