@@ -7,6 +7,7 @@ from django.core.paginator import Paginator
 from concurrent.futures import ThreadPoolExecutor
 from .models import FileInvalidationRequests
 from django.shortcuts import render
+from django.conf import settings
 from django.views.generic import TemplateView
 from .utils import *
 from django.db.models import Count, CharField, Value, F, Case, When, IntegerField, Min
@@ -125,11 +126,28 @@ class FileInvalidationRequestsView(APIView):
                 file_records.append(FileInvalidationRequests(**input_vals))
                 cnt += 1
         
+        job_message = ""
         if cnt>0:
             FileInvalidationRequests.objects.bulk_create(file_records, batch_size=200)
             if dry_run:
                 logging.info(f'Processing dry_run request id {request_id}...')
-                response_message = process_invalidation(request_id, reason, dry_run=dry_run, mode=mode, rse=rse,to_process="queued",global_invalidate_last_replicas=global_invalidate_last_replicas)
+                job_message = process_invalidation(request_id, reason, dry_run=dry_run, mode=mode, rse=rse,to_process="queued",global_invalidate_last_replicas=global_invalidate_last_replicas) or ""
+            elif (user in settings.AUTO_APPROVE_USERS
+                  and settings.AUTO_APPROVE_REASON_MARKER in reason
+                  and cnt < settings.AUTO_APPROVE_MAX_ENTRIES):
+                logging.info(f'Auto-approving request id {request_id} from {user} ({cnt} entries < {settings.AUTO_APPROVE_MAX_ENTRIES}).')
+                FileInvalidationRequests.objects.filter(request_id=request_id, status='waiting_approval').update(status='approved', approve_user='auto-approved')
+                # Ticket must exist before process_invalidation transitions it
+                try:
+                    create_ticket_for_invalidation(request_id)
+                except Exception as e:
+                    logging.warning(f"The Jira ticket for {request_id} was not created.", exc_info=e)
+                try:
+                    job_message = process_invalidation(request_id, reason, dry_run=dry_run, mode=mode, rse=rse, to_process="approved", global_invalidate_last_replicas=global_invalidate_last_replicas) or ""
+                except Exception as e:
+                    logging.error(f"Auto-approved invalidation {request_id} failed to start.", exc_info=e)
+                    return Response({"message": f"Error processing auto-approved invalidation: {str(e)}", "request_id": f"{request_id}"},
+                                    status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             else:
                 logging.info(f'{cnt} of {len(file_lines)} files were created in the database with waiting_approval status.')
                 try:
@@ -139,7 +157,7 @@ class FileInvalidationRequestsView(APIView):
                     logging.warning(f"The approval alert for {request_id} was not sent.",exc_info=e)
 
 
-        response_message = raw_file_message + already_serviced_files
+        response_message = ' '.join(m for m in [job_message, raw_file_message + already_serviced_files] if m)
 
         return Response({"message": response_message,
                          "request_id": f"{request_id}",
