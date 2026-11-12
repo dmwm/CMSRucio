@@ -92,16 +92,19 @@ class ProcessQueueTests(TestCase):
         self.assertEqual(statuses, {'failed'})
 
 
-@override_settings(AUTO_APPROVE_USERS=['cmsunified'], AUTO_APPROVE_MAX_ENTRIES=3)
+@override_settings(AUTO_APPROVE_USERS=['cmsunified'], AUTO_APPROVE_MAX_ENTRIES=3,
+                   AUTO_APPROVE_REASON_MARKER='Automatic McM invalidation')
 @patch('fi_manager.views.send_approval_alert')
 @patch('fi_manager.views.create_ticket_for_invalidation')
 @patch('fi_manager.views.process_invalidation', return_value='started')
 class AutoApproveTests(TestCase):
 
-    def submit(self, user, n_files):
+    MCM_REASON = 'Automatic McM invalidation of request XYZ'
+
+    def submit(self, user, n_files, reason=MCM_REASON):
         client = APIClient()
         files = '\n'.join(f'/store/test/{uuid.uuid4().hex}.root' for _ in range(n_files))
-        return client.post('/api/upload/', {'reason': 'test', 'file_content': files, 'mode': 'global'},
+        return client.post('/api/upload/', {'reason': reason, 'file_content': files, 'mode': 'global'},
                            format='json', HTTP_X_FORWARDED_PREFERRED_USERNAME=user, HTTP_ACCEPT='application/json')
 
     def statuses(self, response):
@@ -124,5 +127,10 @@ class AutoApproveTests(TestCase):
 
     def test_other_user_needs_approval(self, process, *_):
         response = self.submit('someone', 1)
+        self.assertEqual(self.statuses(response), {'waiting_approval'})
+        process.assert_not_called()
+
+    def test_unified_without_mcm_reason_needs_approval(self, process, *_):
+        response = self.submit('cmsunified', 1, reason='Manual invalidation, bad files')
         self.assertEqual(self.statuses(response), {'waiting_approval'})
         process.assert_not_called()
