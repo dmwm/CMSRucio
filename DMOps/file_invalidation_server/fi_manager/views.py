@@ -132,7 +132,9 @@ class FileInvalidationRequestsView(APIView):
             if dry_run:
                 logging.info(f'Processing dry_run request id {request_id}...')
                 job_message = process_invalidation(request_id, reason, dry_run=dry_run, mode=mode, rse=rse,to_process="queued",global_invalidate_last_replicas=global_invalidate_last_replicas) or ""
-            elif user in settings.AUTO_APPROVE_USERS and cnt < settings.AUTO_APPROVE_MAX_ENTRIES:
+            elif (user in settings.AUTO_APPROVE_USERS
+                  and settings.AUTO_APPROVE_REASON_MARKER in reason
+                  and cnt < settings.AUTO_APPROVE_MAX_ENTRIES):
                 logging.info(f'Auto-approving request id {request_id} from {user} ({cnt} entries < {settings.AUTO_APPROVE_MAX_ENTRIES}).')
                 FileInvalidationRequests.objects.filter(request_id=request_id, status='waiting_approval').update(status='approved', approve_user='auto-approved')
                 # Ticket must exist before process_invalidation transitions it
