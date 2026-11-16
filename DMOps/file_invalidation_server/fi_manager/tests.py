@@ -323,3 +323,58 @@ class LogProcessorJobHandlingTests(TestCase):
         # A second pass over the same failed job must not touch the rows or Jira again.
         process_jobs.process_job(fake_job('Failed'), batch, core)
         ticket.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Approve / decline (fi_manager/views.py InvalidationApproval)
+# ---------------------------------------------------------------------------
+@patch('fi_manager.views.update_ticket')
+@patch('fi_manager.views.process_invalidation', return_value='started')
+class ApproveDeclineTests(TestCase):
+
+    def post(self, request_id, user, action, html=False):
+        accept = 'text/html' if html else 'application/json'
+        return APIClient().post(f'/api/approve/{request_id}', {'action': action}, format='json',
+                                HTTP_X_FORWARDED_PREFERRED_USERNAME=user, HTTP_ACCEPT=accept)
+
+    def remaining(self, request_id):
+        return FileInvalidationRequests.objects.filter(request_id=request_id).count()
+
+    @patch('fi_manager.views.user_has_permissions', return_value=False)
+    def test_requester_can_decline_own_request(self, _perm, _process, ticket):
+        request_id = make_request(status='waiting_approval', user='alice')
+        response = self.post(request_id, 'alice', 'decline')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.remaining(request_id), 0)
+        ticket.assert_called_once()
+
+    @patch('fi_manager.views.user_has_permissions', return_value=True)
+    def test_dmops_can_decline_someone_elses_request(self, _perm, *_):
+        request_id = make_request(status='waiting_approval', user='alice')
+        self.assertEqual(self.post(request_id, 'bob', 'decline').status_code, 200)
+        self.assertEqual(self.remaining(request_id), 0)
+
+    @patch('fi_manager.views.user_has_permissions', return_value=False)
+    def test_non_dmops_cannot_decline_someone_elses_request(self, _perm, *_):
+        request_id = make_request(status='waiting_approval', user='alice')
+        self.assertEqual(self.post(request_id, 'mallory', 'decline').status_code, 403)
+        self.assertEqual(self.remaining(request_id), 2)
+
+    @patch('fi_manager.views.user_has_permissions', return_value=True)
+    def test_requester_still_cannot_approve_own_request(self, _perm, process, _ticket):
+        request_id = make_request(status='waiting_approval', user='alice')
+        self.assertEqual(self.post(request_id, 'alice', 'approve').status_code, 403)
+        process.assert_not_called()
+
+    @patch('fi_manager.views.user_has_permissions', return_value=True)
+    def test_dmops_can_approve(self, _perm, process, _ticket):
+        request_id = make_request(status='waiting_approval', user='alice')
+        self.assertEqual(self.post(request_id, 'bob', 'approve').status_code, 200)
+        process.assert_called_once()
+
+    @patch('fi_manager.views.user_has_permissions', return_value=False)
+    def test_rejection_message_is_shown_on_the_html_page(self, _perm, *_):
+        request_id = make_request(status='waiting_approval', user='alice')
+        response = self.post(request_id, 'alice', 'approve', html=True)
+        self.assertEqual(response.status_code, 403)
+        self.assertIn(b'Approval user cannot be the same as request user', response.content)
