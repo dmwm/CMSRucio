@@ -134,3 +134,192 @@ class AutoApproveTests(TestCase):
         response = self.submit('cmsunified', 1, reason='Manual invalidation, bad files')
         self.assertEqual(self.statuses(response), {'waiting_approval'})
         process.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Log processor (fi_manager/process_jobs.py)
+# ---------------------------------------------------------------------------
+from types import SimpleNamespace
+from unittest.mock import MagicMock
+
+from fi_manager import process_jobs
+
+CONT_A = '/PrimA/Era22-v1/MINIAODSIM'
+CONT_B = '/PrimB/Era22-v1/NANOAODSIM'
+FILE_A = '/store/mc/Era22/PrimA/MINIAODSIM/v1/2530000/aaaa.root'
+FILE_B = '/store/mc/Era22/PrimA/MINIAODSIM/v1/2530000/bbbb.root'
+TS = 'INFO 2026-11-16 19:02:29 - '
+
+
+def tool_log(*body):
+    return '\n'.join(TS + line for line in body) + '\n'
+
+
+def global_container_log(dry_run=True, containers=(CONT_A, CONT_B), files=(FILE_A, FILE_B), extra=()):
+    w = dry_run
+    return tool_log(
+        'Submitted lists correctly', 'Starting DBS invalidation',
+        *[(f'Would invalidate file on DBS: {f}' if w else f'Invalidation OK for file: {f}') for f in files],
+        *[(f'Would invalidate dataset on DBS: {c}' if w else f'Invalidation OK for dataset: {c}') for c in containers],
+        'Finished DBS invalidation', 'DBS invalidation was performed correctly', 'Starting Rucio invalidation',
+        *[(f"Would declare file {f} as bad at ['T1_IT_CNAF_Tape']" if w else f"Declared file {f} as bad at ['T1_IT_CNAF_Tape']") for f in files],
+        *extra,
+        'Finished Rucio invalidation', 'Rucio invalidation was performed correctly')
+
+
+def make_rows(names, dry_run=True, mode='global', job_id='abcd1234', status='in_progress'):
+    request_id = uuid.uuid4()
+    FileInvalidationRequests.objects.bulk_create([
+        FileInvalidationRequests(request_id=request_id, file_name=n, status=status, mode=mode, dry_run=dry_run,
+                                 reason='test', request_user='someone', job_id=job_id) for n in names])
+    return request_id
+
+
+def rows_by_name(job_id='abcd1234'):
+    return {r.file_name: r for r in FileInvalidationRequests.objects.filter(job_id=job_id)}
+
+
+def fake_job(status, dry_run=True, job_id='abcd1234'):
+    args = ['global', '--reason', '$(REASON)', '--rucio-mode'] + (['--dry-run'] if dry_run else [])
+    return SimpleNamespace(
+        metadata=SimpleNamespace(name=f'file-invalidation-job-{job_id}'),
+        status=SimpleNamespace(conditions=[SimpleNamespace(type=status, status='True')]),
+        spec=SimpleNamespace(template=SimpleNamespace(spec=SimpleNamespace(containers=[SimpleNamespace(args=args)]))))
+
+
+class CondenseLogsTests(TestCase):
+
+    def test_per_item_lines_are_counted_not_stored(self):
+        text = process_jobs.condense_logs(global_container_log())
+        self.assertNotIn(FILE_A, text)
+        self.assertIn('2 x "Would declare file" lines omitted', text)
+        self.assertIn('2 x "Would invalidate dataset on DBS" lines omitted', text)
+        self.assertIn('Rucio invalidation was performed correctly', text)
+
+    def test_size_is_capped_for_the_text_column(self):
+        noise = tool_log(*[f'some unrelated line {i} ' + 'x' * 100 for i in range(5000)])
+        text = process_jobs.condense_logs(noise, max_bytes=10000)
+        self.assertLessEqual(len(text.encode('utf-8')), 10000)
+        self.assertIn('truncated', text)
+
+
+@patch('fi_manager.process_jobs.update_ticket')
+class LogProcessorUpdateTests(TestCase):
+
+    def process(self, logs, dry_run=True):
+        return process_jobs.update_database('abcd1234', process_jobs.parse_job_logs(logs, dry_run=dry_run))
+
+    def test_container_dry_run_is_marked_success_and_keeps_dry_run_flag(self, ticket):
+        make_rows([CONT_A, CONT_B], dry_run=True)
+        self.process(global_container_log(dry_run=True))
+        rows = rows_by_name()
+        self.assertEqual({r.status for r in rows.values()}, {'success'})
+        self.assertTrue(all(r.dry_run for r in rows.values()))
+        self.assertIn('Rucio invalidation was performed correctly', rows[CONT_A].logs)
+        self.assertEqual(ticket.call_args.kwargs['new_status'], process_jobs.JiraStatus.DONE.value)
+
+    def test_container_real_run_is_marked_success(self, _ticket):
+        make_rows([CONT_A, CONT_B], dry_run=False)
+        self.process(global_container_log(dry_run=False), dry_run=False)
+        self.assertEqual({r.status for r in rows_by_name().values()}, {'success'})
+
+    def test_dry_run_without_rucio_replicas_is_not_mistaken_for_real_run(self, _ticket):
+        # Containers with no replicas print no "Would declare file" line at all.
+        make_rows([CONT_A], dry_run=True)
+        self.process(global_container_log(dry_run=True, containers=(CONT_A,), files=()))
+        row = rows_by_name()[CONT_A]
+        self.assertEqual(row.status, 'success')
+        self.assertTrue(row.dry_run)
+
+    def test_container_missing_from_dbs_output_fails(self, ticket):
+        make_rows([CONT_A, CONT_B])
+        self.process(global_container_log(containers=(CONT_A,)))
+        rows = rows_by_name()
+        self.assertEqual(rows[CONT_A].status, 'success')
+        self.assertEqual(rows[CONT_B].status, 'failed')
+        self.assertEqual(ticket.call_args.kwargs['new_status'], process_jobs.JiraStatus.FAILED.value)
+
+    def test_error_caught_by_the_tool_fails_the_request(self, _ticket):
+        # The tool logs this at INFO and exits 0, so the k8s job reports Complete.
+        make_rows([CONT_A])
+        logs = tool_log('Submitted lists correctly', 'Starting DBS invalidation',
+                        'Error running invalidation script:', 'boom')
+        self.process(logs)
+        self.assertEqual(rows_by_name()[CONT_A].status, 'failed')
+
+    def test_unattributable_error_lines_fail_container_rows(self, _ticket):
+        make_rows([CONT_A, CONT_B])
+        err = f"ERROR 2026-11-16 19:02:29 - Error declaring file {FILE_A} as bad at ['X']: timeout"
+        self.process(global_container_log() + err + '\n')
+        self.assertEqual({r.status for r in rows_by_name().values()}, {'failed'})
+
+    def test_rucio_only_container_succeeds_on_completion_marker(self, _ticket):
+        make_rows([CONT_A], mode='rucio-only')
+        logs = tool_log('Starting Rucio invalidation', f"Would declare file {FILE_A} as bad at ['X']",
+                        'Finished Rucio invalidation')
+        self.process(logs)
+        self.assertEqual(rows_by_name()[CONT_A].status, 'success')
+
+    def test_file_level_rows_are_matched_individually(self, _ticket):
+        make_rows([FILE_A, FILE_B])
+        logs = tool_log(f'Would invalidate file on DBS: {FILE_A}', f"Would declare file {FILE_A} as bad at ['X']",
+                        'DBS invalidation was performed correctly', 'Rucio invalidation was performed correctly')
+        self.process(logs)
+        rows = rows_by_name()
+        self.assertEqual((rows[FILE_A].status, rows[FILE_A].mode), ('success', 'global'))
+        self.assertEqual(rows[FILE_B].status, 'failed')
+
+    def test_file_named_in_an_error_line_fails(self, _ticket):
+        make_rows([FILE_A])
+        logs = tool_log(f'Would invalidate file on DBS: {FILE_A}') + \
+            f'ERROR 2026-11-16 19:02:29 - Error declaring file {FILE_A} as bad at [\'X\']: timeout\n'
+        self.process(logs)
+        self.assertEqual(rows_by_name()[FILE_A].status, 'failed')
+
+    def test_rows_already_resolved_are_left_alone(self, ticket):
+        make_rows([CONT_A], status='success')
+        self.assertIsNone(self.process(global_container_log()))
+        ticket.assert_not_called()
+
+
+@patch('fi_manager.process_jobs.update_ticket')
+class LogProcessorJobHandlingTests(TestCase):
+
+    def clients(self, logs):
+        core = MagicMock()
+        core.list_namespaced_pod.return_value.items = [SimpleNamespace(
+            metadata=SimpleNamespace(name='pod-1', creation_timestamp=1), status=SimpleNamespace(start_time=1))]
+        core.read_namespaced_pod_log.return_value = logs
+        return MagicMock(), core
+
+    def test_completed_job_is_recorded_then_deleted(self, _ticket):
+        make_rows([CONT_A, CONT_B])
+        batch, core = self.clients(global_container_log())
+        process_jobs.process_job(fake_job('Complete'), batch, core)
+        self.assertEqual({r.status for r in rows_by_name().values()}, {'success'})
+        batch.delete_namespaced_job.assert_called_once()
+
+    def test_job_is_kept_if_recording_fails(self, _ticket):
+        make_rows([CONT_A])
+        batch, core = self.clients(global_container_log())
+        with patch('fi_manager.process_jobs.update_database', side_effect=RuntimeError('db down')):
+            with self.assertRaises(RuntimeError):
+                process_jobs.process_job(fake_job('Complete'), batch, core)
+        batch.delete_namespaced_job.assert_not_called()
+
+    def test_dry_run_is_read_from_job_args(self, _ticket):
+        self.assertTrue(process_jobs.job_is_dry_run(fake_job('Complete', dry_run=True)))
+        self.assertFalse(process_jobs.job_is_dry_run(fake_job('Complete', dry_run=False)))
+
+    def test_failed_job_marks_rows_failed_and_keeps_job(self, ticket):
+        make_rows([CONT_A])
+        batch, core = self.clients(tool_log('Traceback (most recent call last):', 'OOMKilled'))
+        process_jobs.process_job(fake_job('Failed'), batch, core)
+        row = rows_by_name()[CONT_A]
+        self.assertEqual(row.status, 'failed')
+        self.assertIn('Kubernetes job file-invalidation-job-abcd1234 failed', row.logs)
+        batch.delete_namespaced_job.assert_not_called()
+        ticket.assert_called_once()
+        # A second pass over the same failed job must not touch the rows or Jira again.
+        process_jobs.process_job(fake_job('Failed'), batch, core)
+        ticket.assert_called_once()
