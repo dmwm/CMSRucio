@@ -290,16 +290,20 @@ class InvalidationApproval(APIView):
         
         approve_user = get_cern_username(request)
         request_user = files.first().request_user
-
-        if approve_user==request_user:
-            return Response({"message":f"Approval user cannot be the same as request user"},
-                            status=status.HTTP_403_FORBIDDEN)
-        
-        if not user_has_permissions(approve_user):
-            return Response({"message":f"Approval user must be part of cms-dm-ops-core-team"},
-                            status=status.HTTP_403_FORBIDDEN)
-
         action = request.data.get('action', 'approve').lower()
+
+        if action == 'decline':
+            # Requesters may withdraw their own request; anyone else must be DMOps.
+            if approve_user != request_user and not user_has_permissions(approve_user):
+                return Response({"message": "Only the requester or a member of cms-dm-ops-core-team can decline this request"},
+                                status=status.HTTP_403_FORBIDDEN)
+        elif action == 'approve':
+            if approve_user == request_user:
+                return Response({"message": "Approval user cannot be the same as request user"},
+                                status=status.HTTP_403_FORBIDDEN)
+            if not user_has_permissions(approve_user):
+                return Response({"message": "Approval user must be part of cms-dm-ops-core-team"},
+                                status=status.HTTP_403_FORBIDDEN)
 
         if action == 'decline':
             files.delete()  # Removes all objects with this request_id
