@@ -10,6 +10,8 @@ import time
 from kubernetes import client, config
 from django.core.mail import send_mail
 from django.conf import settings
+from django.db import connection
+from contextlib import contextmanager
 from jira import JIRA
 from enum import Enum
 import requests
@@ -164,6 +166,53 @@ def send_approval_alert(request_id):
     )
 
 
+INVALIDATION_JOB_PREFIX = 'file-invalidation-job-'
+INVALIDATION_JOB_LOCK_NAME = 'fi_manager_invalidation_job_start'
+
+
+@contextmanager
+def invalidation_job_start_lock(timeout=30):
+    """Cross-process lock around starting an invalidation job.
+
+    Uses a MySQL named lock (GET_LOCK) so it works across web workers, pods and
+    the queue cronjob. Yields True if the lock was acquired. On non-MySQL
+    backends (local sqlite) it is a no-op that always yields True.
+    """
+    if connection.vendor != 'mysql':
+        yield True
+        return
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT GET_LOCK(%s, %s)", [INVALIDATION_JOB_LOCK_NAME, timeout])
+        acquired = cursor.fetchone()[0] == 1
+    try:
+        yield acquired
+    finally:
+        if acquired:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT RELEASE_LOCK(%s)", [INVALIDATION_JOB_LOCK_NAME])
+
+
+def invalidation_job_running():
+    """True if any file-invalidation job in the namespace has not finished yet.
+
+    Kubernetes is used as the source of truth rather than the DB, because failed
+    jobs never get their DB rows moved out of 'in_progress'.
+    """
+    try:
+        config.load_incluster_config()
+    except config.ConfigException:
+        raise Exception("Could not configure kubernetes client")
+    batch_v1 = client.BatchV1Api()
+    jobs = batch_v1.list_namespaced_job(namespace="file-invalidation-tool")
+    for job in jobs.items:
+        if not job.metadata.name.startswith(INVALIDATION_JOB_PREFIX):
+            continue
+        conditions = {c.type: c.status for c in (job.status.conditions or [])}
+        if conditions.get("Complete") != "True" and conditions.get("Failed") != "True":
+            return True
+    return False
+
+
 def process_invalidation(request_id, reason, dry_run=True,mode='global',rse=None,to_process='approved',global_invalidate_last_replicas=False):
     file_records = FileInvalidationRequests.objects.filter(request_id=request_id,status=to_process)
     if file_records.count()==0:
@@ -184,14 +233,23 @@ def process_invalidation(request_id, reason, dry_run=True,mode='global',rse=None
         approve_user = sent_requests.first().approve_user
         return
 
-    pvc_mount_path = "/shared-data"
-    if len(os.listdir(pvc_mount_path))>0:
-        for entry in os.listdir(pvc_mount_path):
-            os.remove(os.path.join(pvc_mount_path, entry))
-    file_path = os.path.join(pvc_mount_path, f'temp_file_{str(request_id).replace("-","")}.txt')
+    # All invalidation jobs share the same PVC and fixed intermediate file names,
+    # so only one job may run at a time. The check + PVC write + job creation is
+    # done under a DB lock so concurrent web workers / the queue cron can't race.
+    with invalidation_job_start_lock() as acquired:
+        if not acquired or invalidation_job_running():
+            logging.info(f"An invalidation job is already running; request {request_id} stays '{to_process}' and will be started by the queue processor.")
+            return (f'Another invalidation job is currently running. Request #{request_id} ({len(file_records)} files) '
+                    f'is queued and will start automatically once the current job finishes.')
 
-    with open(file_path, "w") as temp_file:
-        temp_file.write(txt_content)
+        pvc_mount_path = "/shared-data"
+        if len(os.listdir(pvc_mount_path))>0:
+            for entry in os.listdir(pvc_mount_path):
+                os.remove(os.path.join(pvc_mount_path, entry))
+        file_path = os.path.join(pvc_mount_path, f'temp_file_{str(request_id).replace("-","")}.txt')
+
+        with open(file_path, "w") as temp_file:
+            temp_file.write(txt_content)
 
         logging.info(f"File saved to: {file_path}.")
         job_unique_uuid = uuid.uuid4().hex[:8]
@@ -204,15 +262,15 @@ def process_invalidation(request_id, reason, dry_run=True,mode='global',rse=None
             mode=mode,
             rse=rse,
             global_invalidate_last_replicas=global_invalidate_last_replicas
-        )        
-        
-        # On job creation, the files are sent to queued status
+        )
+
+        # On job creation, the files are sent to in_progress (or failed) status
         sent_requests = FileInvalidationRequests.objects.filter(request_id=request_id)
         sent_requests.update(status=status)
         sent_requests.update(job_id=job_unique_uuid)
 
-        approve_user = sent_requests.first().approve_user
-        update_ticket(request_id=request_id,new_status=JiraStatus.APPROVED.value,approve_user=approve_user)
+    approve_user = sent_requests.first().approve_user
+    update_ticket(request_id=request_id,new_status=JiraStatus.APPROVED.value,approve_user=approve_user)
 
 
     if status=='in_progress':
